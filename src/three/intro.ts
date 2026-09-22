@@ -4,29 +4,29 @@ import { gsap } from 'gsap';
 /**
  * The Gray Solutions scroll-driven cinematic intro.
  *
+ * The concept: there is NO separate bridge or road. The bar you start on
+ * IS the logo's own silver crossbar — the horizontal bar of the GS
+ * monogram. The camera begins in extreme close-up on it (a vast metallic
+ * platform in infinite space), and the zoom-out reveals the bar was part
+ * of Chris's actual logo all along: crossbar → G curve and blue S →
+ * badge → GRAY SOLUTIONS → full lockup → crossfade into the hero.
+ *
  * Division of labor:
- *   - Three.js owns the WORLD: camera, perspective, the bar (the logo's
- *     connector — the thing you stand on), starfield + glints, atmospheric
- *     haze, fog, and Chris's ACTUAL logo on a single plane at the far end
- *     of the bar.
+ *   - Three.js owns the WORLD: the logo plane (the entire world), the
+ *     camera path, starfield + glints, atmospheric haze, fog.
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so the
  *     whole sequence is fully reversible: scrolling up rewinds the camera
- *     exactly. The DOM (phrase blocks, progress bar) is choreographed
- *     separately in IntroSequence.vue from the same scroll position.
- *
- * The journey, told backwards: you begin low over the connector bar in
- * infinite space — the logo is nowhere to be seen because you're standing
- * on it. The camera pulls back and rises CONTINUOUSLY (it never moves
- * forward); the story phrases drift past; the real logo fades in at the
- * end of the bar; the pullback accelerates hard into a wide shot of the
- * full logo; then the canvas crossfades into the hero showing the same
- * logo image — "you've been standing on it the entire time."
+ *     exactly. The DOM (phrase blocks, progress bar, vignette) is
+ *     choreographed separately in IntroSequence.vue from the same scroll
+ *     position.
  */
 
 export interface IntroSceneCallbacks {
   /** Called with the current energy-flash level (0..1); drive a DOM overlay. */
   onFlashLevel?: (v: number) => void;
+  /** Called with the vignette level (0..1); strong at p=0, gone by p≈0.35. */
+  onVignetteLevel?: (v: number) => void;
 }
 
 export interface IntroSceneHandle {
@@ -69,11 +69,14 @@ function randomIn(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-// The logo's home in world space: a single vertical plane at the far end
-// of the bar, its base sitting where the bar ends.
-const LOGO_Z = -240;
-const LOGO_SIZE = 140;
-const LOGO_Y = LOGO_SIZE / 2;
+// The logo IS the world: one 200×200 plane. The image is 1254×1254 and the
+// silver crossbar sits essentially at image center, so plane center ≈
+// crossbar. The camera starts ~5 units in front of it and only ever moves
+// away.
+const LOGO_SIZE = 200;
+const LOGO_Y = 8;
+const LOGO_Z = -260;
+const LOGO_CENTER = new THREE.Vector3(0, LOGO_Y, LOGO_Z);
 
 export function startIntroScene(
   canvas: HTMLCanvasElement,
@@ -99,26 +102,19 @@ export function startIntroScene(
     0.1,
     1600,
   );
-  // Start LOW and CLOSE over the bar, looking forward and slightly down.
-  // From here, the camera only ever pulls back and rises — never forward.
-  camera.position.set(0, 2.6, 10);
+  // Start in EXTREME CLOSE-UP on the crossbar: 5 units from the plane,
+  // ~1.5 above the bar line, tilted slightly down along the bar so it
+  // reads as a vast metallic platform under/ahead of you in dark space.
+  // From here the camera ONLY pulls back and rises — never forward.
+  camera.position.set(0, LOGO_Y + 1.5, LOGO_Z + 5);
 
   const camTarget = new THREE.Object3D();
-  camTarget.position.set(0, 0.8, -30);
+  camTarget.position.set(0, LOGO_Y - 2, LOGO_Z);
   scene.add(camTarget);
-
-  // ---------- lights ----------
-  scene.add(new THREE.AmbientLight(0x2a3648, 1.4));
-  const key = new THREE.DirectionalLight(0x9fb6d8, 1.1);
-  key.position.set(-30, 60, -100);
-  scene.add(key);
-  const rim = new THREE.PointLight(0x2f9bff, 900, 260, 1.8);
-  rim.position.set(0, 12, -120);
-  scene.add(rim);
 
   // ---------- atmospheric haze ----------
   const haze = new THREE.Mesh(
-    new THREE.PlaneGeometry(1100, 560),
+    new THREE.PlaneGeometry(1400, 700),
     new THREE.MeshBasicMaterial({
       map: makeHazeTexture(),
       transparent: true,
@@ -126,14 +122,14 @@ export function startIntroScene(
       fog: false,
     }),
   );
-  haze.position.set(0, 70, -760);
+  haze.position.set(0, 90, -900);
   scene.add(haze);
 
   // ---------- stars + glints ----------
   const starGeo = new THREE.BufferGeometry();
   const starPos: number[] = [];
   for (let i = 0; i < 1400; i++) {
-    starPos.push(randomIn(-230, 230), randomIn(-30, 130), randomIn(-720, 30));
+    starPos.push(randomIn(-260, 260), randomIn(-60, 160), randomIn(-880, 40));
   }
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
   const starMat = new THREE.PointsMaterial({
@@ -150,7 +146,7 @@ export function startIntroScene(
   const glintGeo = new THREE.BufferGeometry();
   const glintPos: number[] = [];
   for (let i = 0; i < 70; i++) {
-    glintPos.push(randomIn(-180, 180), randomIn(-20, 110), randomIn(-650, -20));
+    glintPos.push(randomIn(-200, 200), randomIn(-40, 140), randomIn(-820, -40));
   }
   glintGeo.setAttribute('position', new THREE.Float32BufferAttribute(glintPos, 3));
   const glintMat = new THREE.PointsMaterial({
@@ -165,43 +161,9 @@ export function startIntroScene(
   });
   scene.add(new THREE.Points(glintGeo, glintMat));
 
-  // ---------- the bar: the logo's connector, the thing you stand on ----------
-  // It runs from just behind the camera's start to the base of the logo
-  // plane, so the pullback reveal reads: the bar leads INTO the logo.
-  const deckMat = new THREE.MeshStandardMaterial({
-    color: 0x0d1119,
-    roughness: 0.85,
-    metalness: 0.25,
-    transparent: true,
-  });
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.35, 260), deckMat);
-  deck.position.set(0, -0.18, -110);
-  scene.add(deck);
-
-  const edgeMat = new THREE.MeshBasicMaterial({ color: 0x3d4c63, transparent: true });
-  const edgeColor = new THREE.Color(0x3d4c63);
-  edgeMat.color = edgeColor;
-  for (const sx of [-2.32, 2.32]) {
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 260), edgeMat);
-    strip.position.set(sx, 0.05, -110);
-    scene.add(strip);
-  }
-
-  const dashMat = new THREE.MeshBasicMaterial({
-    color: 0x223146,
-    transparent: true,
-    opacity: 0.9,
-  });
-  for (let i = 0; i < 16; i++) {
-    const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 2.4), dashMat);
-    dash.rotation.x = -Math.PI / 2;
-    dash.position.set(0, 0.02, -6 - i * 14);
-    scene.add(dash);
-  }
-
-  // ---------- the logo: Chris's actual mark, one plane, no copies ----------
+  // ---------- the logo: Chris's actual mark, one plane — the whole world —
   // MeshBasicMaterial (unlit) so the brand mark reads exactly as designed.
-  // fog:false — the reveal is driven by opacity, not distance haze.
+  // fog:false — the reveal is driven by the zoom, not distance haze.
   // FrontSide + default plane orientation: the camera always stays on the
   // +z side of the plane, so the texture reads upright, never mirrored
   // (THREE flips Y on load by default, matching the plane's UVs).
@@ -211,12 +173,12 @@ export function startIntroScene(
   const logoMat = new THREE.MeshBasicMaterial({
     map: logoTex,
     transparent: true,
-    opacity: 0,
+    opacity: 1,
     fog: false,
     side: THREE.FrontSide,
   });
   const logoPlane = new THREE.Mesh(new THREE.PlaneGeometry(LOGO_SIZE, LOGO_SIZE), logoMat);
-  logoPlane.position.set(0, LOGO_Y, LOGO_Z);
+  logoPlane.position.copy(LOGO_CENTER);
   scene.add(logoPlane);
 
   // ---------- energy burst (deterministic: fully reversible under scrub) ----------
@@ -225,9 +187,9 @@ export function startIntroScene(
   const burstBase = new Float32Array(BURST_N * 3);
   const burstVel: number[] = [];
   for (let i = 0; i < BURST_N; i++) {
-    burstBase[i * 3] = 0;
-    burstBase[i * 3 + 1] = LOGO_Y;
-    burstBase[i * 3 + 2] = LOGO_Z;
+    burstBase[i * 3] = LOGO_CENTER.x;
+    burstBase[i * 3 + 1] = LOGO_CENTER.y;
+    burstBase[i * 3 + 2] = LOGO_CENTER.z;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(randomIn(-1, 1));
     const speed = randomIn(6, 26);
@@ -251,30 +213,32 @@ export function startIntroScene(
   const burstState = { t: 0 };
 
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
-  // Normalized duration 1. The camera ONLY pulls back and rises — every
-  // tween increases distance/height, so scrubbing 0→1 is a continuous
-  // zoom-out. Phase 1 (0→0.35): slow pullback begins, low over the bar.
-  // Phase 2 (0.35→0.7): pullback continues, the real logo fades in at the
-  // end of the bar. Phase 3 (0.7→1): FAST accelerating pullback — the
-  // camera tweens use power3.in so the motion rushes outward into the
-  // wide shot, fully reversible under scrub.
+  // Normalized duration 1. The camera ONLY ever increases its distance
+  // from the logo plane — scrubbing 0→1 is one continuous zoom-out.
+  // Phase 1 (0→0.35): slow pullback, still tight on the bar. Phase 2
+  // (0.35→0.7): the G curve and blue S resolve around you, then the
+  // badge. Phase 3 (0.7→1): FAST accelerating pullback — power3.in so
+  // the motion rushes outward into the full lockup, fully reversible
+  // under scrub.
+  //
+  // Camera distances from plane center: 5 → ~41 → ~114 → ~212.
   const tl = gsap.timeline({ paused: true });
   const camPos = camera.position;
   const lookPos = camTarget.position;
   const fx = { flash: 0 };
 
   // Phase 1 — the zoom-out begins: back and up, slow and weighty.
-  tl.to(camPos, { x: 0, y: 6, z: 42, duration: 0.35, ease: 'sine.inOut' }, 0);
-  tl.to(lookPos, { x: 0, y: 2.5, z: -70, duration: 0.35, ease: 'sine.inOut' }, 0);
-  tl.to(edgeColor, { r: 0x5f / 255, g: 0x9f / 255, b: 0xe8 / 255, duration: 0.6, ease: 'sine.inOut' }, 0);
+  tl.to(camPos, { x: 0, y: 16, z: -220, duration: 0.35, ease: 'sine.inOut' }, 0);
+  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.35, ease: 'sine.inOut' }, 0);
 
-  // Phase 2 — keep pulling back and rising; the logo resolves ahead.
-  tl.to(camPos, { x: 0, y: 28, z: 110, duration: 0.35, ease: 'power2.inOut' }, 0.35);
-  tl.to(lookPos, { x: 0, y: 45, z: LOGO_Z, duration: 0.35, ease: 'power2.inOut' }, 0.35);
-  tl.to(logoMat, { opacity: 1, duration: 0.2, ease: 'sine.inOut' }, 0.42);
+  // Phase 2 — keep pulling back and rising; the monogram resolves around
+  // you, then the badge.
+  tl.to(camPos, { x: 0, y: 38, z: -150, duration: 0.35, ease: 'power2.inOut' }, 0.35);
+  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.35, ease: 'power2.inOut' }, 0.35);
 
-  // Phase 3 — FAST accelerating pullback into the wide shot.
-  tl.to(camPos, { x: 0, y: 62, z: 150, duration: 0.3, ease: 'power3.in' }, 0.7);
+  // Phase 3 — FAST accelerating pullback into the wide shot of the full
+  // lockup. The crossfade to the hero then happens in IntroSequence.vue.
+  tl.to(camPos, { x: 0, y: 60, z: -55, duration: 0.3, ease: 'power3.in' }, 0.7);
   tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.3, ease: 'power3.in' }, 0.7);
 
   // Restrained energy release right at the reveal.
@@ -291,8 +255,10 @@ export function startIntroScene(
   let visible = true;
   let disposed = false;
   let lastFlash = -1;
+  let lastVignette = -1;
 
   const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
   const tick = () => {
     if (disposed) return;
@@ -321,6 +287,17 @@ export function startIntroScene(
     if (cb.onFlashLevel && Math.abs(fx.flash - lastFlash) > 0.002) {
       lastFlash = fx.flash;
       cb.onFlashLevel(fx.flash);
+    }
+
+    // Vignette: a pure function of timeline progress — strong at p=0 so
+    // the frame edges dissolve to black (only the bar + stars visible),
+    // fully gone by p≈0.35. Deterministic and reversible under scrub.
+    if (cb.onVignetteLevel) {
+      const v = clamp01((0.35 - tl.progress()) / 0.35);
+      if (Math.abs(v - lastVignette) > 0.002) {
+        lastVignette = v;
+        cb.onVignetteLevel(v);
+      }
     }
 
     camera.lookAt(camTarget.position);

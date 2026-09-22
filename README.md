@@ -38,7 +38,7 @@ src/
     reveal.ts             # v-reveal: restrained scroll-in animation
   components/
     IntroSequence.vue     # the 700vh scroll region: fixed canvas, phrase
-                          #   blocks, progress bar, flash + veil
+                          #   blocks, progress bar, vignette + flash + veil
     Wordmark.vue          # GRAY / SOLUTIONS wordmark
     Nav.vue / Hero.vue / About.vue / Services.vue
     Work.vue / Process.vue / Contact.vue / Footer.vue
@@ -57,19 +57,21 @@ everything, so scrolling up rewinds the camera exactly.
 
 The division of labor is deliberate:
 
-- **Three.js owns the WORLD** — `src/three/intro.ts` builds the scene: the
-  infinite bar (the logo's connector — the thing you stand on), starfield +
-  glints, atmospheric haze, fog, lighting, and Chris's ACTUAL logo
-  (`public/logo-lockup.jpg`) on a single plane at the far end of the bar.
-  No geometric logo interpretation, no duplicates, no reflections.
+- **Three.js owns the WORLD** — `src/three/intro.ts` builds the scene:
+  Chris's ACTUAL logo (`public/logo-lockup.jpg`) on a single 200×200 plane
+  IS the world — there is no separate bridge or road. The bar you start on
+  is the logo's own silver crossbar. Starfield + glints, atmospheric haze,
+  and fog complete the infinite-space feel. No geometric logo
+  interpretation, no duplicates, no reflections.
 - **GSAP owns the STORY** — one *paused* timeline, scrubbed via
-  `setProgress(p)`. The camera NEVER moves forward: it starts low and close
-  over the bar and only ever pulls back and rises. Phase 1 (0→0.35): the
-  slow zoom-out begins. Phase 2 (0.35→0.7): the pullback continues and the
-  real logo fades in at the end of the bar. Phase 3 (0.7→1): a FAST
+  `setProgress(p)`. The camera NEVER moves forward: it starts in extreme
+  close-up on the crossbar (~5 units away, tilted slightly down along the
+  bar) and only ever pulls back and rises. Phase 1 (0→0.35): the slow
+  zoom-out begins, still tight on the bar. Phase 2 (0.35→0.7): the G curve
+  and blue S resolve around you, then the badge. Phase 3 (0.7→1): a FAST
   accelerating pullback — the camera tweens use `power3.in` easing so the
   motion rushes outward ("scroll out a lot faster") into a wide shot of the
-  full logo, then a restrained flash + particle burst at the reveal. The
+  full lockup, then a restrained flash + particle burst at the reveal. The
   burst is deterministic (a pure function of timeline state), so it rewinds
   cleanly too. The canvas then crossfades into the hero showing the SAME
   logo image, making the handoff near-seamless.

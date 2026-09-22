@@ -13,6 +13,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const barWrapRef = ref<HTMLElement | null>(null);
 const barRef = ref<HTMLElement | null>(null);
 const flashRef = ref<HTMLElement | null>(null);
+const vignetteRef = ref<HTMLElement | null>(null);
 const veilRef = ref<HTMLElement | null>(null);
 
 let scene: IntroSceneHandle | null = null;
@@ -74,6 +75,11 @@ onMounted(async () => {
     scene = intro.startIntroScene(canvasRef.value, {
       onFlashLevel: (v) => {
         if (flashRef.value) flashRef.value.style.opacity = v.toFixed(3);
+      },
+      // Sells "infinite space" at the start: frame edges dissolve to
+      // black at p=0, fully gone by p≈0.35. Deterministic + reversible.
+      onVignetteLevel: (v) => {
+        if (vignetteRef.value) vignetteRef.value.style.opacity = v.toFixed(3);
       },
     });
   } catch {
@@ -153,6 +159,8 @@ onUnmounted(() => {
 <template>
   <section ref="sectionRef" class="intro" aria-label="Introduction">
     <canvas ref="canvasRef" class="intro-canvas" aria-hidden="true"></canvas>
+
+    <div ref="vignetteRef" class="intro-vignette" aria-hidden="true"></div>
 
     <div class="intro-phrases" aria-hidden="true">
       <div class="intro-spacer"></div>
@@ -241,6 +249,21 @@ onUnmounted(() => {
 
 .intro-tail {
   height: 70vh;
+}
+
+.intro-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 22%,
+    rgba(2, 4, 8, 0.55) 58%,
+    rgba(0, 0, 0, 0.92) 84%,
+    #000 100%
+  );
+  opacity: 1;
 }
 
 .intro-flash {
