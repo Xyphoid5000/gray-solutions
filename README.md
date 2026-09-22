@@ -58,11 +58,16 @@ everything, so scrolling up rewinds the camera exactly.
 The division of labor is deliberate:
 
 - **Three.js owns the WORLD** — `src/three/intro.ts` builds the scene:
-  Chris's ACTUAL logo (`public/logo-lockup.jpg`) on a single 200×200 plane
-  IS the world — there is no separate bridge or road. The bar you start on
-  is the logo's own silver crossbar. Starfield + glints, atmospheric haze,
-  and fog complete the infinite-space feel. No geometric logo
-  interpretation, no duplicates, no reflections.
+  Chris's ACTUAL logo (`public/logo-lockup.jpg`) is a physical 3D relief
+  floating in infinite space — there is no separate bridge or road, and no
+  flat billboard. The image's luminance is baked into a 320×320-segment
+  plane's vertices (with true smooth normals), so the silver G, the blue S,
+  the pixel accents, and the wordmark physically RISE off the dark badge
+  face as dimensional chrome; the same luminance drives metalness and a
+  radial alphaMap dissolves the quad edges into the starfield. A low
+  raking light grazes the extrusion so the depth reads at close range.
+  Starfield + glints and atmospheric haze complete the infinite-space
+  feel. No geometric logo interpretation, no duplicates, no reflections.
 - **GSAP owns the STORY** — one *paused* timeline, scrubbed via
   `setProgress(p)`. The camera NEVER moves forward: it starts in extreme
   close-up on the crossbar (~5 units away, tilted slightly down along the

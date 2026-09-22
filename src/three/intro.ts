@@ -1,19 +1,29 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
  * The Gray Solutions scroll-driven cinematic intro.
  *
- * The concept: there is NO separate bridge or road. The bar you start on
- * IS the logo's own silver crossbar — the horizontal bar of the GS
- * monogram. The camera begins in extreme close-up on it (a vast metallic
- * platform in infinite space), and the zoom-out reveals the bar was part
- * of Chris's actual logo all along: crossbar → G curve and blue S →
- * badge → GRAY SOLUTIONS → full lockup → crossfade into the hero.
+ * The concept: Chris's ACTUAL logo (`public/logo-lockup.jpg` — never
+ * redrawn, never reinterpreted) is a physical 3D relief floating in
+ * infinite space. The JPEG is BOTH the color map and the height source:
+ * its luminance is baked into a high-segment plane's vertices, so the
+ * bright silver G, the blue S, the pixel accents, and the wordmark
+ * physically RISE off the dark badge face as dimensional chrome. The
+ * same luminance drives metalness (dark badge ≈ dielectric, bright
+ * letters ≈ chrome), and a radial alphaMap dissolves the plane's square
+ * edges so the badge floats as an island in the starfield.
+ *
+ * The journey: you start hovering just above the RAISED crossbar — the
+ * circled bar in the logo — at a low grazing angle. Scrolling only ever
+ * zooms OUT (dolly back + rise + a slight lateral arc): the chrome bar
+ * fills the frame → the G's inner counter resolves around you → the S's
+ * curves show their thickness → the full dimensional badge → the
+ * wordmark → the wide lockup → crossfade into the hero.
  *
  * Division of labor:
- *   - Three.js owns the WORLD: the logo plane (the entire world), the
- *     camera path, starfield + glints, atmospheric haze, fog.
+ *   - Three.js owns the WORLD: the relief, camera, lights, stars, haze.
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so the
  *     whole sequence is fully reversible: scrolling up rewinds the camera
@@ -65,23 +75,105 @@ function makeHazeTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/**
+ * Radial alpha fade: the relief's square edges dissolve into space so the
+ * badge floats as an island. Opaque through the badge + wordmark radius,
+ * fully transparent before the quad corners.
+ */
+function makeAlphaTexture(): THREE.CanvasTexture {
+  const s = 512;
+  const c = document.createElement('canvas');
+  c.width = s;
+  c.height = s;
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('2d context unavailable');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.74, '#ffffff');
+  g.addColorStop(1, '#000000');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, s, s);
+  return new THREE.CanvasTexture(c);
+}
+
 function randomIn(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-// The logo IS the world: one 200×200 plane. The image is 1254×1254 and the
-// silver crossbar sits essentially at image center, so plane center ≈
-// crossbar. The camera starts ~5 units in front of it and only ever moves
-// away.
+/**
+ * Bake the logo's luminance into plane vertices (CPU displacement) so the
+ * relief gets CORRECT smooth normals via computeVertexNormals — three.js
+ * does not recompute normals for GPU displacementMap, which would leave
+ * the extrusion shading flat. Also builds a grayscale luminance canvas
+ * for the metalness map. UV math mirrors PlaneGeometry's own mapping
+ * (top edge = image top), so relief and print stay registered.
+ */
+function buildRelief(
+  img: HTMLImageElement,
+  size: number,
+  segments: number,
+  reliefScale: number,
+  reliefBias: number,
+): { geometry: THREE.PlaneGeometry; luminanceCanvas: HTMLCanvasElement } {
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const src = document.createElement('canvas');
+  src.width = w;
+  src.height = h;
+  const sctx = src.getContext('2d', { willReadFrequently: true });
+  if (!sctx) throw new Error('2d context unavailable');
+  sctx.drawImage(img, 0, 0);
+  const srcData = sctx.getImageData(0, 0, w, h).data;
+
+  const gray = document.createElement('canvas');
+  gray.width = w;
+  gray.height = h;
+  const gctx = gray.getContext('2d');
+  if (!gctx) throw new Error('2d context unavailable');
+  const grayImg = gctx.createImageData(w, h);
+  const grayData = grayImg.data;
+
+  const geo = new THREE.PlaneGeometry(size, size, segments, segments);
+  const posAttr = geo.attributes.position as THREE.BufferAttribute;
+  const arr = posAttr.array as Float32Array;
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = arr[i * 3];
+    const y = arr[i * 3 + 1];
+    const u = x / size + 0.5;
+    const v = y / size + 0.5;
+    const px = Math.min(w - 1, Math.max(0, Math.floor(u * w)));
+    const py = Math.min(h - 1, Math.max(0, Math.floor((1 - v) * h)));
+    const o = (py * w + px) * 4;
+    const lum = Math.round(
+      0.2126 * srcData[o] + 0.7152 * srcData[o + 1] + 0.0722 * srcData[o + 2],
+    );
+    const go = (py * w + px) * 4;
+    grayData[go] = lum;
+    grayData[go + 1] = lum;
+    grayData[go + 2] = lum;
+    grayData[go + 3] = 255;
+    arr[i * 3 + 2] = (lum / 255) * reliefScale + reliefBias;
+  }
+  gctx.putImageData(grayImg, 0, 0);
+  posAttr.needsUpdate = true;
+  geo.computeVertexNormals();
+  return { geometry: geo, luminanceCanvas: gray };
+}
+
+// The logo IS the world: one 220×220 relief. The image is 1254×1254;
+// the silver crossbar sits at image ≈(647,450) → plane-local ≈(+3,+28).
+// Relief: bright letters rise ~9 units off the badge face.
 const LOGO_SIZE = 200;
 const LOGO_Y = 8;
 const LOGO_Z = -260;
 const LOGO_CENTER = new THREE.Vector3(0, LOGO_Y, LOGO_Z);
+const RELIEF_SCALE = 12;
+const RELIEF_BIAS = -1.6;
 
-export function startIntroScene(
+export async function startIntroScene(
   canvas: HTMLCanvasElement,
   cb: IntroSceneCallbacks = {},
-): IntroSceneHandle {
+): Promise<IntroSceneHandle> {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -96,21 +188,52 @@ export function startIntroScene(
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x05070b, 0.006);
 
+  // Image-based lighting so the chrome relief has something to reflect.
+  // Kept subtle (envMapIntensity on the material) so the artwork's colors
+  // stay true — the finale crossfades into the unlit DOM image.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = envTex;
+
   const camera = new THREE.PerspectiveCamera(
     58,
     window.innerWidth / window.innerHeight,
-    0.1,
-    1600,
+    0.5,
+    2000,
   );
-  // Start in EXTREME CLOSE-UP on the crossbar: 5 units from the plane,
-  // ~1.5 above the bar line, tilted slightly down along the bar so it
-  // reads as a vast metallic platform under/ahead of you in dark space.
-  // From here the camera ONLY pulls back and rises — never forward.
-  camera.position.set(0, LOGO_Y + 1.5, LOGO_Z + 5);
+  // Start hovering just above the RAISED crossbar — the circled bar in
+  // the logo (image ≈(647,450)/1254 → plane-local ≈(+3,+28), its top
+  // surface ~8 units proud of the badge face): low grazing angle,
+  // looking slightly down ALONG the bar — the chrome surface below you,
+  // its beveled sides falling away, darkness + stars beyond. From here
+  // the camera ONLY pulls back and rises — never forward.
+  camera.position.set(-20, 38, -238);
 
   const camTarget = new THREE.Object3D();
-  camTarget.position.set(0, LOGO_Y - 2, LOGO_Z);
+  camTarget.position.set(30, 24, -254);
   scene.add(camTarget);
+
+  const logoTarget = new THREE.Object3D();
+  logoTarget.position.copy(LOGO_CENTER);
+  scene.add(logoTarget);
+
+  // ---------- lights: dimension must read at close range ----------
+  scene.add(new THREE.AmbientLight(0x223044, 0.9));
+
+  const key = new THREE.DirectionalLight(0xe8f0ff, 1.3);
+  key.position.set(-50, 90, -150);
+  scene.add(key);
+
+  // Low raking light across the relief: grazes the extrusion so the
+  // 9-unit letter depth casts strong light/shade at close range.
+  const rake = new THREE.DirectionalLight(0xbfd4ff, 1.7);
+  rake.position.set(-160, 14, -190);
+  rake.target = logoTarget;
+  scene.add(rake);
+
+  const rim = new THREE.PointLight(0x2f9bff, 1200, 400, 1.8);
+  rim.position.set(60, 40, -180);
+  scene.add(rim);
 
   // ---------- atmospheric haze ----------
   const haze = new THREE.Mesh(
@@ -161,25 +284,38 @@ export function startIntroScene(
   });
   scene.add(new THREE.Points(glintGeo, glintMat));
 
-  // ---------- the logo: Chris's actual mark, one plane — the whole world —
-  // MeshBasicMaterial (unlit) so the brand mark reads exactly as designed.
+  // ---------- the logo: Chris's actual mark as dimensional chrome relief —
   // fog:false — the reveal is driven by the zoom, not distance haze.
-  // FrontSide + default plane orientation: the camera always stays on the
-  // +z side of the plane, so the texture reads upright, never mirrored
-  // (THREE flips Y on load by default, matching the plane's UVs).
-  const logoTex = new THREE.TextureLoader().load('/logo-lockup.jpg');
+  // FrontSide + the camera always on the +z side: the artwork reads
+  // upright, never mirrored.
+  const logoTex = await new THREE.TextureLoader().loadAsync('/logo-lockup.jpg');
   logoTex.colorSpace = THREE.SRGBColorSpace;
   logoTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  const logoMat = new THREE.MeshBasicMaterial({
+
+  const { geometry: reliefGeo, luminanceCanvas } = buildRelief(
+    logoTex.image as HTMLImageElement,
+    LOGO_SIZE,
+    320,
+    RELIEF_SCALE,
+    RELIEF_BIAS,
+  );
+  const metalTex = new THREE.CanvasTexture(luminanceCanvas);
+  // NoColorSpace (linear): luminance → metalness. Dark badge ≈ 0.15
+  // (dielectric), bright silver ≈ 0.9 (chrome).
+  const logoMat = new THREE.MeshStandardMaterial({
     map: logoTex,
+    metalnessMap: metalTex,
+    metalness: 1.0,
+    roughness: 0.38,
+    envMapIntensity: 0.55,
     transparent: true,
-    opacity: 1,
+    alphaMap: makeAlphaTexture(),
     fog: false,
     side: THREE.FrontSide,
   });
-  const logoPlane = new THREE.Mesh(new THREE.PlaneGeometry(LOGO_SIZE, LOGO_SIZE), logoMat);
-  logoPlane.position.copy(LOGO_CENTER);
-  scene.add(logoPlane);
+  const relief = new THREE.Mesh(reliefGeo, logoMat);
+  relief.position.copy(LOGO_CENTER);
+  scene.add(relief);
 
   // ---------- energy burst (deterministic: fully reversible under scrub) ----------
   const BURST_N = 220;
@@ -214,31 +350,27 @@ export function startIntroScene(
 
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
   // Normalized duration 1. The camera ONLY ever increases its distance
-  // from the logo plane — scrubbing 0→1 is one continuous zoom-out.
-  // Phase 1 (0→0.35): slow pullback, still tight on the bar. Phase 2
-  // (0.35→0.7): the G curve and blue S resolve around you, then the
-  // badge. Phase 3 (0.7→1): FAST accelerating pullback — power3.in so
-  // the motion rushes outward into the full lockup, fully reversible
-  // under scrub.
+  // from the badge — scrubbing 0→1 is one continuous zoom-out.
+  // Distances from badge center: ~42 → ~100 → ~186 → ~251.
   //
-  // Camera distances from plane center: 5 → ~41 → ~114 → ~212.
+  // Phase 1 (0→0.35): the zoom-out begins, still tight on the bar.
+  // Phase 2 (0.35→0.7): the G's inner counter resolves around you, the
+  // S's curves show their thickness, then the badge. Slight lateral arc.
+  // Phase 3 (0.7→1): FAST accelerating pullback — power3.in so the
+  // motion rushes outward into a near-flat-on wide shot of the full
+  // lockup ("scroll out a lot faster"), fully reversible under scrub.
   const tl = gsap.timeline({ paused: true });
   const camPos = camera.position;
   const lookPos = camTarget.position;
   const fx = { flash: 0 };
 
-  // Phase 1 — the zoom-out begins: back and up, slow and weighty.
-  tl.to(camPos, { x: 0, y: 16, z: -220, duration: 0.35, ease: 'sine.inOut' }, 0);
+  tl.to(camPos, { x: -28, y: 34, z: -168, duration: 0.35, ease: 'sine.inOut' }, 0);
   tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.35, ease: 'sine.inOut' }, 0);
 
-  // Phase 2 — keep pulling back and rising; the monogram resolves around
-  // you, then the badge.
-  tl.to(camPos, { x: 0, y: 38, z: -150, duration: 0.35, ease: 'power2.inOut' }, 0.35);
+  tl.to(camPos, { x: -46, y: 60, z: -88, duration: 0.35, ease: 'power2.inOut' }, 0.35);
   tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.35, ease: 'power2.inOut' }, 0.35);
 
-  // Phase 3 — FAST accelerating pullback into the wide shot of the full
-  // lockup. The crossfade to the hero then happens in IntroSequence.vue.
-  tl.to(camPos, { x: 0, y: 60, z: -55, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(camPos, { x: 0, y: 26, z: -10, duration: 0.3, ease: 'power3.in' }, 0.7);
   tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.3, ease: 'power3.in' }, 0.7);
 
   // Restrained energy release right at the reveal.
@@ -331,6 +463,8 @@ export function startIntroScene(
         disposeMaterial(material);
       }
     });
+    envTex.dispose();
+    pmrem.dispose();
     renderer.dispose();
   };
 
@@ -346,7 +480,13 @@ export function startIntroScene(
 }
 
 function disposeMaterial(m: THREE.Material): void {
-  const withMap = m as THREE.Material & { map?: THREE.Texture | null };
-  if (withMap.map) withMap.map.dispose();
+  const withMaps = m as THREE.Material & {
+    map?: THREE.Texture | null;
+    metalnessMap?: THREE.Texture | null;
+    alphaMap?: THREE.Texture | null;
+  };
+  if (withMaps.map) withMaps.map.dispose();
+  if (withMaps.metalnessMap) withMaps.metalnessMap.dispose();
+  if (withMaps.alphaMap) withMaps.alphaMap.dispose();
   m.dispose();
 }

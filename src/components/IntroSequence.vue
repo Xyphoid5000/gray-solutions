@@ -72,7 +72,7 @@ onMounted(async () => {
     // intro actually runs (never on no-WebGL devices — App gates those).
     const intro = await import('../three/intro');
     if (tornDown || !canvasRef.value) return;
-    scene = intro.startIntroScene(canvasRef.value, {
+    const handle = await intro.startIntroScene(canvasRef.value, {
       onFlashLevel: (v) => {
         if (flashRef.value) flashRef.value.style.opacity = v.toFixed(3);
       },
@@ -82,6 +82,13 @@ onMounted(async () => {
         if (vignetteRef.value) vignetteRef.value.style.opacity = v.toFixed(3);
       },
     });
+    // The texture load + relief bake is async — the component may have
+    // been torn down while we waited.
+    if (tornDown || !canvasRef.value) {
+      handle.dispose();
+      return;
+    }
+    scene = handle;
   } catch {
     // WebGL context creation or module load failed: drop the intro region
     // entirely and land the visitor on the hero.
@@ -129,7 +136,9 @@ onMounted(async () => {
       },
     });
 
-    // Spotlight phrases: illuminate crossing center, dim leaving.
+    // Spotlight phrases: ghost type — the illuminated state peaks at ~0.6
+    // opacity so the starfield stays faintly visible through the words;
+    // never opaque. Illuminate crossing center, dim leaving.
     gsap.utils.toArray<HTMLElement>('.phrase-block').forEach((block) => {
       const line = block.querySelector('.phrase');
       if (!line) return;
@@ -137,7 +146,7 @@ onMounted(async () => {
         line,
         { opacity: 0.12 },
         {
-          opacity: 1,
+          opacity: 0.6,
           ease: 'none',
           scrollTrigger: { trigger: block, start: 'top 82%', end: 'top 42%', scrub: true },
         },
