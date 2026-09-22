@@ -20,15 +20,35 @@ let ctx: gsap.Context | null = null;
 let tornDown = false;
 
 /**
- * The story, set in giant DOM type. Each phrase starts dim and illuminates
- * to full brightness as it crosses the viewport center, then dims as it
- * leaves — all scrubbed by scroll, like lenis.dev's statement section.
+ * The story, set in giant DOM type — the full hero philosophy copy, split
+ * across five blocks. Each phrase starts dim and illuminates to full
+ * brightness as it crosses the viewport center, then dims as it leaves —
+ * all scrubbed by scroll, like lenis.dev's statement section.
+ *
+ * G-S word pairs wear the logo's colors: the G-word in silver, the S-word
+ * in electric blue.
  */
 const phrases = [
-  'Every <em class="g">G</em>ood <em class="s">S</em>tory',
-  'Great Structure',
-  'Generate Smiles',
-  '<em class="s">S</em>olve Problems',
+  {
+    html: 'Every <em class="g">good</em> <em class="s">story</em> needs <em class="g">great</em> <em class="s">structure</em>.',
+    small: false,
+  },
+  {
+    html: 'Something that <em class="g">generates</em> <em class="s">smiles</em>.',
+    small: false,
+  },
+  {
+    html: 'Something that <em class="g">solves</em> <em class="s">problems</em>.',
+    small: false,
+  },
+  {
+    html: 'Something that stands apart.',
+    small: false,
+  },
+  {
+    html: 'That&rsquo;s Gray Solutions. I build software and digital experiences that turn ideas into something real.',
+    small: true,
+  },
 ];
 
 function teardown() {
@@ -136,8 +156,8 @@ onUnmounted(() => {
 
     <div class="intro-phrases" aria-hidden="true">
       <div class="intro-spacer"></div>
-      <div v-for="(html, i) in phrases" :key="i" class="phrase-block">
-        <p class="phrase" v-html="html"></p>
+      <div v-for="(p, i) in phrases" :key="i" class="phrase-block">
+        <p class="phrase" :class="{ 'phrase-small': p.small }" v-html="p.html"></p>
       </div>
       <div class="intro-tail"></div>
     </div>
@@ -174,11 +194,11 @@ onUnmounted(() => {
 }
 
 .intro-spacer {
-  height: 90vh;
+  height: 80vh;
 }
 
 .phrase-block {
-  min-height: 140vh;
+  min-height: 110vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,12 +218,20 @@ onUnmounted(() => {
   text-wrap: balance;
 }
 
+.phrase-small {
+  font-size: clamp(1.7rem, 4.6vw, 3.9rem);
+  font-weight: 600;
+  line-height: 1.22;
+  max-width: 60rem;
+}
+
 .phrase :deep(em) {
   font-style: normal;
 }
 
 .phrase :deep(em.g) {
-  color: #ffffff;
+  color: var(--silver);
+  text-shadow: 0 0 36px rgba(199, 204, 212, 0.35);
 }
 
 .phrase :deep(em.s) {
@@ -212,7 +240,7 @@ onUnmounted(() => {
 }
 
 .intro-tail {
-  height: 50vh;
+  height: 70vh;
 }
 
 .intro-flash {

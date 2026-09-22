@@ -10,10 +10,12 @@ import { scrollToTop } from '../lib/scroll';
         <img src="/logo-lockup.jpg" alt="Gray Solutions" class="hero-mark" />
       </div>
       <p v-reveal="0.2" class="hero-copy">
-        Every good story needs great structure. Something that generates
-        smiles. Something that solves problems. Something that stands apart.
-        That&rsquo;s Gray Solutions. I build software and digital experiences
-        that turn ideas into something real.
+        Every <em class="g">good</em> <em class="s">story</em> needs
+        <em class="g">great</em> <em class="s">structure</em>. Something that
+        <em class="g">generates</em> <em class="s">smiles</em>. Something that
+        <em class="g">solves</em> <em class="s">problems</em>. Something that
+        stands apart. That&rsquo;s Gray Solutions. I build software and
+        digital experiences that turn ideas into something real.
       </p>
       <div v-reveal="0.3" class="hero-actions">
         <a href="#contact" class="btn btn-primary">
@@ -80,6 +82,18 @@ import { scrollToTop } from '../lib/scroll';
   font-size: clamp(1.02rem, 2.2vw, 1.22rem);
   margin: 1.8rem 0 2.4rem;
   color: var(--silver-dim);
+}
+
+.hero-copy em {
+  font-style: normal;
+}
+
+.hero-copy em.g {
+  color: var(--silver);
+}
+
+.hero-copy em.s {
+  color: var(--blue);
 }
 
 .hero-actions {
