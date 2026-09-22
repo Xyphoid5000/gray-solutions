@@ -17,9 +17,8 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+/* NOTE: no `scroll-behavior: smooth` here — Lenis owns smoothness.
+   The CSS property fights Lenis and causes double-eased anchor jumps. */
 
 body {
   margin: 0;
@@ -164,4 +163,15 @@ a:hover {
   html {
     scroll-behavior: auto;
   }
+}
+
+/*
+ * The intro's WebGL canvas is `position: fixed` behind everything. Once the
+ * scroll-driven intro ends, the page content must paint ABOVE that canvas as
+ * it slides up over it — hence its own stacking context and solid background.
+ */
+.page {
+  position: relative;
+  z-index: 2;
+  background: var(--bg);
 }

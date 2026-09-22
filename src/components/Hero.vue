@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const emit = defineEmits<{ replay: [] }>();
+import { scrollToTop } from '../lib/scroll';
 </script>
 
 <template>
@@ -22,7 +22,7 @@ const emit = defineEmits<{ replay: [] }>();
         </a>
         <a href="#work" class="btn btn-ghost">See the work</a>
       </div>
-      <button v-reveal="0.4" type="button" class="hero-replay" @click="emit('replay')">
+      <button v-reveal="0.4" type="button" class="hero-replay" @click="scrollToTop">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M3 12a9 9 0 1 0 3-6.7" />
           <path d="M3 4v5h5" />

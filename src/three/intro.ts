@@ -2,103 +2,45 @@ import * as THREE from 'three';
 import { gsap } from 'gsap';
 
 /**
- * The Gray Solutions cinematic intro.
+ * The Gray Solutions scroll-driven cinematic intro.
  *
- * Division of labor (per the design brief):
- *   - Three.js owns the WORLD: camera, perspective, bridge geometry, G/S
- *     geometry, stars, particles, haze, emissive lighting, depth, fog.
- *   - GSAP owns the STORY: camera movement, text choreography, reveal
- *     timing, the perspective shift, logo assembly, energy release.
+ * Division of labor:
+ *   - Three.js owns the WORLD: camera, perspective, the bar (secretly the
+ *     logo's connector), starfield + glints, atmospheric haze, the G/S
+ *     geometry, fog, emissive lighting.
+ *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
+ *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so the
+ *     whole sequence is fully reversible: scrolling up rewinds the camera
+ *     exactly. The DOM (phrase blocks, progress bar) is choreographed
+ *     separately in IntroSequence.vue from the same scroll position.
  *
- * The visitor opens in a dark "deep-space observatory" standing on an
- * infinite straight bridge — which is secretly the extruded connector
- * between the G and S of the GS logo. The camera drifts forward past
- * floating phrases, flies through the G's negative space, meets the blue
- * S, then swings into alignment as the bridge collapses into the logo's
- * connector. A restrained energy release, the logo snaps flat, and we
- * crossfade into the site.
+ * The journey, told backwards: you begin standing on the logo's connector
+ * bar in infinite space → scroll drifts you forward through the story →
+ * the camera pulls back and the G/S assemble around you → the pullback
+ * accelerates hard → the full logo is revealed as the hero arrives.
  */
 
-export interface IntroCallbacks {
-  /** The 3D sequence reached its end (or was skipped/failed). */
-  onDone: () => void;
-  /** Brief full-screen flash for the energy-release beat. */
-  onFlash: () => void;
+export interface IntroSceneCallbacks {
+  /** Called with the current energy-flash level (0..1); drive a DOM overlay. */
+  onFlashLevel?: (v: number) => void;
 }
 
-export interface IntroHandle {
-  skip: () => void;
+export interface IntroSceneHandle {
+  /** Drive the story. p is raw scroll progress, clamped to 0..1. */
+  setProgress: (p: number) => void;
+  /** Pause/resume rendering (e.g. when the canvas has faded out). */
+  setVisible: (v: boolean) => void;
   dispose: () => void;
 }
 
 export function isWebGLAvailable(): boolean {
   try {
     const canvas = document.createElement('canvas');
-    const gl =
-      canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
     return !!gl;
   } catch {
     return false;
   }
-}
-
-interface TextSegment {
-  text: string;
-  color: string;
-}
-
-const DISPLAY_FONT = '"Space Grotesk", system-ui, sans-serif';
-
-/** Draw multi-colored display text onto a canvas, return canvas + aspect. */
-function makeTextCanvas(
-  segments: TextSegment[],
-  fontSize = 104,
-): { canvas: HTMLCanvasElement; aspect: number } {
-  const font = `600 ${fontSize}px ${DISPLAY_FONT}`;
-  const measurer = document.createElement('canvas').getContext('2d');
-  if (!measurer) throw new Error('2d context unavailable');
-  measurer.font = font;
-  const pad = fontSize * 0.7;
-  let width = pad * 2;
-  for (const s of segments) width += measurer.measureText(s.text).width;
-  const height = fontSize * 1.9;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.ceil(width);
-  canvas.height = Math.ceil(height);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('2d context unavailable');
-  ctx.font = font;
-  ctx.textBaseline = 'middle';
-  let x = pad;
-  const y = height / 2;
-  for (const s of segments) {
-    ctx.fillStyle = s.color;
-    ctx.fillText(s.text, x, y);
-    x += ctx.measureText(s.text).width;
-  }
-  return { canvas, aspect: canvas.width / canvas.height };
-}
-
-function makeLabel(
-  segments: TextSegment[],
-  worldHeight: number,
-  fontSize = 104,
-): THREE.Sprite {
-  const { canvas, aspect } = makeTextCanvas(segments, fontSize);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  const mat = new THREE.SpriteMaterial({
-    map: tex,
-    transparent: true,
-    depthWrite: false,
-    opacity: 0,
-  });
-  const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(worldHeight * aspect, worldHeight, 1);
-  sprite.userData.baseY = 0;
-  return sprite;
 }
 
 /** Faint blue-gray atmospheric gradient far behind the world. */
@@ -123,31 +65,19 @@ function randomIn(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-export function startIntro(
+// Logo assembly point in world space.
+const LOGO_Y = 5;
+const LOGO_Z = -240;
+
+export function startIntroScene(
   canvas: HTMLCanvasElement,
-  cb: IntroCallbacks,
-): IntroHandle {
-  let renderer: THREE.WebGLRenderer | null = null;
-  let raf = 0;
-  let finished = false;
-  let disposed = false;
-
-  const finish = () => {
-    if (finished || disposed) return;
-    finished = true;
-    cb.onDone();
-  };
-
-  try {
-    renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      powerPreference: 'high-performance',
-    });
-  } catch {
-    finish();
-    return { skip: finish, dispose: () => { disposed = true; } };
-  }
+  cb: IntroSceneCallbacks = {},
+): IntroSceneHandle {
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    powerPreference: 'high-performance',
+  });
 
   const smallScreen = Math.min(window.innerWidth, window.innerHeight) < 700;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, smallScreen ? 1.5 : 2));
@@ -165,11 +95,9 @@ export function startIntro(
   );
   camera.position.set(0, 3.4, 14);
 
-  // We tween a target object; the render loop lookAt()s it every frame.
   const camTarget = new THREE.Object3D();
-  camTarget.position.set(0, 1.6, -40);
+  camTarget.position.set(0, 1.8, -50);
   scene.add(camTarget);
-  const roll = { z: 0 };
 
   // ---------- lights ----------
   scene.add(new THREE.AmbientLight(0x2a3648, 1.4));
@@ -207,10 +135,9 @@ export function startIntro(
     transparent: true,
     opacity: 0.75,
     depthWrite: false,
-    fog: false, // distant stars punch through the fog
+    fog: false,
   });
-  const stars = new THREE.Points(starGeo, starMat);
-  scene.add(stars);
+  scene.add(new THREE.Points(starGeo, starMat));
 
   const glintGeo = new THREE.BufferGeometry();
   const glintPos: number[] = [];
@@ -228,11 +155,10 @@ export function startIntro(
     blending: THREE.AdditiveBlending,
     fog: false,
   });
-  const glints = new THREE.Points(glintGeo, glintMat);
-  scene.add(glints);
+  scene.add(new THREE.Points(glintGeo, glintMat));
 
-  // ---------- the bridge (secretly the logo's connector) ----------
-  const bridge = new THREE.Group();
+  // ---------- the bar: the logo's connector, stretching to infinity ----------
+  // The camera starts just above it, looking forward and slightly down.
   const deckMat = new THREE.MeshStandardMaterial({
     color: 0x0d1119,
     roughness: 0.85,
@@ -241,13 +167,17 @@ export function startIntro(
   });
   const deck = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.35, 560), deckMat);
   deck.position.set(0, -0.18, -260);
-  bridge.add(deck);
+  scene.add(deck);
 
   const edgeMat = new THREE.MeshBasicMaterial({ color: 0x3d4c63, transparent: true });
+  const edgeColor = new THREE.Color(0x3d4c63);
+  edgeMat.color = edgeColor;
+  const edgeMeshes: THREE.Mesh[] = [];
   for (const sx of [-2.32, 2.32]) {
     const strip = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 560), edgeMat);
     strip.position.set(sx, 0.05, -260);
-    bridge.add(strip);
+    scene.add(strip);
+    edgeMeshes.push(strip);
   }
 
   const dashMat = new THREE.MeshBasicMaterial({
@@ -255,55 +185,17 @@ export function startIntro(
     transparent: true,
     opacity: 0.9,
   });
+  const dashes: THREE.Mesh[] = [];
   for (let i = 0; i < 36; i++) {
     const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 2.4), dashMat);
     dash.rotation.x = -Math.PI / 2;
     dash.position.set(0, 0.02, -6 - i * 15);
-    bridge.add(dash);
+    scene.add(dash);
+    dashes.push(dash);
   }
-  scene.add(bridge);
 
-  // ---------- floating phrases ----------
-  const SILVER = '#c7ccd4';
-  const DIM = '#8b93a1';
-  const BLUE = '#5cb3ff';
-  const phrases: THREE.Sprite[] = [];
-  const phraseDefs: { seg: TextSegment[]; pos: [number, number, number]; h: number }[] = [
-    {
-      seg: [
-        { text: 'Every ', color: DIM },
-        { text: 'G', color: '#eef1f5' },
-        { text: 'ood ', color: DIM },
-        { text: 'S', color: BLUE },
-        { text: 'tory', color: DIM },
-      ],
-      pos: [0, 4.6, -55],
-      h: 7.5,
-    },
-    { seg: [{ text: 'Great Structure', color: SILVER }], pos: [-9, 3.6, -95], h: 6.5 },
-    { seg: [{ text: 'Generate Smiles', color: SILVER }], pos: [8, 5.2, -130], h: 6.5 },
-    {
-      seg: [
-        { text: 'Solve ', color: DIM },
-        { text: 'P', color: '#eef1f5' },
-        { text: 'roblems', color: DIM },
-      ],
-      pos: [-8, 4.2, -162],
-      h: 6.5,
-    },
-  ];
-  phraseDefs.forEach((d, i) => {
-    const s = makeLabel(d.seg, d.h);
-    s.position.set(...d.pos);
-    s.userData.baseY = d.pos[1];
-    s.userData.phase = i * 1.7;
-    scene.add(s);
-    phrases.push(s);
-  });
-
-  // ---------- the G (torus-arc segments + arrow crossbar) ----------
+  // ---------- the G: stylized torus arc + crossbar, silver ----------
   const gGroup = new THREE.Group();
-  gGroup.position.set(-18, 3.5, -195);
   const gMats: THREE.MeshStandardMaterial[] = [];
   const SEG_ARC = 1.55;
   const SEG_OFFSET = 0.42; // rotates the gap to the right, G-style
@@ -317,7 +209,7 @@ export function startIntro(
       transparent: true,
       opacity: 0,
     });
-    const seg = new THREE.Mesh(new THREE.TorusGeometry(13, 3, 20, 42, SEG_ARC), mat);
+    const seg = new THREE.Mesh(new THREE.TorusGeometry(9, 2.2, 20, 42, SEG_ARC), mat);
     seg.rotation.z = SEG_OFFSET + i * SEG_ARC;
     gGroup.add(seg);
     gMats.push(mat);
@@ -331,29 +223,16 @@ export function startIntro(
     transparent: true,
     opacity: 0,
   });
-  const crossbar = new THREE.Mesh(new THREE.BoxGeometry(11, 2.8, 2.8), barMat);
-  crossbar.position.set(4.2, 0.6, 0);
+  const crossbar = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 2), barMat);
+  crossbar.position.set(3.2, 0.5, 0);
   gGroup.add(crossbar);
   gMats.push(barMat);
+  const G_FINAL = new THREE.Vector3(-13, LOGO_Y, LOGO_Z);
+  gGroup.position.set(-24, LOGO_Y + 7, LOGO_Z);
   scene.add(gGroup);
 
-  // ---------- projected phrases inside the G tunnel ----------
-  const tunnelTexts: THREE.Sprite[] = [];
-  (
-    [
-      { text: 'GOOD STORIES', pos: [-18, 9.5, -186] as const },
-      { text: 'GREAT STRUCTURE', pos: [-26, 1.5, -190] as const },
-    ]
-  ).forEach((t) => {
-    const s = makeLabel([{ text: t.text, color: '#7d90ac' }], 5.2, 92);
-    s.position.set(t.pos[0], t.pos[1], t.pos[2]);
-    scene.add(s);
-    tunnelTexts.push(s);
-  });
-
-  // ---------- the S (emissive blue tube) ----------
+  // ---------- the S: emissive blue tube, draws itself ----------
   const sGroup = new THREE.Group();
-  sGroup.position.set(16, 3.5, -255);
   const sCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(5.5, 7.5, 0),
     new THREE.Vector3(0.5, 8.6, 0),
@@ -377,28 +256,31 @@ export function startIntro(
     transparent: true,
     opacity: 0,
   });
-  const sMesh = new THREE.Mesh(sGeo, sMat);
-  sGroup.add(sMesh);
+  sGroup.add(new THREE.Mesh(sGeo, sMat));
+  sGroup.scale.setScalar(0.82);
+  const S_FINAL = new THREE.Vector3(13, LOGO_Y, LOGO_Z);
+  sGroup.position.set(22, LOGO_Y + 6, LOGO_Z);
   scene.add(sGroup);
 
-  // ---------- finale: connector bar + energy burst ----------
+  // ---------- the connector: the bar made logo ----------
   const connectorMat = new THREE.MeshBasicMaterial({
     color: 0x6f87a8,
     transparent: true,
     opacity: 0,
   });
-  const connector = new THREE.Mesh(new THREE.BoxGeometry(13, 1.5, 1.5), connectorMat);
-  connector.position.set(0, 4, -315);
+  const connector = new THREE.Mesh(new THREE.BoxGeometry(9.5, 1.5, 1.5), connectorMat);
+  connector.position.set(0, LOGO_Y, LOGO_Z);
   scene.add(connector);
 
-  const BURST_N = 260;
+  // ---------- energy burst (deterministic: fully reversible under scrub) ----------
+  const BURST_N = 220;
   const burstGeo = new THREE.BufferGeometry();
-  const burstPos = new Float32Array(BURST_N * 3);
+  const burstBase = new Float32Array(BURST_N * 3);
   const burstVel: number[] = [];
   for (let i = 0; i < BURST_N; i++) {
-    burstPos[i * 3] = 0;
-    burstPos[i * 3 + 1] = 4;
-    burstPos[i * 3 + 2] = -315;
+    burstBase[i * 3] = 0;
+    burstBase[i * 3 + 1] = LOGO_Y;
+    burstBase[i * 3 + 2] = LOGO_Z;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(randomIn(-1, 1));
     const speed = randomIn(6, 26);
@@ -408,7 +290,7 @@ export function startIntro(
       Math.cos(phi) * speed,
     );
   }
-  burstGeo.setAttribute('position', new THREE.BufferAttribute(burstPos, 3));
+  burstGeo.setAttribute('position', new THREE.BufferAttribute(burstBase.slice(), 3));
   const burstMat = new THREE.PointsMaterial({
     color: 0x9fd4ff,
     size: 1.7,
@@ -418,104 +300,80 @@ export function startIntro(
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
-  const burst = new THREE.Points(burstGeo, burstMat);
-  burst.visible = false;
-  scene.add(burst);
-  const burstState = { t: 1 }; // 1 = idle
+  scene.add(new THREE.Points(burstGeo, burstMat));
+  const burstState = { t: 0 };
 
-  // ---------- the STORY (GSAP timeline) ----------
-  const tl = gsap.timeline({ onComplete: finish });
+  // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
+  // Normalized duration 1. Phase 1 (0→0.4): slow forward drift past the
+  // story. Phase 2 (0.4→0.7): pullback begins, G/S emerge. Phase 3
+  // (0.7→1): FAST accelerating pullback — the camera tweens use power3.in
+  // so the motion accelerates as scroll progress increases.
+  const tl = gsap.timeline({ paused: true });
   const camPos = camera.position;
   const lookPos = camTarget.position;
+  const fx = { flash: 0 };
+  const glintFade = { v: 1 }; // timeline-owned; the tick multiplies shimmer by it
 
-  const fadeSprite = (s: THREE.Sprite, at: number, dur = 1.6) => {
-    const m = s.material as THREE.SpriteMaterial;
-    tl.to(m, { opacity: 0, duration: dur, ease: 'sine.inOut' }, at);
-  };
+  // Phase 1 — slow drift forward along the bar (0 → 0.4)
+  tl.to(camPos, { x: 0, y: 3.0, z: -70, duration: 0.4, ease: 'sine.inOut' }, 0);
+  tl.to(lookPos, { x: 0, y: 2.0, z: -140, duration: 0.4, ease: 'sine.inOut' }, 0);
+  tl.to(edgeColor, { r: 0x5f / 255, g: 0x9f / 255, b: 0xe8 / 255, duration: 0.55, ease: 'sine.inOut' }, 0);
 
-  // Beat 1 — drift forward along the bridge, phrases drift past (0 → 5.5s)
-  tl.to(camPos, { x: 0, y: 3, z: -70, duration: 5.5, ease: 'sine.inOut' }, 0);
-  tl.to(lookPos, { x: 0, y: 1.8, z: -120, duration: 5.5, ease: 'sine.inOut' }, 0);
-  phrases.forEach((s, i) => {
-    const m = s.material as THREE.SpriteMaterial;
-    tl.to(m, { opacity: 0.95, duration: 1.2, ease: 'sine.out' }, 0.4 + i * 1.1);
-    fadeSprite(s, 3.2 + i * 1.35);
-  });
+  // Phase 2 — pullback begins; the G and S emerge from the dark (0.4 → 0.7)
+  tl.to(camPos, { x: 0, y: 13, z: -150, duration: 0.3, ease: 'power2.inOut' }, 0.4);
+  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.3, ease: 'power2.inOut' }, 0.4);
 
-  // Beat 2 — veer left, fly inside the G's negative space (5.5 → 10s)
-  tl.to(camPos, { x: -10, y: 3, z: -150, duration: 2.5, ease: 'sine.inOut' }, 5.5);
-  tl.to(lookPos, { x: -16, y: 3, z: -195, duration: 2.5, ease: 'sine.inOut' }, 5.5);
-  tl.to(camPos, { x: -18, y: 3.2, z: -197, duration: 2, ease: 'sine.inOut' }, 8);
-  tl.to(lookPos, { x: -18, y: 3, z: -240, duration: 2, ease: 'sine.inOut' }, 8);
-
-  // G reveals piece by piece from the left
   gMats.forEach((m, i) => {
-    tl.to(m, { opacity: 1, duration: 0.9, ease: 'sine.out' }, 5.8 + i * 0.6);
-    tl.to(m, { emissiveIntensity: 1.1, duration: 1.4, ease: 'sine.out' }, 5.8 + i * 0.6);
+    tl.to(m, { opacity: 1, duration: 0.09, ease: 'sine.out' }, 0.42 + i * 0.045);
+    tl.to(m, { emissiveIntensity: 0.9, duration: 0.18, ease: 'sine.out' }, 0.42 + i * 0.045);
   });
+  tl.to(gGroup.position, { x: G_FINAL.x, y: G_FINAL.y, z: G_FINAL.z, duration: 0.28, ease: 'power2.out' }, 0.42);
 
-  // Tunnel-wall projections illuminate, then fade
-  tunnelTexts.forEach((s, i) => {
-    const m = s.material as THREE.SpriteMaterial;
-    const at = 6.8 + i * 0.9;
-    tl.to(m, { opacity: 0.85, duration: 0.8, ease: 'sine.in' }, at);
-    tl.to(m, { opacity: 0, duration: 1.1, ease: 'sine.out' }, at + 1.0);
-  });
-
-  // Color progression: bridge edges drift gray → blue
-  const edgeColor = new THREE.Color(0x3d4c63);
-  edgeMat.color = edgeColor;
-  tl.to(edgeColor, { r: 0x5f / 255, g: 0x9f / 255, b: 0xe8 / 255, duration: 8, ease: 'sine.inOut' }, 4);
-
-  // Beat 3 — through the G, the blue S draws itself on the right (10 → 13s)
-  tl.to(camPos, { x: -8, y: 3.8, z: -250, duration: 1.6, ease: 'sine.inOut' }, 10);
-  tl.to(lookPos, { x: 2, y: 3.6, z: -290, duration: 1.6, ease: 'sine.inOut' }, 10);
-  tl.to(camPos, { x: -2, y: 4.2, z: -285, duration: 1.4, ease: 'sine.inOut' }, 11.6);
-  tl.to(lookPos, { x: 0, y: 4, z: -315, duration: 1.4, ease: 'sine.inOut' }, 11.6);
-
+  tl.to(sMat, { opacity: 1, duration: 0.08, ease: 'sine.out' }, 0.48);
+  tl.to(sMat, { emissiveIntensity: 2.2, duration: 0.2, ease: 'sine.out' }, 0.48);
+  tl.to(sGroup.position, { x: S_FINAL.x, y: S_FINAL.y, z: S_FINAL.z, duration: 0.24, ease: 'power2.out' }, 0.48);
   const drawState = { p: 0 };
-  tl.to(sMat, { opacity: 1, duration: 0.4 }, 10.2);
-  tl.to(
-    drawState,
-    {
-      p: 1,
-      duration: 2.2,
-      ease: 'power2.inOut',
-      onUpdate: () => sGeo.setDrawRange(0, Math.floor(drawState.p * sIndexCount)),
-    },
-    10.2,
-  );
-  tl.to(sMat, { emissiveIntensity: 2.4, duration: 2.8, ease: 'sine.out' }, 10.2);
+  tl.to(drawState, {
+    p: 1,
+    duration: 0.18,
+    ease: 'power2.inOut',
+    onUpdate: () => sGeo.setDrawRange(0, Math.floor(drawState.p * sIndexCount)),
+  }, 0.5);
 
-  // Beat 4 — perspective shift: swing into alignment, assemble the logo (13 → 16s)
-  tl.to(gGroup.position, { x: -7.5, y: 4, z: -315, duration: 3, ease: 'power2.inOut' }, 13);
-  tl.to(gGroup.scale, { x: 0.62, y: 0.62, z: 0.62, duration: 3, ease: 'power2.inOut' }, 13);
-  tl.to(sGroup.position, { x: 6.5, y: 4, z: -315, duration: 3, ease: 'power2.inOut' }, 13);
-  tl.to(sGroup.scale, { x: 0.62, y: 0.62, z: 0.62, duration: 3, ease: 'power2.inOut' }, 13);
-  tl.to(deckMat, { opacity: 0, duration: 2, ease: 'sine.inOut' }, 13.2);
-  tl.to(edgeMat, { opacity: 0, duration: 2, ease: 'sine.inOut' }, 13.2);
-  tl.to(dashMat, { opacity: 0, duration: 2, ease: 'sine.inOut' }, 13.2);
-  tl.to(connectorMat, { opacity: 0.95, duration: 1.6, ease: 'sine.in' }, 14);
-  tl.to(connectorMat.color, { r: 0x8f / 255, g: 0xd0 / 255, b: 1, duration: 1.6 }, 14);
-  tl.to(starMat, { opacity: 0.06, duration: 2.5 }, 13.5);
-  tl.to(glintMat, { opacity: 0, duration: 2 }, 13.5);
-  tl.to(camPos, { x: 0, y: 4.2, z: -281, duration: 3, ease: 'power2.inOut' }, 13);
-  tl.to(lookPos, { x: 0, y: 4, z: -315, duration: 3, ease: 'power2.inOut' }, 13);
-  tl.to(roll, { z: -0.1, duration: 1.2, ease: 'sine.in' }, 13);
-  tl.to(roll, { z: 0, duration: 1.2, ease: 'power2.out' }, 14.2);
+  tl.to(connectorMat, { opacity: 0.95, duration: 0.16, ease: 'sine.in' }, 0.6);
+  tl.to(connectorMat.color, { r: 0x8f / 255, g: 0xd0 / 255, b: 1, duration: 0.16 }, 0.6);
 
-  // Beat 5 — energy release (restrained): flash + particle burst, then hold
-  tl.add(() => {
-    cb.onFlash();
-    burst.visible = true;
-    burstState.t = 0;
-  }, 16);
-  tl.to(camPos, { z: -279.5, duration: 0.9, ease: 'sine.out' }, 16);
-  tl.add(() => finish(), 16.9);
+  // Phase 3 — FAST accelerating pullback (0.7 → 1). power3.in easing makes
+  // the camera cover little ground at first, then rush outward — "scroll
+  // out a lot faster", fully reversible under scrub.
+  tl.to(camPos, { x: 0, y: 30, z: -330, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(gGroup.scale, { x: 1.06, y: 1.06, z: 1.06, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(sGroup.scale, { x: 0.87, y: 0.87, z: 0.87, duration: 0.3, ease: 'power3.in' }, 0.7);
+
+  // The infinite bar dissolves; only the logo's connector remains.
+  tl.to(deckMat, { opacity: 0, duration: 0.16, ease: 'sine.inOut' }, 0.72);
+  tl.to(edgeMat, { opacity: 0, duration: 0.16, ease: 'sine.inOut' }, 0.72);
+  tl.to(dashMat, { opacity: 0, duration: 0.16, ease: 'sine.inOut' }, 0.72);
+  tl.to(starMat, { opacity: 0.15, duration: 0.22, ease: 'sine.inOut' }, 0.72);
+  tl.to(glintFade, { v: 0, duration: 0.18, ease: 'sine.inOut' }, 0.72);
+
+  // Restrained energy release right at the reveal.
+  tl.to(burstMat, { opacity: 0.9, duration: 0.012 }, 0.955);
+  tl.to(burstState, { t: 1, duration: 0.045, ease: 'power2.out' }, 0.955);
+  tl.to(burstMat, { opacity: 0, duration: 0.045, ease: 'sine.in' }, 0.955);
+  tl.to(fx, { flash: 0.9, duration: 0.018, ease: 'power1.in' }, 0.96);
+  tl.to(fx, { flash: 0, duration: 0.022, ease: 'power1.out' }, 0.978);
 
   // ---------- render loop ----------
   const clock = new THREE.Clock();
   let elapsed = 0;
+  let raf = 0;
+  let visible = true;
+  let disposed = false;
+  let lastFlash = -1;
+
+  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
   const tick = () => {
     if (disposed) return;
@@ -523,36 +381,32 @@ export function startIntro(
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
 
-    // Ambient drift: phrases breathe, glints shimmer
-    for (const s of phrases) {
-      const m = s.material as THREE.SpriteMaterial;
-      if (m.opacity > 0.01) {
-        s.position.y = s.userData.baseY + Math.sin(elapsed * 0.5 + s.userData.phase) * 0.35;
-      }
-    }
-    glintMat.opacity = 0.25 + Math.sin(elapsed * 1.7) * 0.12;
+    // Occasional glints shimmer (ambient; the timeline owns the overall fade).
+    glintMat.opacity = Math.max(0, 0.25 + Math.sin(elapsed * 1.7) * 0.12) * glintFade.v;
 
-    // Energy burst particles
-    if (burstState.t < 1) {
-      burstState.t = Math.min(1, burstState.t + dt / 0.9);
+    // Deterministic burst: position is a pure function of timeline state,
+    // so scrubbing backwards rewinds the particles exactly.
+    if (burstState.t > 0) {
       const pos = burstGeo.attributes.position as THREE.BufferAttribute;
       const arr = pos.array as Float32Array;
-      const damp = 1 - burstState.t * 0.75;
+      const spread = easeOutCubic(burstState.t) * 34;
       for (let i = 0; i < BURST_N; i++) {
-        arr[i * 3] += burstVel[i * 3] * dt * damp;
-        arr[i * 3 + 1] += burstVel[i * 3 + 1] * dt * damp;
-        arr[i * 3 + 2] += burstVel[i * 3 + 2] * dt * damp;
+        arr[i * 3] = burstBase[i * 3] + burstVel[i * 3] * spread * 0.12;
+        arr[i * 3 + 1] = burstBase[i * 3 + 1] + burstVel[i * 3 + 1] * spread * 0.12;
+        arr[i * 3 + 2] = burstBase[i * 3 + 2] + burstVel[i * 3 + 2] * spread * 0.12;
       }
       pos.needsUpdate = true;
-      burstMat.opacity = 1 - burstState.t;
+    }
+
+    // Flash level → DOM overlay (write only when it changes).
+    if (cb.onFlashLevel && Math.abs(fx.flash - lastFlash) > 0.002) {
+      lastFlash = fx.flash;
+      cb.onFlashLevel(fx.flash);
     }
 
     camera.lookAt(camTarget.position);
-    if (roll.z !== 0) camera.rotateZ(roll.z);
 
-    // Pause rendering when the tab is hidden; the GSAP timeline keeps
-    // its own clock, so the story resumes cleanly on return.
-    if (!document.hidden && renderer) {
+    if (visible && !document.hidden) {
       renderer.render(scene, camera);
     }
   };
@@ -560,40 +414,36 @@ export function startIntro(
 
   // ---------- resize ----------
   const onResize = () => {
-    if (!renderer) return;
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight, false);
   };
   window.addEventListener('resize', onResize);
 
-  // ---------- fail-safe: never trap the visitor ----------
-  const watchdog = window.setTimeout(finish, 32000);
-
   const dispose = () => {
     disposed = true;
     cancelAnimationFrame(raf);
-    window.clearTimeout(watchdog);
     window.removeEventListener('resize', onResize);
     tl.kill();
     scene.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
-      const material = (mesh as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
       if (Array.isArray(material)) {
-        material.forEach((m) => disposeMaterial(m));
+        material.forEach(disposeMaterial);
       } else if (material) {
         disposeMaterial(material);
       }
     });
-    renderer?.dispose();
-    renderer = null;
+    renderer.dispose();
   };
 
   return {
-    skip: () => {
-      tl.kill();
-      finish();
+    setProgress: (p: number) => {
+      tl.progress(Math.min(1, Math.max(0, p)));
+    },
+    setVisible: (v: boolean) => {
+      visible = v;
     },
     dispose,
   };
