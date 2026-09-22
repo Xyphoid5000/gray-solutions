@@ -51,43 +51,47 @@ public/
 ## How the intro works
 
 The intro is **scroll-driven and fully scrubbable** — there is no autoplay
-timeline and nothing to "finish". One fixed full-viewport WebGL canvas sits
-behind a ~700vh scroll region; a single scroll-progress value (0→1) drives
-everything, so scrolling up rewinds the camera exactly.
+timeline and nothing to "finish". A sticky 100vh stage holds the whole
+sequence behind a ~700vh scroll region; a single scroll-progress value
+(0→1) drives everything, so scrolling up rewinds the camera exactly.
 
 The division of labor is deliberate:
 
 - **Three.js owns the WORLD** — `src/three/intro.ts` builds the scene:
-  Chris's ACTUAL logo (`public/logo-lockup.jpg`) is a physical 3D relief
-  floating in infinite space — there is no separate bridge or road, and no
-  flat billboard. The image's luminance is baked into a 320×320-segment
-  plane's vertices (with true smooth normals), so the silver G, the blue S,
-  the pixel accents, and the wordmark physically RISE off the dark badge
-  face as dimensional chrome; the same luminance drives metalness and a
-  radial alphaMap dissolves the quad edges into the starfield. A low
-  raking light grazes the extrusion so the depth reads at close range.
-  Starfield + glints and atmospheric haze complete the infinite-space
-  feel. No geometric logo interpretation, no duplicates, no reflections.
+  the logo is INFINITELY DEEP, but only the middle bar exists in 3D. An
+  endless chrome beam (`BoxGeometry(3000, 30, 24)`, metalness 1.0,
+  RoomEnvironment IBL) runs to ±X infinity, and a giant chrome "G"
+  (hand-authored extruded arch, gap on the right) stands around it — the
+  beam IS the G's crossbar, one monumental sculpture. Starfield + glints
+  and atmospheric haze complete the infinite-space feel. No badge, no
+  wordmark, no S, no duplicates, no reflections.
 - **GSAP owns the STORY** — one *paused* timeline, scrubbed via
-  `setProgress(p)`. The camera NEVER moves forward: it starts in extreme
-  close-up on the crossbar (~5 units away, tilted slightly down along the
-  bar) and only ever pulls back and rises. Phase 1 (0→0.35): the slow
-  zoom-out begins, still tight on the bar. Phase 2 (0.35→0.7): the G curve
-  and blue S resolve around you, then the badge. Phase 3 (0.7→1): a FAST
-  accelerating pullback — the camera tweens use `power3.in` easing so the
-  motion rushes outward ("scroll out a lot faster") into a wide shot of the
-  full lockup, then a restrained flash + particle burst at the reveal. The
-  burst is deterministic (a pure function of timeline state), so it rewinds
-  cleanly too. The canvas then crossfades into the hero showing the SAME
-  logo image, making the handoff near-seamless.
-- **The DOM owns the STORYTELLING LAYER** — `IntroSequence.vue` renders the
-  full hero philosophy copy across five giant-type blocks ("Every good
+  `setProgress(p)`. The camera moves by PURE TRANSLATION only, with one
+  fixed lookAt `(0, 10, 0)` — no rotation, no arcs. It starts sitting ON
+  the beam (26, 22, 14 — ~7 units above the surface, deep inside the G's
+  ring) and only ever dollies back and up: (10, 45, 110) → (-30, 90, 260)
+  → (-70, 160, 430). FogExp2 density is timeline-driven (deterministic,
+  reversible): dense at p=0 so the G is fully hidden, lifting through
+  phase 2 so the G's top arch comes into view first, then its side, to
+  near-clear at the wide shot. Phase 3 (0.7→1) is a FAST accelerating
+  pullback (`power3.in`), with a restrained flash + particle burst as the
+  G resolves (~p 0.8). The burst is deterministic (a pure function of
+  timeline state), so it rewinds cleanly too.
+- **The DOM owns the STORYTELLING LAYER** — `IntroSequence.vue` renders
+  the full hero philosophy copy across five giant-type blocks ("Every good
   story needs great structure." … "turn ideas into something real."). Each
-  line starts dim and illuminates as it crosses the viewport center, then
-  dims as it leaves — all scrubbed by scroll. G-S word pairs wear the
-  logo's colors (G-word silver, S-word blue), matching the hero copy. A
-  thin electric-blue progress bar (the only progress indicator) tracks the
+  line starts dim and illuminates to full SOLID opacity over its scroll
+  window, then dims as it leaves — all scrubbed by scroll, driven
+  deterministically by the same progress value (no ScrollTrigger enter
+  events inside the sticky stage). G-S word pairs wear the logo's colors
+  (G-word silver, S-word blue), matching the hero copy. A thin
+  electric-blue progress bar (the only progress indicator) tracks the
   journey at the top of the viewport.
+- **The hero was there the whole time** — it lives inside the sticky
+  stage behind the canvas for the entire sequence (opacity 0 → 1 from
+  p≈0.88 → 1, while the canvas fades 1 → 0 from p≈0.9 → 1). It is revealed
+  in place and never slides up; the visitor started inside it. When the
+  intro can't run, the hero renders statically in the page instead.
 - **Lenis owns the FEEL** — inertial smooth scrolling wired into GSAP's
   ticker (`lenis.on('scroll', ScrollTrigger.update)`), with nav anchor
   clicks routed through `lenis.scrollTo`. The smoothness *is* the message.

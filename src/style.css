@@ -166,9 +166,10 @@ a:hover {
 }
 
 /*
- * The intro's WebGL canvas is `position: fixed` behind everything. Once the
- * scroll-driven intro ends, the page content must paint ABOVE that canvas as
- * it slides up over it — hence its own stacking context and solid background.
+ * The intro's 3D sequence lives in a sticky 100vh stage inside its 700vh
+ * section; the hero is revealed in place behind the fading canvas. Once
+ * the intro section ends, the page content paints ABOVE it as it scrolls
+ * past — hence its own stacking context and solid background.
  */
 .page {
   position: relative;

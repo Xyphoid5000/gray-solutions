@@ -5,31 +5,27 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 /**
  * The Gray Solutions scroll-driven cinematic intro.
  *
- * The concept: Chris's ACTUAL logo (`public/logo-lockup.jpg` — never
- * redrawn, never reinterpreted) is a physical 3D relief floating in
- * infinite space. The JPEG is BOTH the color map and the height source:
- * its luminance is baked into a high-segment plane's vertices, so the
- * bright silver G, the blue S, the pixel accents, and the wordmark
- * physically RISE off the dark badge face as dimensional chrome. The
- * same luminance drives metalness (dark badge ≈ dielectric, bright
- * letters ≈ chrome), and a radial alphaMap dissolves the plane's square
- * edges so the badge floats as an island in the starfield.
+ * The concept, per Chris: the logo is INFINITELY DEEP, but only the
+ * middle bar exists in 3D. The scene holds exactly two things — an
+ * endless chrome beam, and a giant chrome "G" whose crossbar the beam
+ * IS. You start sitting ON the beam, deep inside the G's space; the
+ * camera only ever dollies straight back and up (pure translation, one
+ * fixed lookAt — no rotation, no arcs). Fog starts dense so the G is
+ * fully hidden, then lifts: the G's top arch comes into view first,
+ * then its side, as one monumental chrome sculpture.
  *
- * The journey: you start hovering just above the RAISED crossbar — the
- * circled bar in the logo — at a low grazing angle. Scrolling only ever
- * zooms OUT (dolly back + rise + a slight lateral arc): the chrome bar
- * fills the frame → the G's inner counter resolves around you → the S's
- * curves show their thickness → the full dimensional badge → the
- * wordmark → the wide lockup → crossfade into the hero.
+ * The hero lives INSIDE the intro's sticky stage behind the canvas for
+ * the whole sequence (see IntroSequence.vue) — at the end the canvas
+ * fades and the hero is revealed in place. You started inside it.
  *
  * Division of labor:
- *   - Three.js owns the WORLD: the relief, camera, lights, stars, haze.
+ *   - Three.js owns the WORLD: the beam, the G, camera, fog, stars.
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
- *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so the
- *     whole sequence is fully reversible: scrolling up rewinds the camera
- *     exactly. The DOM (phrase blocks, progress bar, vignette) is
- *     choreographed separately in IntroSequence.vue from the same scroll
- *     position.
+ *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so
+ *     the whole sequence is fully reversible: scrolling up rewinds the
+ *     camera exactly. The DOM (hero, phrases, progress bar, vignette)
+ *     is choreographed separately in IntroSequence.vue from the same
+ *     scroll position.
  */
 
 export interface IntroSceneCallbacks {
@@ -75,105 +71,42 @@ function makeHazeTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-/**
- * Radial alpha fade: the relief's square edges dissolve into space so the
- * badge floats as an island. Opaque through the badge + wordmark radius,
- * fully transparent before the quad corners.
- */
-function makeAlphaTexture(): THREE.CanvasTexture {
-  const s = 512;
-  const c = document.createElement('canvas');
-  c.width = s;
-  c.height = s;
-  const ctx = c.getContext('2d');
-  if (!ctx) throw new Error('2d context unavailable');
-  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  g.addColorStop(0, '#ffffff');
-  g.addColorStop(0.74, '#ffffff');
-  g.addColorStop(1, '#000000');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, s, s);
-  return new THREE.CanvasTexture(c);
-}
-
 function randomIn(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
 /**
- * Bake the logo's luminance into plane vertices (CPU displacement) so the
- * relief gets CORRECT smooth normals via computeVertexNormals — three.js
- * does not recompute normals for GPU displacementMap, which would leave
- * the extrusion shading flat. Also builds a grayscale luminance canvas
- * for the metalness map. UV math mirrors PlaneGeometry's own mapping
- * (top edge = image top), so relief and print stay registered.
+ * The G: a bold geometric arch with a clean gap on the right side.
+ * Outer arc radius 115, inner counter radius 72 — the opening spans
+ * ±0.7 rad (≈ ±40°) around +X, closed by straight chords so the ends
+ * read as flat terminals. Extruded ~34 deep with a small bevel.
+ *
+ * NOTE: this letterform is an interpretation of the mark's anatomy —
+ * the beam passing through its middle is the G's crossbar.
  */
-function buildRelief(
-  img: HTMLImageElement,
-  size: number,
-  segments: number,
-  reliefScale: number,
-  reliefBias: number,
-): { geometry: THREE.PlaneGeometry; luminanceCanvas: HTMLCanvasElement } {
-  const w = img.naturalWidth;
-  const h = img.naturalHeight;
-  const src = document.createElement('canvas');
-  src.width = w;
-  src.height = h;
-  const sctx = src.getContext('2d', { willReadFrequently: true });
-  if (!sctx) throw new Error('2d context unavailable');
-  sctx.drawImage(img, 0, 0);
-  const srcData = sctx.getImageData(0, 0, w, h).data;
-
-  const gray = document.createElement('canvas');
-  gray.width = w;
-  gray.height = h;
-  const gctx = gray.getContext('2d');
-  if (!gctx) throw new Error('2d context unavailable');
-  const grayImg = gctx.createImageData(w, h);
-  const grayData = grayImg.data;
-
-  const geo = new THREE.PlaneGeometry(size, size, segments, segments);
-  const posAttr = geo.attributes.position as THREE.BufferAttribute;
-  const arr = posAttr.array as Float32Array;
-  for (let i = 0; i < posAttr.count; i++) {
-    const x = arr[i * 3];
-    const y = arr[i * 3 + 1];
-    const u = x / size + 0.5;
-    const v = y / size + 0.5;
-    const px = Math.min(w - 1, Math.max(0, Math.floor(u * w)));
-    const py = Math.min(h - 1, Math.max(0, Math.floor((1 - v) * h)));
-    const o = (py * w + px) * 4;
-    const lum = Math.round(
-      0.2126 * srcData[o] + 0.7152 * srcData[o + 1] + 0.0722 * srcData[o + 2],
-    );
-    const go = (py * w + px) * 4;
-    grayData[go] = lum;
-    grayData[go + 1] = lum;
-    grayData[go + 2] = lum;
-    grayData[go + 3] = 255;
-    arr[i * 3 + 2] = (lum / 255) * reliefScale + reliefBias;
-  }
-  gctx.putImageData(grayImg, 0, 0);
-  posAttr.needsUpdate = true;
-  geo.computeVertexNormals();
-  return { geometry: geo, luminanceCanvas: gray };
+function makeGShape(): THREE.Shape {
+  const R = 115;
+  const r = 72;
+  const gap = 0.7;
+  const shape = new THREE.Shape();
+  // Clockwise from -gap the LONG way round to +gap: the arc wraps the
+  // left, top, and bottom, leaving the opening on the right.
+  shape.absarc(0, 0, R, -gap, gap, true);
+  shape.closePath();
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, r, -gap, gap, true);
+  hole.closePath();
+  shape.holes.push(hole);
+  return shape;
 }
 
-// The logo IS the world: one 220×220 relief. The image is 1254×1254;
-// the silver crossbar sits at image ≈(647,450) → plane-local ≈(+3,+28).
-// Relief: bright letters rise ~9 units off the badge face.
-const LOGO_SIZE = 200;
-const LOGO_Y = 8;
-const LOGO_Z = -260;
-const LOGO_CENTER = new THREE.Vector3(0, LOGO_Y, LOGO_Z);
-const RELIEF_SCALE = 12;
-const RELIEF_BIAS = -1.6;
+/** The one fixed lookAt for the entire journey. Never animated. */
+const LOOK_AT = new THREE.Vector3(0, 10, 0);
 
-export async function startIntroScene(
+export function startIntroScene(
   canvas: HTMLCanvasElement,
   cb: IntroSceneCallbacks = {},
-): Promise<IntroSceneHandle> {
+): IntroSceneHandle {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -186,11 +119,13 @@ export async function startIntroScene(
   renderer.setClearColor(0x05070b, 1);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x05070b, 0.006);
+  // Fog starts DENSE — the G is fully hidden at p=0 — and the timeline
+  // lifts it to near-clear by p=1. Driven by the timeline so scrubbing
+  // backwards re-fogs the G exactly.
+  const fog = new THREE.FogExp2(0x05070b, 0.035);
+  scene.fog = fog;
 
-  // Image-based lighting so the chrome relief has something to reflect.
-  // Kept subtle (envMapIntensity on the material) so the artwork's colors
-  // stay true — the finale crossfades into the unlit DOM image.
+  // Image-based lighting so the chrome has something to reflect.
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   scene.environment = envTex;
@@ -199,45 +134,27 @@ export async function startIntroScene(
     58,
     window.innerWidth / window.innerHeight,
     0.5,
-    2000,
+    5000,
   );
-  // Start hovering just above the RAISED crossbar — the circled bar in
-  // the logo (image ≈(647,450)/1254 → plane-local ≈(+3,+28), its top
-  // surface ~8 units proud of the badge face): low grazing angle,
-  // looking slightly down ALONG the bar — the chrome surface below you,
-  // its beveled sides falling away, darkness + stars beyond. From here
-  // the camera ONLY pulls back and rises — never forward.
-  camera.position.set(-20, 38, -238);
+  // p=0: sitting ON the beam (top surface y=15), ~7 units above it,
+  // deep inside the G's ring — the beam fills the frame and runs to
+  // vanishing points. From here the camera ONLY dollies back and up.
+  camera.position.set(26, 22, 14);
 
-  const camTarget = new THREE.Object3D();
-  camTarget.position.set(30, 24, -254);
-  scene.add(camTarget);
-
-  const logoTarget = new THREE.Object3D();
-  logoTarget.position.copy(LOGO_CENTER);
-  scene.add(logoTarget);
-
-  // ---------- lights: dimension must read at close range ----------
+  // ---------- lights ----------
   scene.add(new THREE.AmbientLight(0x223044, 0.9));
 
-  const key = new THREE.DirectionalLight(0xe8f0ff, 1.3);
-  key.position.set(-50, 90, -150);
+  const key = new THREE.DirectionalLight(0xe8f0ff, 1.2);
+  key.position.set(-120, 200, 260);
   scene.add(key);
 
-  // Low raking light across the relief: grazes the extrusion so the
-  // 9-unit letter depth casts strong light/shade at close range.
-  const rake = new THREE.DirectionalLight(0xbfd4ff, 1.7);
-  rake.position.set(-160, 14, -190);
-  rake.target = logoTarget;
-  scene.add(rake);
-
-  const rim = new THREE.PointLight(0x2f9bff, 1200, 400, 1.8);
-  rim.position.set(60, 40, -180);
+  const rim = new THREE.PointLight(0x2f9bff, 1500, 700, 1.8);
+  rim.position.set(80, 60, 140);
   scene.add(rim);
 
-  // ---------- atmospheric haze ----------
+  // ---------- atmospheric haze, behind the G ----------
   const haze = new THREE.Mesh(
-    new THREE.PlaneGeometry(1400, 700),
+    new THREE.PlaneGeometry(1800, 900),
     new THREE.MeshBasicMaterial({
       map: makeHazeTexture(),
       transparent: true,
@@ -245,14 +162,14 @@ export async function startIntroScene(
       fog: false,
     }),
   );
-  haze.position.set(0, 90, -900);
+  haze.position.set(0, 60, -620);
   scene.add(haze);
 
   // ---------- stars + glints ----------
   const starGeo = new THREE.BufferGeometry();
   const starPos: number[] = [];
-  for (let i = 0; i < 1400; i++) {
-    starPos.push(randomIn(-260, 260), randomIn(-60, 160), randomIn(-880, 40));
+  for (let i = 0; i < 1500; i++) {
+    starPos.push(randomIn(-900, 900), randomIn(-250, 600), randomIn(-900, 700));
   }
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
   const starMat = new THREE.PointsMaterial({
@@ -268,8 +185,8 @@ export async function startIntroScene(
 
   const glintGeo = new THREE.BufferGeometry();
   const glintPos: number[] = [];
-  for (let i = 0; i < 70; i++) {
-    glintPos.push(randomIn(-200, 200), randomIn(-40, 140), randomIn(-820, -40));
+  for (let i = 0; i < 80; i++) {
+    glintPos.push(randomIn(-700, 700), randomIn(-200, 500), randomIn(-800, 500));
   }
   glintGeo.setAttribute('position', new THREE.Float32BufferAttribute(glintPos, 3));
   const glintMat = new THREE.PointsMaterial({
@@ -284,38 +201,34 @@ export async function startIntroScene(
   });
   scene.add(new THREE.Points(glintGeo, glintMat));
 
-  // ---------- the logo: Chris's actual mark as dimensional chrome relief —
-  // fog:false — the reveal is driven by the zoom, not distance haze.
-  // FrontSide + the camera always on the +z side: the artwork reads
-  // upright, never mirrored.
-  const logoTex = await new THREE.TextureLoader().loadAsync('/logo-lockup.jpg');
-  logoTex.colorSpace = THREE.SRGBColorSpace;
-  logoTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-
-  const { geometry: reliefGeo, luminanceCanvas } = buildRelief(
-    logoTex.image as HTMLImageElement,
-    LOGO_SIZE,
-    320,
-    RELIEF_SCALE,
-    RELIEF_BIAS,
-  );
-  const metalTex = new THREE.CanvasTexture(luminanceCanvas);
-  // NoColorSpace (linear): luminance → metalness. Dark badge ≈ 0.15
-  // (dielectric), bright silver ≈ 0.9 (chrome).
-  const logoMat = new THREE.MeshStandardMaterial({
-    map: logoTex,
-    metalnessMap: metalTex,
+  // ---------- the chrome: one material, one sculpture ----------
+  const chromeMat = new THREE.MeshStandardMaterial({
+    color: 0xf4f6f9,
     metalness: 1.0,
-    roughness: 0.38,
-    envMapIntensity: 0.55,
-    transparent: true,
-    alphaMap: makeAlphaTexture(),
-    fog: false,
-    side: THREE.FrontSide,
+    roughness: 0.22,
+    envMapIntensity: 1.0,
   });
-  const relief = new THREE.Mesh(reliefGeo, logoMat);
-  relief.position.copy(LOGO_CENTER);
-  scene.add(relief);
+
+  // The infinite beam: the middle bar, running to ±X infinity. The beam
+  // IS the G's crossbar. Top surface at y=15.
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(3000, 30, 24), chromeMat);
+  beam.position.set(0, 0, 0);
+  scene.add(beam);
+
+  // The G: the beam passes through its middle as the crossbar. Same
+  // chrome, so beam + G read as one monumental sculpture.
+  const gGeo = new THREE.ExtrudeGeometry(makeGShape(), {
+    depth: 34,
+    bevelEnabled: true,
+    bevelThickness: 4,
+    bevelSize: 4,
+    bevelSegments: 3,
+    curveSegments: 96,
+  });
+  gGeo.center();
+  const gMesh = new THREE.Mesh(gGeo, chromeMat);
+  gMesh.position.set(0, 0, 0);
+  scene.add(gMesh);
 
   // ---------- energy burst (deterministic: fully reversible under scrub) ----------
   const BURST_N = 220;
@@ -323,9 +236,9 @@ export async function startIntroScene(
   const burstBase = new Float32Array(BURST_N * 3);
   const burstVel: number[] = [];
   for (let i = 0; i < BURST_N; i++) {
-    burstBase[i * 3] = LOGO_CENTER.x;
-    burstBase[i * 3 + 1] = LOGO_CENTER.y;
-    burstBase[i * 3 + 2] = LOGO_CENTER.z;
+    burstBase[i * 3] = 0;
+    burstBase[i * 3 + 1] = 20;
+    burstBase[i * 3 + 2] = 0;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos(randomIn(-1, 1));
     const speed = randomIn(6, 26);
@@ -349,36 +262,36 @@ export async function startIntroScene(
   const burstState = { t: 0 };
 
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
-  // Normalized duration 1. The camera ONLY ever increases its distance
-  // from the badge — scrubbing 0→1 is one continuous zoom-out.
-  // Distances from badge center: ~42 → ~100 → ~186 → ~251.
+  // Normalized duration 1. The camera moves by PURE TRANSLATION only —
+  // no lookAt changes, no arcs, no roll. Distances from the fixed
+  // lookAt (0,10,0): ~32 → ~116 → ~274 → ~461 — strictly increasing.
   //
-  // Phase 1 (0→0.35): the zoom-out begins, still tight on the bar.
-  // Phase 2 (0.35→0.7): the G's inner counter resolves around you, the
-  // S's curves show their thickness, then the badge. Slight lateral arc.
+  // Phase 1 (0→0.35): slow drift back and up, still tight on the beam;
+  // the G stays fully fogged.
+  // Phase 2 (0.35→0.7): the fog lifts — the G's top arch comes into
+  // view first, then its side.
   // Phase 3 (0.7→1): FAST accelerating pullback — power3.in so the
-  // motion rushes outward into a near-flat-on wide shot of the full
-  // lockup ("scroll out a lot faster"), fully reversible under scrub.
+  // motion rushes outward into the wide shot of the chrome G.
   const tl = gsap.timeline({ paused: true });
   const camPos = camera.position;
-  const lookPos = camTarget.position;
   const fx = { flash: 0 };
 
-  tl.to(camPos, { x: -28, y: 34, z: -168, duration: 0.35, ease: 'sine.inOut' }, 0);
-  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.35, ease: 'sine.inOut' }, 0);
+  tl.to(camPos, { x: 10, y: 45, z: 110, duration: 0.35, ease: 'sine.inOut' }, 0);
+  tl.to(fog, { density: 0.016, duration: 0.35, ease: 'sine.inOut' }, 0);
 
-  tl.to(camPos, { x: -46, y: 60, z: -88, duration: 0.35, ease: 'power2.inOut' }, 0.35);
-  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.35, ease: 'power2.inOut' }, 0.35);
+  tl.to(camPos, { x: -30, y: 90, z: 260, duration: 0.35, ease: 'power2.inOut' }, 0.35);
+  tl.to(fog, { density: 0.007, duration: 0.2, ease: 'sine.inOut' }, 0.35);
+  tl.to(fog, { density: 0.0022, duration: 0.15, ease: 'sine.inOut' }, 0.55);
 
-  tl.to(camPos, { x: 0, y: 26, z: -10, duration: 0.3, ease: 'power3.in' }, 0.7);
-  tl.to(lookPos, { x: 0, y: LOGO_Y, z: LOGO_Z, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(camPos, { x: -70, y: 160, z: 430, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(fog, { density: 0.0006, duration: 0.3, ease: 'power1.in' }, 0.7);
 
-  // Restrained energy release right at the reveal.
-  tl.to(burstMat, { opacity: 0.9, duration: 0.012 }, 0.955);
-  tl.to(burstState, { t: 1, duration: 0.045, ease: 'power2.out' }, 0.955);
-  tl.to(burstMat, { opacity: 0, duration: 0.045, ease: 'sine.in' }, 0.955);
-  tl.to(fx, { flash: 0.9, duration: 0.018, ease: 'power1.in' }, 0.96);
-  tl.to(fx, { flash: 0, duration: 0.022, ease: 'power1.out' }, 0.978);
+  // Restrained energy release as the G resolves through the fog.
+  tl.to(burstMat, { opacity: 0.9, duration: 0.012 }, 0.8);
+  tl.to(burstState, { t: 1, duration: 0.06, ease: 'power2.out' }, 0.8);
+  tl.to(burstMat, { opacity: 0, duration: 0.06, ease: 'sine.in' }, 0.8);
+  tl.to(fx, { flash: 0.9, duration: 0.018, ease: 'power1.in' }, 0.81);
+  tl.to(fx, { flash: 0, duration: 0.03, ease: 'power1.out' }, 0.828);
 
   // ---------- render loop ----------
   const clock = new THREE.Clock();
@@ -406,7 +319,7 @@ export async function startIntroScene(
     if (burstState.t > 0) {
       const pos = burstGeo.attributes.position as THREE.BufferAttribute;
       const arr = pos.array as Float32Array;
-      const spread = easeOutCubic(burstState.t) * 34;
+      const spread = easeOutCubic(burstState.t) * 40;
       for (let i = 0; i < BURST_N; i++) {
         arr[i * 3] = burstBase[i * 3] + burstVel[i * 3] * spread * 0.12;
         arr[i * 3 + 1] = burstBase[i * 3 + 1] + burstVel[i * 3 + 1] * spread * 0.12;
@@ -422,7 +335,7 @@ export async function startIntroScene(
     }
 
     // Vignette: a pure function of timeline progress — strong at p=0 so
-    // the frame edges dissolve to black (only the bar + stars visible),
+    // the frame edges dissolve to black (only the beam + stars visible),
     // fully gone by p≈0.35. Deterministic and reversible under scrub.
     if (cb.onVignetteLevel) {
       const v = clamp01((0.35 - tl.progress()) / 0.35);
@@ -432,7 +345,8 @@ export async function startIntroScene(
       }
     }
 
-    camera.lookAt(camTarget.position);
+    // The one fixed lookAt — the camera never rotates on its own.
+    camera.lookAt(LOOK_AT);
 
     if (visible && !document.hidden) {
       renderer.render(scene, camera);
@@ -458,9 +372,9 @@ export async function startIntroScene(
       if (mesh.geometry) mesh.geometry.dispose();
       const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
       if (Array.isArray(material)) {
-        material.forEach(disposeMaterial);
+        material.forEach((m) => m.dispose());
       } else if (material) {
-        disposeMaterial(material);
+        material.dispose();
       }
     });
     envTex.dispose();
@@ -477,16 +391,4 @@ export async function startIntroScene(
     },
     dispose,
   };
-}
-
-function disposeMaterial(m: THREE.Material): void {
-  const withMaps = m as THREE.Material & {
-    map?: THREE.Texture | null;
-    metalnessMap?: THREE.Texture | null;
-    alphaMap?: THREE.Texture | null;
-  };
-  if (withMaps.map) withMaps.map.dispose();
-  if (withMaps.metalnessMap) withMaps.metalnessMap.dispose();
-  if (withMaps.alphaMap) withMaps.alphaMap.dispose();
-  m.dispose();
 }

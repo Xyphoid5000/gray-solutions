@@ -93,7 +93,11 @@ onUnmounted(() => {
   <IntroSequence v-if="showIntro" @unavailable="showIntro = false" />
   <div class="page">
     <main>
-      <Hero />
+      <!-- When the intro runs, the hero lives inside its sticky stage and
+           is revealed in place — so the page must NOT render a second one.
+           This one is the static fallback (reduced-motion / no-WebGL /
+           ?skip-intro / WebGL failure). -->
+      <Hero v-if="!showIntro" />
       <About />
       <Services />
       <Work />

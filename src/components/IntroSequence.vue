@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Hero from './Hero.vue';
 import type { IntroSceneHandle } from '../three/intro';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -10,11 +11,13 @@ const emit = defineEmits<{ unavailable: [] }>();
 
 const sectionRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+const heroWrapRef = ref<HTMLElement | null>(null);
 const barWrapRef = ref<HTMLElement | null>(null);
-const barRef = ref<HTMLElement | null>(null);
+const barRef = ref<HTMLSpanElement | null>(null);
 const flashRef = ref<HTMLElement | null>(null);
 const vignetteRef = ref<HTMLElement | null>(null);
 const veilRef = ref<HTMLElement | null>(null);
+const phraseRefs = ref<HTMLElement[]>([]);
 
 let scene: IntroSceneHandle | null = null;
 let ctx: gsap.Context | null = null;
@@ -22,9 +25,9 @@ let tornDown = false;
 
 /**
  * The story, set in giant DOM type — the full hero philosophy copy, split
- * across five blocks. Each phrase starts dim and illuminates to full
- * brightness as it crosses the viewport center, then dims as it leaves —
- * all scrubbed by scroll, like lenis.dev's statement section.
+ * across five blocks. Each phrase starts dim and illuminates to full SOLID
+ * brightness as its scroll window passes, then dims as it leaves — all
+ * scrubbed by scroll, like lenis.dev's statement section.
  *
  * G-S word pairs wear the logo's colors: the G-word in silver, the S-word
  * in electric blue.
@@ -52,6 +55,12 @@ const phrases = [
   },
 ];
 
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const smooth = (t: number) => {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
+};
+
 function teardown() {
   if (tornDown) return;
   tornDown = true;
@@ -72,7 +81,7 @@ onMounted(async () => {
     // intro actually runs (never on no-WebGL devices — App gates those).
     const intro = await import('../three/intro');
     if (tornDown || !canvasRef.value) return;
-    const handle = await intro.startIntroScene(canvasRef.value, {
+    scene = intro.startIntroScene(canvasRef.value, {
       onFlashLevel: (v) => {
         if (flashRef.value) flashRef.value.style.opacity = v.toFixed(3);
       },
@@ -82,13 +91,6 @@ onMounted(async () => {
         if (vignetteRef.value) vignetteRef.value.style.opacity = v.toFixed(3);
       },
     });
-    // The texture load + relief bake is async — the component may have
-    // been torn down while we waited.
-    if (tornDown || !canvasRef.value) {
-      handle.dispose();
-      return;
-    }
-    scene = handle;
   } catch {
     // WebGL context creation or module load failed: drop the intro region
     // entirely and land the visitor on the hero.
@@ -99,9 +101,11 @@ onMounted(async () => {
   ctx = gsap.context(() => {
     const section = sectionRef.value!;
     const canvas = canvasRef.value!;
+    const heroWrap = heroWrapRef.value!;
     const bar = barRef.value!;
     const barWrap = barWrapRef.value!;
     const veil = veilRef.value!;
+    const phraseEls = phraseRefs.value;
 
     // Fade in from black once the first frame is ready.
     gsap.to(veil, { opacity: 0, duration: 1.2, ease: 'power1.out', delay: 0.1 });
@@ -109,8 +113,45 @@ onMounted(async () => {
     // THE master timeline driver: one scroll-progress value, 0→1 across
     // the whole intro region. A proxy tween with scrub smoothing gives the
     // progress a silky catch-up (the lenis.dev feel); the smoothed value
-    // drives the 3D scene, the progress bar, and the canvas crossfade —
-    // so scrolling up rewinds everything exactly.
+    // drives the 3D scene, the hero reveal, the phrases, the progress bar,
+    // and the canvas crossfade — so scrolling up rewinds everything
+    // exactly. Do NOT use ScrollTrigger enter events inside the sticky
+    // stage; positions are unreliable there.
+    const applyProgress = (p: number) => {
+      scene?.setProgress(p);
+      bar.style.transform = `scaleX(${p.toFixed(4)})`;
+
+      // Crossfade the canvas out as the hero arrives; pause rendering
+      // once it's fully gone.
+      const canvasFade = clamp01((p - 0.9) / 0.1);
+      canvas.style.opacity = (1 - canvasFade).toFixed(3);
+      scene?.setVisible(p < 0.985);
+
+      // The hero was there the whole time — revealed in place behind the
+      // fading canvas. It never slides up; we started inside it.
+      const heroO = clamp01((p - 0.88) / 0.12);
+      heroWrap.style.opacity = heroO.toFixed(3);
+      // Keep the hero's links/buttons out of the tab order until visible.
+      heroWrap.inert = p < 0.95;
+
+      // Spotlight phrases: SOLID at peak (opacity 1), dim (0.12)
+      // off-center. Each phrase owns a scroll window matching the old
+      // 110vh-block layout: illuminate over the first 40vh, dim over the
+      // next 122vh. All phrases fade with the canvas so the hero arrives
+      // clean.
+      for (let i = 0; i < phraseEls.length; i++) {
+        const a = (110 * i - 2) / 600;
+        const b = (110 * i + 38) / 600;
+        const c = (110 * i + 160) / 600;
+        let o: number;
+        if (p <= a) o = 0.12;
+        else if (p <= b) o = 0.12 + 0.88 * smooth((p - a) / (b - a));
+        else if (p <= c) o = 1 - 0.88 * smooth((p - b) / (c - b));
+        else o = 0.12;
+        phraseEls[i].style.opacity = (o * (1 - canvasFade)).toFixed(3);
+      }
+    };
+
     const proxy = { p: 0 };
     gsap.to(proxy, {
       p: 1,
@@ -124,39 +165,12 @@ onMounted(async () => {
           barWrap.classList.toggle('is-active', self.isActive);
         },
       },
-      onUpdate: () => {
-        const p = proxy.p;
-        scene?.setProgress(p);
-        bar.style.transform = `scaleX(${p.toFixed(4)})`;
-        // Crossfade the canvas out as the hero arrives; pause rendering
-        // once it's fully gone.
-        const fade = Math.min(1, Math.max(0, (p - 0.93) / 0.07));
-        canvas.style.opacity = (1 - fade).toFixed(3);
-        scene?.setVisible(p < 0.985);
-      },
+      onUpdate: () => applyProgress(proxy.p),
     });
 
-    // Spotlight phrases: ghost type — the illuminated state peaks at ~0.6
-    // opacity so the starfield stays faintly visible through the words;
-    // never opaque. Illuminate crossing center, dim leaving.
-    gsap.utils.toArray<HTMLElement>('.phrase-block').forEach((block) => {
-      const line = block.querySelector('.phrase');
-      if (!line) return;
-      gsap.fromTo(
-        line,
-        { opacity: 0.12 },
-        {
-          opacity: 0.6,
-          ease: 'none',
-          scrollTrigger: { trigger: block, start: 'top 82%', end: 'top 42%', scrub: true },
-        },
-      );
-      gsap.to(line, {
-        opacity: 0.12,
-        ease: 'none',
-        scrollTrigger: { trigger: block, start: 'top 42%', end: 'bottom 30%', scrub: true },
-      });
-    });
+    // Set the initial state deterministically (in case ScrollTrigger
+    // hasn't fired onUpdate yet).
+    applyProgress(0);
   }, sectionRef.value);
 });
 
@@ -167,20 +181,32 @@ onUnmounted(() => {
 
 <template>
   <section ref="sectionRef" class="intro" aria-label="Introduction">
-    <canvas ref="canvasRef" class="intro-canvas" aria-hidden="true"></canvas>
-
-    <div ref="vignetteRef" class="intro-vignette" aria-hidden="true"></div>
-
-    <div class="intro-phrases" aria-hidden="true">
-      <div class="intro-spacer"></div>
-      <div v-for="(p, i) in phrases" :key="i" class="phrase-block">
-        <p class="phrase" :class="{ 'phrase-small': p.small }" v-html="p.html"></p>
+    <!-- Sticky 100vh stage: the hero lives here for the whole sequence,
+         behind the WebGL canvas. At the end the canvas fades and the hero
+         is revealed in place — it never slides up into view. -->
+    <div class="intro-stage">
+      <div ref="heroWrapRef" class="intro-hero">
+        <Hero />
       </div>
-      <div class="intro-tail"></div>
-    </div>
 
-    <div ref="flashRef" class="intro-flash"></div>
-    <div ref="veilRef" class="intro-veil"></div>
+      <canvas ref="canvasRef" class="intro-canvas" aria-hidden="true"></canvas>
+
+      <div ref="vignetteRef" class="intro-vignette" aria-hidden="true"></div>
+
+      <div class="intro-phrases" aria-hidden="true">
+        <div v-for="(p, i) in phrases" :key="i" class="phrase-slot">
+          <p
+            ref="phraseRefs"
+            class="phrase"
+            :class="{ 'phrase-small': p.small }"
+            v-html="p.html"
+          ></p>
+        </div>
+      </div>
+
+      <div ref="flashRef" class="intro-flash"></div>
+      <div ref="veilRef" class="intro-veil"></div>
+    </div>
 
     <div ref="barWrapRef" class="intro-progress">
       <span ref="barRef" class="intro-progress-bar"></span>
@@ -195,8 +221,31 @@ onUnmounted(() => {
   background: #05070b;
 }
 
+.intro-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* The hero, behind everything for the entire sequence. Revealed in
+   place by scroll progress — never slides. */
+.intro-hero {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  background: var(--bg);
+}
+
+.intro-hero :deep(.hero) {
+  min-height: 100%;
+  height: 100%;
+}
+
 .intro-canvas {
-  position: fixed;
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -204,18 +253,33 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-.intro-phrases {
-  position: relative;
+.intro-vignette {
+  position: absolute;
+  inset: 0;
   z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 22%,
+    rgba(2, 4, 8, 0.55) 58%,
+    rgba(0, 0, 0, 0.92) 84%,
+    #000 100%
+  );
+  opacity: 1;
+}
+
+/* Giant story type, overlaid on the stage. Each slot fills the stage;
+   opacity is driven deterministically by scroll progress. */
+.intro-phrases {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
   pointer-events: none;
 }
 
-.intro-spacer {
-  height: 80vh;
-}
-
-.phrase-block {
-  min-height: 110vh;
+.phrase-slot {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -256,29 +320,10 @@ onUnmounted(() => {
   text-shadow: 0 0 42px rgba(47, 155, 255, 0.55);
 }
 
-.intro-tail {
-  height: 70vh;
-}
-
-.intro-vignette {
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 22%,
-    rgba(2, 4, 8, 0.55) 58%,
-    rgba(0, 0, 0, 0.92) 84%,
-    #000 100%
-  );
-  opacity: 1;
-}
-
 .intro-flash {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 58;
+  z-index: 4;
   pointer-events: none;
   background: radial-gradient(
     ellipse at center,
@@ -290,9 +335,9 @@ onUnmounted(() => {
 }
 
 .intro-veil {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 59;
+  z-index: 5;
   pointer-events: none;
   background: #000;
 }
