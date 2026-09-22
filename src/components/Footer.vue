@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import LogoMark from './LogoMark.vue';
 import Wordmark from './Wordmark.vue';
 import { siteConfig } from '../config';
 
@@ -19,7 +18,7 @@ const links = [
     <div class="container footer-inner">
       <div class="footer-brand">
         <a href="#top" class="footer-logo" aria-label="Gray Solutions home">
-          <LogoMark class="footer-mark" />
+          <img src="/logo-badge.jpg" alt="Gray Solutions" class="footer-mark" />
           <Wordmark size="md" />
         </a>
         <p class="footer-tagline">{{ siteConfig.tagline }}</p>
@@ -83,6 +82,7 @@ const links = [
 .footer-mark {
   width: 2.6rem;
   height: 2.6rem;
+  border-radius: 0.6rem;
 }
 
 .footer-tagline {

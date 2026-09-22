@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import LogoMark from './LogoMark.vue';
 import Wordmark from './Wordmark.vue';
 
 const scrolled = ref(false);
@@ -32,7 +31,7 @@ onUnmounted(() => {
   <header class="nav" :class="{ 'nav-scrolled': scrolled }">
     <div class="container nav-inner">
       <a href="#top" class="nav-brand" aria-label="Gray Solutions home">
-        <LogoMark class="nav-mark" />
+        <img src="/logo-badge.jpg" alt="Gray Solutions" class="nav-mark" />
         <Wordmark size="md" />
       </a>
 
@@ -100,6 +99,7 @@ onUnmounted(() => {
 .nav-mark {
   width: 2.4rem;
   height: 2.4rem;
+  border-radius: 0.55rem;
 }
 
 .nav-links {

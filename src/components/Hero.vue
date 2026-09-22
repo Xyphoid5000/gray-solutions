@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import LogoMark from './LogoMark.vue';
-import Wordmark from './Wordmark.vue';
-
 const emit = defineEmits<{ replay: [] }>();
 </script>
 
@@ -10,10 +7,7 @@ const emit = defineEmits<{ replay: [] }>();
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="container hero-inner">
       <div v-reveal class="hero-logo">
-        <LogoMark class="hero-mark" :badge="true" />
-      </div>
-      <div v-reveal="0.1">
-        <Wordmark size="lg" />
+        <img src="/logo-lockup.jpg" alt="Gray Solutions" class="hero-mark" />
       </div>
       <p v-reveal="0.2" class="hero-copy">
         Every good story needs great structure. Something that generates
@@ -75,8 +69,9 @@ const emit = defineEmits<{ replay: [] }>();
 }
 
 .hero-mark {
-  width: clamp(120px, 20vw, 168px);
+  width: clamp(240px, 34vw, 340px);
   height: auto;
+  border-radius: 1.25rem;
   filter: drop-shadow(0 18px 50px rgba(47, 155, 255, 0.18));
 }
 
