@@ -18,42 +18,44 @@ const SHOW_STARS = false;
  * story phrases are parked behind SHOW_PHRASES in IntroSequence.vue
  * (off). Nothing deleted — both return in a later pass.
  *
- * THE GEOMETRY (per Chris's schematic): the bridge IS the G's crossbar —
- * ONE straight bar, one line. A single 64×56 chrome bar runs along Z
- * (z −200 → 2240), centered x=0, y=0: it is BOTH the bridge deck and the
- * crossbar. No separate crossbar mesh exists. The grey G (v4's extruded
- * annulus sector, gap facing +X in shape space) rides in a group with
- * rotation.y = π/2, so its face lies in the ZY plane and the bar passes
- * through its middle along Z: interpenetrating the arc band (same chrome
- * = one cast piece) and spanning the G's opening as the crossbar. The
- * camera ends on +X looking down −X; the gap faces screen-right (−Z),
- * like the mark. The blue S ribbon + pixel cubes ride in the same
- * rotated group, landing lower-right / upper-right of the G.
+ * THE GEOMETRY (per Chris's storyboard frames 1-5): the G stands FACING
+ * the camera — face in the XY plane (normal ±Z), like a billboard, like
+ * his logo. The bridge runs along the Z axis: a single 64×56 chrome bar
+ * (z −100 → 2240, centered x=0, y=0) whose far end is EMBEDDED inside
+ * the G's crossbar volume (crossbar z ≈ ±44 with bevel) — interpenetration,
+ * same chrome, zero gap, zero seam. The bridge emerges from the crossbar's
+ * center-front and runs toward/past the camera: from the front, the chrome
+ * flows uninterrupted from deck into crossbar. The bridge IS the crossbar.
+ * The blue S ribbon + pixel cubes ride in the same unrotated group,
+ * lower-right / upper-right of the G, like the mark.
  *
  * Beats:
  *   - 0 → 0.45: the money shot. Camera dollies straight BACK over the
- *     bar, (0,52,600) → (0,85,1150), looking down its length to a
+ *     bridge, (0,52,600) → (0,85,1150), looking down its length to a
  *     centered vanishing point. Railing posts stream past.
  *   - 0.45 → 0.62: the monument's opacity ramps 0→1 on the scrubbed
- *     timeline (never fog-reliant); the camera starts its sweep toward
- *     (450,200,700) with the look target gluing to the monument (0,0,0).
- *   - 0.62 → 0.8: the sweep completes → (950,300,150). THE REVEAL: the
- *     bar you rode lies horizontal in frame as the G's crossbar.
+ *     timeline (never fog-reliant); the camera drifts up/back to
+ *     (0,120,1300), look target easing toward the G.
+ *   - 0.62 → 0.8: THE PULL-OUT (storyboard frame 5). Straight back along
+ *     Z and up → (0,300,1450), target (0,0,0). No X movement anywhere:
+ *     the G face-on, the bridge visibly receding INTO the screen from
+ *     the foreground into the crossbar.
  *   - 0.8 → 0.9: scale punch, then a crossfade of the 3D world to a plane
  *     textured with Chris's ACTUAL logo-lockup.jpg — the brand anchor.
  *     The DOM hero (same lockup) is then uncovered in place behind the
  *     fading canvas (see IntroSequence.vue).
  *
  * Division of labor:
- *   - Three.js owns the WORLD: the bar, G, S, pixels, bridge furniture,
- *     camera, fog, snap plane. (Stars/streaks/shimmer parked, off.)
+ *   - Three.js owns the WORLD: the bridge, G, crossbar, S, pixels,
+ *     bridge furniture, camera, fog, snap plane. (Stars/streaks/shimmer
+ *     parked, off.)
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0->1 onto the timeline, so the
  *     whole sequence is fully reversible: scrolling up rewinds everything
  *     exactly. The DOM (hero, progress bar, vignette) is choreographed
  *     separately in IntroSequence.vue from the same scroll position.
  *
- * Restrained by design: the bar, edge lights, railings, fog. No assembly
+ * Restrained by design: the bridge, edge lights, railings, fog. No assembly
  * animations, no fly-ins, no bursts.
  */
 
@@ -103,13 +105,15 @@ function randomIn(min: number, max: number): number {
 }
 
 /* ------------------------------------------------------------------ */
-/* THE BAR: one continuous 64×56 chrome bar along Z (z −200 → 2240),    */
-/* centered x=0, y=0. It is BOTH the bridge deck and the G's crossbar — */
-/* a single mesh; no separate crossbar exists. It starts UNDER the p=0 */
-/* camera and runs ahead through the G to the vanishing point — and    */
-/* behind the camera, to sell "infinite".                              */
-/* The G stands ~360 tall; its face is rotated into the ZY plane (see  */
-/* the monument group below) so the bar passes through its middle.     */
+/* THE BRIDGE: one continuous 64×56 chrome bar along Z (z −100 → 2240),  */
+/* centered x=0, y=0. Its far end is EMBEDDED inside the G's crossbar    */
+/* volume (crossbar z ≈ ±44 with bevel): interpenetration, same chrome,  */
+/* zero gap, zero seam. The bridge emerges from the crossbar's           */
+/* center-front and runs toward/past the camera — and behind it, to      */
+/* sell "infinite". From the front, the chrome flows uninterrupted from  */
+/* deck into crossbar: the bridge IS the crossbar.                       */
+/* The G stands ~360 tall, FACING the camera (face in the XY plane,     */
+/* normal ±Z), like a billboard, like his logo.                          */
 /* ------------------------------------------------------------------ */
 
 const G_OUTER_R = 180;
@@ -119,9 +123,9 @@ const G_DEPTH = 64;
 const G_BEVEL_T = 12;
 const G_BEVEL_S = 10;
 
-const DECK_W = 64; // bar width == the G's crossbar width: the bar IS the crossbar
-const DECK_H = 56; // bar thickness
-const DECK_Z_FAR = -200; // ahead of the G, past its opening toward the vanishing point
+const DECK_W = 64; // bridge width; its far end embeds in the crossbar
+const DECK_H = 56; // bridge thickness == crossbar thickness: one read
+const DECK_Z_FAR = -100; // embedded INSIDE the crossbar volume (crossbar z ≈ ±44)
 const DECK_Z_NEAR = 2240; // far behind the camera's furthest travel
 
 /** The G's arc: a bold annulus sector with clean radial-cut terminals. */
@@ -140,6 +144,31 @@ function makeGArcGeometry(): THREE.ExtrudeGeometry {
     bevelSize: G_BEVEL_S,
     bevelSegments: 4,
     curveSegments: 128,
+  });
+  geo.translate(0, 0, -G_DEPTH / 2);
+  return geo;
+}
+
+/**
+ * The G's crossbar: a wedge bar with the mark's slashed right end. Its
+ * left end is buried in the arc's band; the bridge bar's far end is
+ * embedded in ITS volume (z ≈ ±44 with bevel) — same chrome,
+ * interpenetrating, so deck and crossbar read as one cast piece.
+ */
+function makeCrossbarGeometry(): THREE.ExtrudeGeometry {
+  const t = DECK_H / 2;
+  const s = new THREE.Shape();
+  s.moveTo(-195, -t);
+  s.lineTo(240, -t);
+  s.lineTo(208, t); // slashed end, like the mark
+  s.lineTo(-195, t);
+  s.closePath();
+  const geo = new THREE.ExtrudeGeometry(s, {
+    depth: G_DEPTH,
+    bevelEnabled: true,
+    bevelThickness: G_BEVEL_T,
+    bevelSize: G_BEVEL_S,
+    bevelSegments: 3,
   });
   geo.translate(0, 0, -G_DEPTH / 2);
   return geo;
@@ -320,17 +349,19 @@ export function startIntroScene(
     transparent: true,
   });
 
-  // ---------- the monument: grey G + blue S + pixels ----------
+  // ---------- the monument: grey G + crossbar + blue S + pixels ----------
   // Opacity 0 from frame one — revealed ONLY by the timeline at beat 4.
-  // rotation.y = π/2 lays the G's face in the ZY plane (facing ±X): the
-  // bar passes through the monument's middle along Z — interpenetrating
-  // the arc band (same chrome = one cast piece) and spanning the G's
-  // opening as the crossbar. S + pixels ride along into place.
+  // The G faces the camera (face in the XY plane, normal ±Z), like a
+  // billboard, like his logo. The bridge bar's far end is embedded in
+  // the crossbar's volume — same chrome, one cast piece. S + pixels sit
+  // lower-right / upper-right of the G, like the mark.
   const logoGroup = new THREE.Group();
-  logoGroup.rotation.y = Math.PI / 2;
 
   const gArc = new THREE.Mesh(makeGArcGeometry(), gMat);
   logoGroup.add(gArc);
+
+  const crossbar = new THREE.Mesh(makeCrossbarGeometry(), gMat);
+  logoGroup.add(crossbar);
 
   const sGroup = new THREE.Group();
   sGroup.add(new THREE.Mesh(makeSRibbonGeometry(), sMat));
@@ -354,10 +385,13 @@ export function startIntroScene(
   }
   scene.add(logoGroup);
 
-  // ---------- THE BAR: the bridge IS the G's crossbar ----------
-  // ONE straight bar along Z — single mesh, the v4 grey chrome (it reads
-  // grey; params untouched). Visible from frame one; the monument fades
-  // in around its middle at beat 4.
+  // ---------- THE BRIDGE: it IS the G's crossbar ----------
+  // ONE straight bar along Z — the grey chrome (it reads grey; params
+  // untouched). Its far end (z=-100) is EMBEDDED inside the crossbar
+  // volume (z ≈ ±44): interpenetration, same chrome, zero gap, zero seam.
+  // Visible from frame one; the monument fades in around its far end
+  // at beat 4. In the pull-out it visibly recedes INTO the screen,
+  // from the foreground into the crossbar.
   const deckLen = DECK_Z_NEAR - DECK_Z_FAR;
   const deck = new THREE.Mesh(new THREE.BoxGeometry(DECK_W, DECK_H, deckLen), deckMat);
   deck.position.set(0, 0, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
@@ -513,18 +547,19 @@ export function startIntroScene(
   // scrolling up rewinds the camera, the fog, the reveal, and the snap.
   //
   // Beats 1-3 (0 -> 0.45): the money sensation is MOVING BACKWARDS. The
-  // camera dollies straight back along the bar (+Z) while looking slightly
+  // camera dollies straight back along the bridge (+Z) while looking slightly
   // DOWN its length to the centered vanishing point. Railing posts stream
   // past; the monument sits at opacity 0 — not the subject.
   //
   // Beat 4 (0.45 -> 0.62): the monument's opacity ramps 0->1 on this
-  // timeline (NOT fog) while the camera starts its sweep. The G emerges
-  // from darkness with the bar already running through it — one piece
-  // that was always there, revealed, never assembled.
+  // timeline (NOT fog) while the camera drifts up/back. The G emerges
+  // from darkness with the bridge already running into its crossbar —
+  // one piece that was always there, revealed, never assembled.
   //
-  // Beat 5 (0.62 -> 0.8): the sweep completes to (950,300,150), look
-  // target glued to the monument. THE REVEAL: the bar you rode lies
-  // horizontal in frame as the G's crossbar.
+  // Beat 5 (0.62 -> 0.8): THE PULL-OUT (storyboard frame 5). Straight
+  // back along Z and up — NO X movement anywhere. The G face-on, the
+  // bridge visibly receding INTO the screen from the foreground into
+  // the crossbar.
   //
   // Beat 6 (0.8 -> 0.9): scale punch, then crossfade the whole 3D world
   // to the real 2D logo plane. The DOM then fades the canvas (0.9-1.0)
@@ -537,21 +572,24 @@ export function startIntroScene(
   const tl = gsap.timeline({ paused: true });
   const cp = camera.position;
 
-  // Camera path
+  // Camera path: the travel shot, then a straight-Z pull-out. The camera
+  // never moves in X — the reveal is symmetric and centered.
   tl.to(cp, { x: 0, y: 85, z: 1150, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(cp, { x: 450, y: 200, z: 700, duration: 0.17, ease: 'power2.inOut' }, 0.45);
-  tl.to(cp, { x: 950, y: 300, z: 150, duration: 0.18, ease: 'power2.inOut' }, 0.62);
+  tl.to(cp, { x: 0, y: 120, z: 1300, duration: 0.17, ease: 'power2.inOut' }, 0.45);
+  tl.to(cp, { x: 0, y: 300, z: 1450, duration: 0.18, ease: 'power2.inOut' }, 0.62);
 
-  // Look target — glued to the monument (0,0,0) through the whole sweep
-  // so the G never leaves frame.
+  // Look target — eases from the vanishing point to the G's center and
+  // stays glued there through the pull-out.
   tl.to(lookTarget, { x: 0, y: 30, z: -500, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(lookTarget, { x: 0, y: 0, z: 0, duration: 0.17, ease: 'sine.inOut' }, 0.45);
+  tl.to(lookTarget, { x: 0, y: 40, z: -200, duration: 0.17, ease: 'sine.inOut' }, 0.45);
   tl.to(lookTarget, { x: 0, y: 0, z: 0, duration: 0.18, ease: 'sine.inOut' }, 0.62);
 
-  // Fog: gentle melt of the far deck; the monument hides via opacity, not fog
+  // Fog: gentle melt of the far deck; the monument hides via opacity, not fog.
+  // End density re-checked for the pull-out reveal distance (~1480): the G
+  // stays ~93% clear.
   tl.to(fog, { density: 0.0009, duration: 0.45, ease: 'sine.inOut' }, 0);
   tl.to(fog, { density: 0.0004, duration: 0.17, ease: 'sine.inOut' }, 0.45);
-  tl.to(fog, { density: 0.00025, duration: 0.18, ease: 'sine.inOut' }, 0.62);
+  tl.to(fog, { density: 0.00018, duration: 0.18, ease: 'sine.inOut' }, 0.62);
 
   // The monument emerges from darkness during beat 4 — timeline-driven,
   // so scrubbing backwards re-hides it exactly (no pop-in to invert).
