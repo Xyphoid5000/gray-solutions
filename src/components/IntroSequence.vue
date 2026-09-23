@@ -14,7 +14,6 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const heroWrapRef = ref<HTMLElement | null>(null);
 const barWrapRef = ref<HTMLElement | null>(null);
 const barRef = ref<HTMLSpanElement | null>(null);
-const flashRef = ref<HTMLElement | null>(null);
 const vignetteRef = ref<HTMLElement | null>(null);
 const veilRef = ref<HTMLElement | null>(null);
 const phraseRefs = ref<HTMLElement[]>([]);
@@ -82,9 +81,6 @@ onMounted(async () => {
     const intro = await import('../three/intro');
     if (tornDown || !canvasRef.value) return;
     scene = intro.startIntroScene(canvasRef.value, {
-      onFlashLevel: (v) => {
-        if (flashRef.value) flashRef.value.style.opacity = v.toFixed(3);
-      },
       // Sells "infinite space" at the start: frame edges dissolve to
       // black at p=0, fully gone by p≈0.35. Deterministic + reversible.
       onVignetteLevel: (v) => {
@@ -204,7 +200,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div ref="flashRef" class="intro-flash"></div>
       <div ref="veilRef" class="intro-veil"></div>
     </div>
 
@@ -318,20 +313,6 @@ onUnmounted(() => {
 .phrase :deep(em.s) {
   color: var(--blue);
   text-shadow: 0 0 42px rgba(47, 155, 255, 0.55);
-}
-
-.intro-flash {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(190, 225, 255, 0.9) 0%,
-    rgba(120, 180, 255, 0.4) 45%,
-    transparent 75%
-  );
-  opacity: 0;
 }
 
 .intro-veil {

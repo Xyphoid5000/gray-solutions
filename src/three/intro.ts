@@ -5,32 +5,38 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 /**
  * The Gray Solutions scroll-driven cinematic intro.
  *
- * The concept, per Chris: the logo is INFINITELY DEEP, but only the
- * middle bar exists in 3D. The scene holds exactly two things — an
- * endless chrome beam, and a giant chrome "G" whose crossbar the beam
- * IS. You start sitting ON the beam, deep inside the G's space; the
- * camera only ever dollies straight back and up (pure translation, one
- * fixed lookAt — no rotation, no arcs). Fog starts dense so the G is
- * fully hidden, then lifts: the G's top arch comes into view first,
- * then its side, as one monumental chrome sculpture.
+ * Chris's confirmed vision (2026-09-23): a Three.js BRIDGE-based
+ * sequence. The viewer starts sitting in 3D space above an INFINITE
+ * BRIDGE, with distant shimmer/sparkle effects. A tunnel-like element
+ * forms part of the grey "G"; the "S" is blue chrome. The bridge deck
+ * threads straight through the G's tunnel bore as its endlessly deep
+ * middle bar — you start on the bar, deep inside the logo's space.
+ *
+ * Scroll choreography: the camera ONLY dollies straight back and up
+ * (pure translation, one fixed lookAt — no rotation, no arcs, no
+ * lateral drift). Fog starts dense so the G is fully hidden, then
+ * lifts: the G's top arch comes into view first, then its side, as one
+ * monumental chrome sculpture beside its blue S.
  *
  * The hero lives INSIDE the intro's sticky stage behind the canvas for
  * the whole sequence (see IntroSequence.vue) — at the end the canvas
  * fades and the hero is revealed in place. You started inside it.
  *
  * Division of labor:
- *   - Three.js owns the WORLD: the beam, the G, camera, fog, stars.
+ *   - Three.js owns the WORLD: bridge, G, S, camera, fog, sparkles.
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so
  *     the whole sequence is fully reversible: scrolling up rewinds the
  *     camera exactly. The DOM (hero, phrases, progress bar, vignette)
  *     is choreographed separately in IntroSequence.vue from the same
  *     scroll position.
+ *
+ * NOTE: the G and S letterforms are hand-authored 3D interpretations
+ * of the mark's anatomy — Chris's supplied logo is the source of
+ * truth for the real brand assets.
  */
 
 export interface IntroSceneCallbacks {
-  /** Called with the current energy-flash level (0..1); drive a DOM overlay. */
-  onFlashLevel?: (v: number) => void;
   /** Called with the vignette level (0..1); strong at p=0, gone by p≈0.35. */
   onVignetteLevel?: (v: number) => void;
 }
@@ -77,16 +83,15 @@ function randomIn(min: number, max: number): number {
 
 /**
  * The G: a bold geometric arch with a clean gap on the right side.
- * Outer arc radius 115, inner counter radius 72 — the opening spans
- * ±0.7 rad (≈ ±40°) around +X, closed by straight chords so the ends
- * read as flat terminals. Extruded ~34 deep with a small bevel.
- *
- * NOTE: this letterform is an interpretation of the mark's anatomy —
- * the beam passing through its middle is the G's crossbar.
+ * Outer radius 150, inner counter radius 95 — the opening spans ±0.7
+ * rad (≈ ±40°) around +X. Extruded 100 deep: the counter becomes a
+ * genuine tunnel bore, and the bridge deck threads straight through
+ * it. A luminous ring liner sits inside the bore so the opening reads
+ * as a tunnel mouth, not a flat hole.
  */
 function makeGShape(): THREE.Shape {
-  const R = 115;
-  const r = 72;
+  const R = 150;
+  const r = 95;
   const gap = 0.7;
   const shape = new THREE.Shape();
   // Clockwise from -gap the LONG way round to +gap: the arc wraps the
@@ -100,8 +105,27 @@ function makeGShape(): THREE.Shape {
   return shape;
 }
 
+/** The blue S: a smooth tube swept along an S centerline. */
+function makeSGeometry(): THREE.TubeGeometry {
+  const pts = [
+    new THREE.Vector3(38, 72, 0),
+    new THREE.Vector3(8, 80, 0),
+    new THREE.Vector3(-30, 68, 0),
+    new THREE.Vector3(-42, 40, 0),
+    new THREE.Vector3(-30, 12, 0),
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(30, -12, 0),
+    new THREE.Vector3(42, -40, 0),
+    new THREE.Vector3(30, -68, 0),
+    new THREE.Vector3(8, -80, 0),
+    new THREE.Vector3(-38, -72, 0),
+  ];
+  const curve = new THREE.CatmullRomCurve3(pts);
+  return new THREE.TubeGeometry(curve, 72, 15, 20, false);
+}
+
 /** The one fixed lookAt for the entire journey. Never animated. */
-const LOOK_AT = new THREE.Vector3(0, 10, 0);
+const LOOK_AT = new THREE.Vector3(0, 60, -180);
 
 export function startIntroScene(
   canvas: HTMLCanvasElement,
@@ -122,7 +146,7 @@ export function startIntroScene(
   // Fog starts DENSE — the G is fully hidden at p=0 — and the timeline
   // lifts it to near-clear by p=1. Driven by the timeline so scrubbing
   // backwards re-fogs the G exactly.
-  const fog = new THREE.FogExp2(0x05070b, 0.035);
+  const fog = new THREE.FogExp2(0x05070b, 0.03);
   scene.fog = fog;
 
   // Image-based lighting so the chrome has something to reflect.
@@ -134,27 +158,33 @@ export function startIntroScene(
     58,
     window.innerWidth / window.innerHeight,
     0.5,
-    5000,
+    9000,
   );
-  // p=0: sitting ON the beam (top surface y=15), ~7 units above it,
-  // deep inside the G's ring — the beam fills the frame and runs to
-  // vanishing points. From here the camera ONLY dollies back and up.
-  camera.position.set(26, 22, 14);
+  // p=0: sitting in 3D space just above the infinite bridge deck
+  // (top surface y=0), deep inside the logo's space with the G's
+  // tunnel looming ahead, fully fogged. From here the camera ONLY
+  // dollies straight back and up.
+  camera.position.set(0, 9, 60);
 
   // ---------- lights ----------
   scene.add(new THREE.AmbientLight(0x223044, 0.9));
 
   const key = new THREE.DirectionalLight(0xe8f0ff, 1.2);
-  key.position.set(-120, 200, 260);
+  key.position.set(-160, 260, 320);
   scene.add(key);
 
-  const rim = new THREE.PointLight(0x2f9bff, 1500, 700, 1.8);
-  rim.position.set(80, 60, 140);
+  const rim = new THREE.PointLight(0x2f9bff, 2200, 900, 1.8);
+  rim.position.set(260, 130, 120);
   scene.add(rim);
 
-  // ---------- atmospheric haze, behind the G ----------
+  // Cool glow inside the G's tunnel bore.
+  const tunnelGlow = new THREE.PointLight(0x2f9bff, 1800, 520, 1.8);
+  tunnelGlow.position.set(0, 70, -180);
+  scene.add(tunnelGlow);
+
+  // ---------- atmospheric haze, far behind the G ----------
   const haze = new THREE.Mesh(
-    new THREE.PlaneGeometry(1800, 900),
+    new THREE.PlaneGeometry(2400, 1200),
     new THREE.MeshBasicMaterial({
       map: makeHazeTexture(),
       transparent: true,
@@ -162,46 +192,133 @@ export function startIntroScene(
       fog: false,
     }),
   );
-  haze.position.set(0, 60, -620);
+  haze.position.set(0, 120, -1100);
   scene.add(haze);
 
-  // ---------- stars + glints ----------
+  // ---------- stars ----------
   const starGeo = new THREE.BufferGeometry();
   const starPos: number[] = [];
   for (let i = 0; i < 1500; i++) {
-    starPos.push(randomIn(-900, 900), randomIn(-250, 600), randomIn(-900, 700));
+    starPos.push(randomIn(-1200, 1200), randomIn(-300, 700), randomIn(-2000, 800));
   }
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
   const starMat = new THREE.PointsMaterial({
     color: 0x93a7c4,
-    size: 1.15,
+    size: 1.6,
     sizeAttenuation: true,
     transparent: true,
-    opacity: 0.75,
+    opacity: 0.7,
     depthWrite: false,
     fog: false,
   });
   scene.add(new THREE.Points(starGeo, starMat));
 
-  const glintGeo = new THREE.BufferGeometry();
-  const glintPos: number[] = [];
-  for (let i = 0; i < 80; i++) {
-    glintPos.push(randomIn(-700, 700), randomIn(-200, 500), randomIn(-800, 500));
+  // ---------- distant shimmer: twinkling sparkles toward the horizon ----------
+  // ShaderMaterial ignores scene.fog, so the shimmer stays visible deep
+  // in the fog — the "distant sparkle" of the vision. Twinkle is ambient
+  // (time-driven); the story itself stays scroll-driven.
+  const SHIMMER_N = 900;
+  const shimmerGeo = new THREE.BufferGeometry();
+  const shimmerPos = new Float32Array(SHIMMER_N * 3);
+  const shimmerPhase = new Float32Array(SHIMMER_N);
+  for (let i = 0; i < SHIMMER_N; i++) {
+    shimmerPos[i * 3] = randomIn(-550, 550);
+    shimmerPos[i * 3 + 1] = randomIn(-80, 280);
+    shimmerPos[i * 3 + 2] = randomIn(-1700, 320);
+    shimmerPhase[i] = Math.random() * Math.PI * 2;
   }
-  glintGeo.setAttribute('position', new THREE.Float32BufferAttribute(glintPos, 3));
-  const glintMat = new THREE.PointsMaterial({
-    color: 0xcfe6ff,
-    size: 3.4,
-    sizeAttenuation: true,
+  shimmerGeo.setAttribute('position', new THREE.BufferAttribute(shimmerPos, 3));
+  shimmerGeo.setAttribute('aPhase', new THREE.BufferAttribute(shimmerPhase, 1));
+  const shimmerMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uColor: { value: new THREE.Color(0xbfe0ff) },
+    },
     transparent: true,
-    opacity: 0.35,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    fog: false,
+    vertexShader: /* glsl */ `
+      attribute float aPhase;
+      uniform float uTime;
+      varying float vTw;
+      void main() {
+        vTw = 0.5 + 0.5 * sin(uTime * 2.2 + aPhase);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        float px = (2.0 + 3.0 * vTw) * (340.0 / -mv.z);
+        gl_PointSize = min(px, 20.0);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uColor;
+      varying float vTw;
+      void main() {
+        float d = length(gl_PointCoord - 0.5);
+        float a = smoothstep(0.5, 0.05, d) * (0.12 + 0.88 * vTw);
+        gl_FragColor = vec4(uColor, a);
+      }
+    `,
   });
-  scene.add(new THREE.Points(glintGeo, glintMat));
+  scene.add(new THREE.Points(shimmerGeo, shimmerMat));
 
-  // ---------- the chrome: one material, one sculpture ----------
+  // ---------- the infinite bridge ----------
+  const deckMat = new THREE.MeshStandardMaterial({
+    color: 0x39424c,
+    metalness: 0.85,
+    roughness: 0.45,
+  });
+  const darkMetal = new THREE.MeshStandardMaterial({
+    color: 0x1c2127,
+    metalness: 0.8,
+    roughness: 0.55,
+  });
+
+  // Deck: top surface at y=0, running to ±Z infinity.
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(30, 4, 6000), deckMat);
+  deck.position.set(0, -2, -1000);
+  scene.add(deck);
+
+  // Under-girder.
+  const girder = new THREE.Mesh(new THREE.BoxGeometry(22, 12, 6000), darkMetal);
+  girder.position.set(0, -10, -1000);
+  scene.add(girder);
+
+  // Edge light strips — the infinite leading lines, in logo blue.
+  const edgeMat = new THREE.MeshBasicMaterial({ color: 0x2f9bff });
+  for (const sx of [-13.6, 13.6]) {
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.3, 6000), edgeMat);
+    strip.position.set(sx, 0.2, -1000);
+    scene.add(strip);
+  }
+
+  // Railings: posts (instanced) + continuous top rails.
+  const railMat = new THREE.MeshStandardMaterial({
+    color: 0x9aa4b2,
+    metalness: 1.0,
+    roughness: 0.35,
+  });
+  const postGeo = new THREE.BoxGeometry(0.8, 7, 0.8);
+  const postCount = 150;
+  const posts = new THREE.InstancedMesh(postGeo, railMat, postCount * 2);
+  const dummy = new THREE.Object3D();
+  let pi = 0;
+  for (const sx of [-14.5, 14.5]) {
+    for (let i = 0; i < postCount; i++) {
+      dummy.position.set(sx, 3.5, -3980 + i * 40);
+      dummy.updateMatrix();
+      posts.setMatrixAt(pi++, dummy.matrix);
+    }
+  }
+  posts.instanceMatrix.needsUpdate = true;
+  scene.add(posts);
+
+  for (const sx of [-14.5, 14.5]) {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 6000), railMat);
+    rail.position.set(sx, 7.2, -1000);
+    scene.add(rail);
+  }
+
+  // ---------- the chrome G: grey, with a real tunnel bore ----------
   const chromeMat = new THREE.MeshStandardMaterial({
     color: 0xf4f6f9,
     metalness: 1.0,
@@ -209,89 +326,80 @@ export function startIntroScene(
     envMapIntensity: 1.0,
   });
 
-  // The infinite beam: the middle bar, running to ±X infinity. The beam
-  // IS the G's crossbar. Top surface at y=15.
-  const beam = new THREE.Mesh(new THREE.BoxGeometry(3000, 30, 24), chromeMat);
-  beam.position.set(0, 0, 0);
-  scene.add(beam);
-
-  // The G: the beam passes through its middle as the crossbar. Same
-  // chrome, so beam + G read as one monumental sculpture.
   const gGeo = new THREE.ExtrudeGeometry(makeGShape(), {
-    depth: 34,
+    depth: 100,
     bevelEnabled: true,
-    bevelThickness: 4,
-    bevelSize: 4,
-    bevelSegments: 3,
+    bevelThickness: 3,
+    bevelSize: 3,
+    bevelSegments: 2,
     curveSegments: 96,
   });
   gGeo.center();
   const gMesh = new THREE.Mesh(gGeo, chromeMat);
-  gMesh.position.set(0, 0, 0);
+  // The bridge deck (top y=0) threads the G's tunnel bore as its
+  // endlessly deep middle bar.
+  gMesh.position.set(0, 70, -180);
   scene.add(gMesh);
 
-  // ---------- energy burst (deterministic: fully reversible under scrub) ----------
-  const BURST_N = 220;
-  const burstGeo = new THREE.BufferGeometry();
-  const burstBase = new Float32Array(BURST_N * 3);
-  const burstVel: number[] = [];
-  for (let i = 0; i < BURST_N; i++) {
-    burstBase[i * 3] = 0;
-    burstBase[i * 3 + 1] = 20;
-    burstBase[i * 3 + 2] = 0;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(randomIn(-1, 1));
-    const speed = randomIn(6, 26);
-    burstVel.push(
-      Math.sin(phi) * Math.cos(theta) * speed,
-      Math.sin(phi) * Math.sin(theta) * speed,
-      Math.cos(phi) * speed,
-    );
-  }
-  burstGeo.setAttribute('position', new THREE.BufferAttribute(burstBase.slice(), 3));
-  const burstMat = new THREE.PointsMaterial({
-    color: 0x9fd4ff,
-    size: 1.7,
-    sizeAttenuation: true,
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
+  // Luminous ring liner inside the bore — the tunnel mouth.
+  const linerGeo = new THREE.TorusGeometry(95, 9, 20, 140, Math.PI * 2 - 1.4);
+  const linerMat = new THREE.MeshStandardMaterial({
+    color: 0x11161c,
+    emissive: 0x2f9bff,
+    emissiveIntensity: 0.85,
+    metalness: 0.6,
+    roughness: 0.4,
   });
-  scene.add(new THREE.Points(burstGeo, burstMat));
-  const burstState = { t: 0 };
+  const liner = new THREE.Mesh(linerGeo, linerMat);
+  liner.rotation.z = 0.7; // align the ring's gap with the G's gap (+X)
+  liner.position.set(0, 70, -180);
+  scene.add(liner);
+
+  // ---------- the blue S ----------
+  const blueChromeMat = new THREE.MeshStandardMaterial({
+    color: 0x3a7bff,
+    metalness: 1.0,
+    roughness: 0.25,
+    envMapIntensity: 1.0,
+  });
+  const sMesh = new THREE.Mesh(makeSGeometry(), blueChromeMat);
+  sMesh.position.set(215, 70, -215);
+  scene.add(sMesh);
+  // Cap the S's open tube ends.
+  const capGeo = new THREE.SphereGeometry(15, 20, 16);
+  for (const end of [
+    new THREE.Vector3(38, 72, 0),
+    new THREE.Vector3(-38, -72, 0),
+  ]) {
+    const cap = new THREE.Mesh(capGeo, blueChromeMat);
+    cap.position.copy(end).add(sMesh.position);
+    scene.add(cap);
+  }
 
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
   // Normalized duration 1. The camera moves by PURE TRANSLATION only —
-  // no lookAt changes, no arcs, no roll. Distances from the fixed
-  // lookAt (0,10,0): ~32 → ~116 → ~274 → ~461 — strictly increasing.
+  // x stays 0 the whole way: no lateral drift, no arcs, no roll, and
+  // the lookAt never moves. Distances from the fixed lookAt grow
+  // strictly: ~245 → ~511 → ~741 → ~984.
   //
-  // Phase 1 (0→0.35): slow drift back and up, still tight on the beam;
-  // the G stays fully fogged.
+  // Phase 1 (0→0.35): slow drift back and up, still low over the deck;
+  // the G stays fully fogged — only bridge, rails, shimmer.
   // Phase 2 (0.35→0.7): the fog lifts — the G's top arch comes into
-  // view first, then its side.
+  // view first, then its side, then the blue S.
   // Phase 3 (0.7→1): FAST accelerating pullback — power3.in so the
-  // motion rushes outward into the wide shot of the chrome G.
+  // motion rushes outward into the wide shot of the sculpture.
   const tl = gsap.timeline({ paused: true });
   const camPos = camera.position;
-  const fx = { flash: 0 };
 
-  tl.to(camPos, { x: 10, y: 45, z: 110, duration: 0.35, ease: 'sine.inOut' }, 0);
-  tl.to(fog, { density: 0.016, duration: 0.35, ease: 'sine.inOut' }, 0);
+  tl.to(camPos, { y: 34, z: 330, duration: 0.35, ease: 'sine.inOut' }, 0);
+  tl.to(fog, { density: 0.014, duration: 0.35, ease: 'sine.inOut' }, 0);
 
-  tl.to(camPos, { x: -30, y: 90, z: 260, duration: 0.35, ease: 'power2.inOut' }, 0.35);
-  tl.to(fog, { density: 0.007, duration: 0.2, ease: 'sine.inOut' }, 0.35);
-  tl.to(fog, { density: 0.0022, duration: 0.15, ease: 'sine.inOut' }, 0.55);
+  tl.to(camPos, { y: 95, z: 560, duration: 0.35, ease: 'power2.inOut' }, 0.35);
+  tl.to(fog, { density: 0.006, duration: 0.2, ease: 'sine.inOut' }, 0.35);
+  tl.to(fog, { density: 0.0016, duration: 0.15, ease: 'sine.inOut' }, 0.55);
 
-  tl.to(camPos, { x: -70, y: 160, z: 430, duration: 0.3, ease: 'power3.in' }, 0.7);
-  tl.to(fog, { density: 0.0006, duration: 0.3, ease: 'power1.in' }, 0.7);
-
-  // Restrained energy release as the G resolves through the fog.
-  tl.to(burstMat, { opacity: 0.9, duration: 0.012 }, 0.8);
-  tl.to(burstState, { t: 1, duration: 0.06, ease: 'power2.out' }, 0.8);
-  tl.to(burstMat, { opacity: 0, duration: 0.06, ease: 'sine.in' }, 0.8);
-  tl.to(fx, { flash: 0.9, duration: 0.018, ease: 'power1.in' }, 0.81);
-  tl.to(fx, { flash: 0, duration: 0.03, ease: 'power1.out' }, 0.828);
+  tl.to(camPos, { y: 150, z: 800, duration: 0.3, ease: 'power3.in' }, 0.7);
+  tl.to(fog, { density: 0.0007, duration: 0.3, ease: 'power1.in' }, 0.7);
 
   // ---------- render loop ----------
   const clock = new THREE.Clock();
@@ -299,10 +407,8 @@ export function startIntroScene(
   let raf = 0;
   let visible = true;
   let disposed = false;
-  let lastFlash = -1;
   let lastVignette = -1;
 
-  const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
   const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
   const tick = () => {
@@ -311,31 +417,11 @@ export function startIntroScene(
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
 
-    // Occasional glints shimmer.
-    glintMat.opacity = Math.max(0, 0.25 + Math.sin(elapsed * 1.7) * 0.12);
-
-    // Deterministic burst: position is a pure function of timeline state,
-    // so scrubbing backwards rewinds the particles exactly.
-    if (burstState.t > 0) {
-      const pos = burstGeo.attributes.position as THREE.BufferAttribute;
-      const arr = pos.array as Float32Array;
-      const spread = easeOutCubic(burstState.t) * 40;
-      for (let i = 0; i < BURST_N; i++) {
-        arr[i * 3] = burstBase[i * 3] + burstVel[i * 3] * spread * 0.12;
-        arr[i * 3 + 1] = burstBase[i * 3 + 1] + burstVel[i * 3 + 1] * spread * 0.12;
-        arr[i * 3 + 2] = burstBase[i * 3 + 2] + burstVel[i * 3 + 2] * spread * 0.12;
-      }
-      pos.needsUpdate = true;
-    }
-
-    // Flash level → DOM overlay (write only when it changes).
-    if (cb.onFlashLevel && Math.abs(fx.flash - lastFlash) > 0.002) {
-      lastFlash = fx.flash;
-      cb.onFlashLevel(fx.flash);
-    }
+    // Ambient shimmer twinkle.
+    (shimmerMat.uniforms.uTime as { value: number }).value = elapsed;
 
     // Vignette: a pure function of timeline progress — strong at p=0 so
-    // the frame edges dissolve to black (only the beam + stars visible),
+    // the frame edges dissolve to black (only bridge + shimmer visible),
     // fully gone by p≈0.35. Deterministic and reversible under scrub.
     if (cb.onVignetteLevel) {
       const v = clamp01((0.35 - tl.progress()) / 0.35);
@@ -368,6 +454,8 @@ export function startIntroScene(
     window.removeEventListener('resize', onResize);
     tl.kill();
     scene.traverse((obj) => {
+      const inst = obj as THREE.InstancedMesh;
+      if (inst.isInstancedMesh) inst.dispose();
       const mesh = obj as THREE.Mesh;
       if (mesh.geometry) mesh.geometry.dispose();
       const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
