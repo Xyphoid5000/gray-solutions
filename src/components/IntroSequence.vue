@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Hero from './Hero.vue';
 import type { IntroSceneHandle } from '../three/intro';
+import { outroState } from '../lib/introOutro';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,15 +17,11 @@ const barWrapRef = ref<HTMLElement | null>(null);
 const barRef = ref<HTMLSpanElement | null>(null);
 const vignetteRef = ref<HTMLElement | null>(null);
 const veilRef = ref<HTMLElement | null>(null);
-const zoomRef = ref<HTMLElement | null>(null);
-const zoomImgRef = ref<HTMLImageElement | null>(null);
 const phraseRefs = ref<HTMLElement[]>([]);
 
 let scene: IntroSceneHandle | null = null;
 let ctx: gsap.Context | null = null;
 let tornDown = false;
-let lastP = 0;
-let applyProgressFn: ((p: number) => void) | null = null;
 
 /**
  * TEMP SIMPLIFICATION (2026-09-23, per Chris): forget the text for now —
@@ -34,75 +31,23 @@ let applyProgressFn: ((p: number) => void) | null = null;
 const SHOW_PHRASES = false;
 
 /**
- * ZOOM OUT (2026-09-23, Chris): "when you are about to hit the end, the
- * zoom on the logo zooms out rapidly." His mark drops in HUGE over the
- * bridge — the crossbar IS the bridge — then whips down to exactly where
- * the hero's logo sits while the canvas fades.
+ * THE ENDING (2026-09-23, Chris's words): "You should see the end side
+ * of the bridge and the camera should move down and the. The logo
+ * should appear."
  *
- * Measured from the assets (PIL, 2026-09-23):
- * - public/logo-mark.png is 464x423. Its crossbar: x 120..407, y 130..185.
- * - mark.png -> public/logo-lockup.jpg (1254x1254, the hero's asset):
- *   lockup_px = 1.15 * mark_px + (341, 321.5)
- *   (crossbar template-matched via FFT NCC, mapped rect visually verified
- *   against the G/S/pixels — it hugs the mark exactly).
- *
- * The landed transform is solved at runtime from the hero img's own rect,
- * so it tracks responsive sizes; the zoomed transform centers the
- * crossbar on the viewport with the crossbar covering the frame (cover
- * semantics — correct on any aspect ratio). All math is
- * deterministic — scrubbing back reverses the zoom exactly.
+ * The intro OPENS directly on the 3D bridge. The 3D story (camera
+ * travel, fog reveal, descend, the world mark fading in at the far
+ * end with its crossbar continuing the bridge) lives in
+ * `three/intro.ts`, driven by the same scroll progress below. This
+ * component owns the DOM handoff: at the very end the canvas fades out
+ * and the hero — which was behind the canvas the whole time — reveals
+ * in place. It never slides up; we started inside it.
  */
-const MARK_W = 464;
-const MARK_H = 423;
-const CB_X0 = 120;
-const CB_X1 = 407;
-const CB_Y0 = 130;
-const CB_Y1 = 185;
-const MAP_S = 1.15;
-const MAP_OX = 341;
-const MAP_OY = 321.5;
-const LOCKUP = 1254;
-
-const zoom = { sBig: 1, txBig: 0, tyBig: 0, sEnd: 1, txEnd: 0, tyEnd: 0 };
-
-function layoutZoom() {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const L0 = (vw - MARK_W) / 2;
-  const T0 = (vh - MARK_H) / 2;
-  // Zoomed: the crossbar COVERS the viewport — no S, no pixels, just the
-  // crossbar's silver-grey filling the frame — centered on the viewport.
-  // Cover semantics: scale = max(vw/cbW, vh/cbH). Width-only math fails on
-  // portrait (2026-09-23 bug: crossbar rendered tiny, S + pixels visible).
-  const cbW = CB_X1 - CB_X0;
-  const cbH = CB_Y1 - CB_Y0;
-  const cbCx = (CB_X0 + CB_X1) / 2;
-  const cbCy = (CB_Y0 + CB_Y1) / 2;
-  const sBig = Math.max(vw / cbW, vh / cbH);
-  zoom.sBig = sBig;
-  zoom.txBig = vw / 2 - L0 - cbCx * sBig;
-  zoom.tyBig = vh / 2 - T0 - cbCy * sBig;
-  // Landed: the mark coincides with the mark inside the hero's lockup.
-  // (r.width for both axes: the lockup is square, and height:auto can
-  // report 0 before the image loads — width is CSS-driven and stable.)
-  const heroImg = heroWrapRef.value?.querySelector(
-    '.hero-mark',
-  ) as HTMLImageElement | null;
-  const r = heroImg?.getBoundingClientRect();
-  if (r && r.width > 0) {
-    const sEnd = (MAP_S * r.width) / LOCKUP;
-    zoom.sEnd = sEnd;
-    zoom.txEnd = r.left + (MAP_OX / LOCKUP) * r.width - L0;
-    zoom.tyEnd = r.top + (MAP_OY / LOCKUP) * r.width - T0;
-  }
-}
-
-/** Re-solve the zoom geometry (resize, font settle, reveal settle). */
-function relayoutZoom() {
-  if (tornDown) return;
-  layoutZoom();
-  applyProgressFn?.(lastP);
-}
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const smooth = (t: number) => {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
+};
 
 /**
  * The story, set in giant DOM type — the full hero philosophy copy, split
@@ -136,16 +81,9 @@ const phrases = [
   },
 ];
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const smooth = (t: number) => {
-  const x = clamp01(t);
-  return x * x * (3 - 2 * x);
-};
-
 function teardown() {
   if (tornDown) return;
   tornDown = true;
-  window.removeEventListener('resize', relayoutZoom);
   ctx?.revert();
   ctx = null;
   scene?.dispose();
@@ -197,43 +135,35 @@ onMounted(async () => {
     // exactly. Do NOT use ScrollTrigger enter events inside the sticky
     // stage; positions are unreliable there.
     const applyProgress = (p: number) => {
-      lastP = p;
       scene?.setProgress(p);
       bar.style.transform = `scaleX(${p.toFixed(4)})`;
 
-      // ZOOM OUT (0.80 -> 1.0): his mark drops in HUGE over the bridge —
-      // the crossbar IS the bridge — then whips down to exactly where
-      // the hero's logo sits. Exponential scale interpolation = constant
-      // zoom velocity; ease-out = rapid. Fully scrub-reversible.
-      const zoomEl = zoomRef.value;
-      const zoomImg = zoomImgRef.value;
-      if (zoomEl && zoomImg) {
-        const zT = clamp01((p - 0.8) / 0.2);
-        const ze = 1 - Math.pow(1 - zT, 2.2);
-        const zs = zoom.sBig * Math.pow(zoom.sEnd / zoom.sBig, ze);
-        const ztx = zoom.txBig + (zoom.txEnd - zoom.txBig) * ze;
-        const zty = zoom.tyBig + (zoom.tyEnd - zoom.tyBig) * ze;
-        zoomImg.style.transform =
-          `translate(${ztx.toFixed(1)}px, ${zty.toFixed(1)}px) scale(${zs.toFixed(5)})`;
-        // Fade in fast over the bridge, hold through the whip, then out
-        // as the hero lands.
-        const zO = smooth((p - 0.8) / 0.04) * (1 - smooth((p - 0.965) / 0.035));
-        zoomEl.style.opacity = zO.toFixed(3);
-        zoomEl.style.visibility = zO > 0.002 ? 'visible' : 'hidden';
-      }
+      // HANDOFF (0.965 -> 0.985): the 3D scene — holding the
+      // bridge-into-crossbar line-up — fades out; the hero reveals in
+      // place behind it. The outro state machine (src/lib/introOutro.ts)
+      // forces the exact finished state at/above its threshold, so a
+      // scroll that stalls just shy of 1.0 can never leave ghosts over
+      // the hero (2026-09-23). The .is-done class is the hard guarantee
+      // (!important CSS below); it is removed whenever p drops back
+      // under the threshold, so scrubbing up restores the 3D scene
+      // exactly. Fully scrub-reversible.
+      const outro = outroState(p);
 
-      // The canvas fades as the mark whips down; pause rendering once
-      // it's fully gone.
-      const canvasFade = clamp01((p - 0.84) / 0.16);
-      canvas.style.opacity = (1 - canvasFade).toFixed(3);
-      scene?.setVisible(p < 0.995);
+      // Once finished the canvas is visibility:hidden (not just
+      // transparent) so no WebGL frame can bleed through the hero — and
+      // rendering pauses.
+      canvas.style.opacity = outro.canvasOpacity.toFixed(3);
+      canvas.style.visibility = outro.canvasHidden ? 'hidden' : 'visible';
+      scene?.setVisible(!outro.done && p < 0.995);
 
-      // The hero was there the whole time — revealed in place behind the
-      // fading canvas. It never slides up; we started inside it.
-      const heroO = clamp01((p - 0.9) / 0.1);
-      heroWrap.style.opacity = heroO.toFixed(3);
+      heroWrap.style.opacity = outro.heroOpacity.toFixed(3);
       // Keep the hero's links/buttons out of the tab order until visible.
-      heroWrap.inert = p < 0.97;
+      heroWrap.inert = !outro.heroInteractive;
+
+      // Hard completion guarantee (see .is-done CSS): toggled purely
+      // from p, so scrolling back up removes it and restores the
+      // scrubbed 3D state.
+      section.classList.toggle('is-done', outro.done);
 
       // Spotlight phrases: parked behind SHOW_PHRASES (see top of file).
       // SOLID at peak (opacity 1), dim (0.12) off-center. Each phrase owns
@@ -250,7 +180,7 @@ onMounted(async () => {
           else if (p <= b) o = 0.12 + 0.88 * smooth((p - a) / (b - a));
           else if (p <= c) o = 1 - 0.88 * smooth((p - b) / (c - b));
           else o = 0.12;
-          phraseEls[i].style.opacity = (o * (1 - canvasFade)).toFixed(3);
+          phraseEls[i].style.opacity = (o * outro.canvasOpacity).toFixed(3);
         }
       }
     };
@@ -267,25 +197,26 @@ onMounted(async () => {
         onToggle: (self) => {
           barWrap.classList.toggle('is-active', self.isActive);
         },
+        // If raw scroll passes the very end while the smoothed proxy is
+        // still catching up, force the finished visuals now (the sticky
+        // stage has scrolled away, so the snap is invisible). Scrolling
+        // back up releases the class; the next scrub update restores the
+        // exact 3D state.
+        onLeave: () => {
+          section.classList.add('is-done');
+          applyProgress(1);
+        },
+        onEnterBack: () => {
+          section.classList.remove('is-done');
+        },
       },
       onUpdate: () => applyProgress(proxy.p),
     });
 
     // Set the initial state deterministically (in case ScrollTrigger
     // hasn't fired onUpdate yet).
-    applyProgressFn = applyProgress;
-    layoutZoom();
     applyProgress(0);
-
-    // Re-solve the zoom geometry once the display font settles and once
-    // the hero's scroll-in reveal has cleared its transform.
-    if (document.fonts) {
-      document.fonts.ready.then(() => relayoutZoom()).catch(() => {});
-    }
-    window.setTimeout(relayoutZoom, 1600);
   }, sectionRef.value);
-
-  window.addEventListener('resize', relayoutZoom);
 });
 
 onUnmounted(() => {
@@ -304,13 +235,6 @@ onUnmounted(() => {
       </div>
 
       <canvas ref="canvasRef" class="intro-canvas" aria-hidden="true"></canvas>
-
-      <!-- ZOOM OUT (0.80 -> 1.0): his mark drops in huge over the bridge —
-           the crossbar IS the bridge — then whips down to exactly where
-           the hero's logo sits. -->
-      <div ref="zoomRef" class="intro-zoomlogo" aria-hidden="true">
-        <img ref="zoomImgRef" src="/logo-mark.png" alt="" />
-      </div>
 
       <div ref="vignetteRef" class="intro-vignette" aria-hidden="true"></div>
 
@@ -388,27 +312,19 @@ onUnmounted(() => {
   opacity: 1;
 }
 
-/* The zoom-out mark (0.80 -> 1.0): huge over the bridge, whipping down to
-   the hero's logo position. Transform is fully JS-driven (layoutZoom +
-   scroll progress); the base box is just the mark's natural size,
-   centered, with a top-left transform origin for the computed math. */
-.intro-zoomlogo {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
+/* OUTRO COMPLETION (2026-09-23): hard guarantee — once the handoff is
+   done, the WebGL canvas is truly gone and the hero is fully revealed,
+   even if scroll progress never lands exactly on 1. The class is
+   removed whenever p drops back under the threshold, so scrubbing up
+   restores the 3D scene exactly (inline styles are recomputed on every
+   scroll update). */
+.intro.is-done .intro-canvas {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
-.intro-zoomlogo img {
-  position: absolute;
-  left: calc(50% - 232px);
-  top: calc(50% - 211.5px);
-  width: 464px;
-  height: 423px;
-  transform-origin: 0 0;
-  will-change: transform;
+.intro.is-done .intro-hero {
+  opacity: 1 !important;
 }
 
 /* Giant story type, overlaid on the stage. Each slot fills the stage;

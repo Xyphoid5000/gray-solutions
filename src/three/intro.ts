@@ -1,6 +1,19 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import {
+  CAM_KEYS,
+  TGT_KEYS,
+  FOG_KEYS,
+  MARK_OPACITY_KEYS,
+  MARK_W,
+  MARK_H,
+  MARK_X,
+  MARK_Y,
+  MARK_Z,
+  type Key,
+  type Key3,
+} from '../lib/introPath';
 
 /**
  * Stars, motion streaks, and the environmental shimmer are ON (per Chris,
@@ -12,13 +25,15 @@ const SHOW_STARS = true;
 /**
  * The Gray Solutions scroll-driven cinematic intro.
  *
- * THE CONCEPT (2026-09-23, Chris's words): the intro OPENS directly on
- * the 3D bridge — no logo opening, no zoom-in. The logo appears only at
- * the END: "when you are about to hit the end, the zoom on the logo
- * zooms out rapidly." The 3D bridge IS the logo's crossbar — the motion
- * sells it, no line-up math. The sequence ends with his mark dropping in
- * huge over the bridge and whipping down to exactly where the hero's
- * logo sits, then hands off to the hero.
+ * THE CONCEPT (2026-09-23, Chris's words): "You should see the end side
+ * of the bridge and the camera should move down and the. The logo
+ * should appear."
+ *
+ * The intro OPENS directly on the 3D bridge — no logo opening, no
+ * zoom-in. The logo appears only at the END, standing IN THE WORLD:
+ * his mark fades in at the bridge's far end with its crossbar
+ * continuing the bridge — the slashed far end plugs into the crossbar.
+ * Then the handoff to the hero.
  *
  * THE BRIDGE (approved object, recreated natively): an elongated
  * parallelogram in plan view — constant width ~130, parallel slanted
@@ -29,28 +44,31 @@ const SHOW_STARS = true;
  * swallows the far end = infinite depth. No furniture — the bare
  * approved object.
  *
- * Beats (all scroll-scrubbed, fully reversible):
- *   - 0 → 0.1: the grey-void resolve. The scene opens in heavy fog and
+ * Beats (all scroll-scrubbed, fully reversible — keyframes live in
+ * `lib/introPath.ts`; the timeline below is built from them):
+ *   - 0 -> 0.1: the grey-void resolve. The scene opens in heavy fog;
  *     the bridge materializes out of it.
- *   - 0 → 0.65: THE BRIDGE. Backward dolly, (0,95,520) → (0,140,1150),
- *     looking down the deck's length to a centered vanishing point. No
- *     X movement, no rise, no dive. Star streaks fire with scroll speed;
+ *   - 0 -> 0.60: THE BRIDGE. Backward dolly (0,95,520)->(0,140,1150),
+ *     x=0, looking down the deck. Star streaks fire with scroll speed;
  *     the far end stays swallowed by fog — infinite.
- *   - 0.65 → 0.80: APPROACH. The travel continues; fog lifts a touch so
- *     the far end is hinted — we're about to hit the end.
- *   - 0.80 → 1.0: ZOOM OUT (DOM-owned, IntroSequence.vue). His mark
- *     drops in HUGE over the bridge — the crossbar IS the bridge — then
- *     whips down to exactly where the hero's logo sits while the canvas
- *     fades. The 3D scene just holds its end pose.
+ *   - 0.60 -> 0.75: THE END REVEALED. Travel continues; fog lifts so
+ *     the far end face is clearly visible.
+ *   - 0.75 -> 0.88: DESCEND. The camera moves DOWN (140->70) and eases
+ *     toward the bridge end; the view flattens onto the end face. No
+ *     rise, no swoop, no plunge.
+ *   - 0.80 -> 0.92: THE LOGO APPEARS. His mark fades in standing at
+ *     the far end — the bridge runs into its crossbar.
+ *   - 0.92 -> 0.97: HOLD the line-up. 0.97 -> 1.0: the DOM handoff
+ *     (canvas fades, hero reveals) — see IntroSequence.vue.
  *
  * Division of labor:
- *   - Three.js owns the WORLD: the bridge, stars, streaks, shimmer,
- *     camera, fog, lights. Just the world — no mark, no handoff math.
+ *   - Three.js owns the WORLD: the bridge, the world mark, stars,
+ *     streaks, shimmer, camera, fog, lights. Just the world.
  *   - GSAP owns the STORY — a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0->1 onto the timeline, so
  *     the whole sequence is fully reversible: scrolling up rewinds
- *     everything exactly. The DOM (hero, zoom-out logo, progress bar,
- *     vignette) is choreographed separately in IntroSequence.vue from
+ *     everything exactly. The DOM (hero, progress bar, vignette,
+ *     handoff) is choreographed separately in IntroSequence.vue from
  *     the same scroll position.
  *
  * Restrained by design: one object, fog, light, stars. Nothing else.
@@ -207,7 +225,8 @@ export function startIntroScene(
     fog: false,
   });
   const haze = new THREE.Mesh(new THREE.PlaneGeometry(3200, 1600), hazeMat);
-  haze.position.set(0, 150, -2600);
+  // Far behind the world mark (z=-2740) so it never washes over the logo.
+  haze.position.set(0, 150, -2950);
   scene.add(haze);
 
   // ---------- material ----------
@@ -224,6 +243,45 @@ export function startIntroScene(
   // ---------- THE BRIDGE ----------
   const bridge = new THREE.Mesh(makeBridgeGeometry(), bridgeMat);
   scene.add(bridge);
+
+  // ---------- THE WORLD MARK ----------
+  // His actual mark, standing IN THE WORLD at the bridge's far end —
+  // vertical, facing the camera (+Z). Its crossbar is centered exactly
+  // on the bridge axis (x=0, y=0; see lib/introPath.ts), so the slashed
+  // far end plugs into the middle of the crossbar: the bridge RUNS INTO
+  // the logo. Monumental (840 wide vs the 130-wide deck) so the
+  // crossbar reads clearly at the hold (~7° wide). fog:false +
+  // toneMapped:false keep his asset pixel-true. It fades in on the
+  // timeline (0.80 -> 0.92); scrubbing back fades it out again.
+  const markMat = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    fog: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+  const markMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(MARK_W, MARK_H),
+    markMat,
+  );
+  markMesh.position.set(MARK_X, MARK_Y, MARK_Z);
+  markMesh.visible = false; // shown once the texture arrives
+  markMesh.renderOrder = 2;
+  scene.add(markMesh);
+  new THREE.TextureLoader().load(
+    '/logo-mark.png',
+    (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      markMat.map = tex;
+      markMat.needsUpdate = true;
+      markMesh.visible = true;
+    },
+    undefined,
+    () => {
+      // Texture failed: leave the mark hidden; the intro still works.
+    },
+  );
 
   // ---------- stars: twinkle always, STREAK on scroll (beat 2) ----------
   const starGeo = new THREE.BufferGeometry();
@@ -323,41 +381,56 @@ export function startIntroScene(
   scene.add(streaks);
 
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
-  // Normalized duration 1. Everything below is a pure function of p, so
-  // scrolling up rewinds the camera and the fog exactly.
-  //
-  // 0 -> 0.1: the grey-void resolve. The scene opens in heavy fog; the
-  // bridge materializes out of it over the first beat of scroll.
-  //
-  // 0 -> 0.65: THE BRIDGE. The money sensation is MOVING BACKWARDS. The
-  // camera dollies straight back along the bridge (+Z) while looking
-  // slightly DOWN its length to the centered vanishing point. No X
-  // movement, no rise, no dive. Star streaks fire with scroll speed;
-  // the far end stays swallowed by fog — infinite.
-  //
-  // 0.65 -> 0.80: APPROACH. The travel continues; the fog lifts a touch
-  // so the far end is hinted — we're about to hit the end.
-  //
-  // 0.80 -> 1.0: ZOOM OUT. DOM-owned (IntroSequence.vue): his mark drops
-  // in HUGE over the bridge — the crossbar IS the bridge — then whips
-  // down to exactly where the hero's logo sits while the canvas fades.
-  // The 3D scene just holds its end pose.
+  // Built from the keyframe tables in lib/introPath.ts — every channel
+  // is a pure function of p, so scrolling up rewinds the camera, the
+  // fog, and the mark exactly.
   const lookTarget = new THREE.Vector3(0, 25, -700);
 
   const tl = gsap.timeline({ paused: true });
   const cp = camera.position;
 
-  // The grey-void resolve: heavy fog at p=0, clearing to normal.
-  tl.to(fog, { density: 0.0005, duration: 0.1, ease: 'sine.out' }, 0);
+  /** One tween per keyframe segment, laid at its absolute position. */
+  function channel3(
+    target: { x: number; y: number; z: number },
+    keys: Key3[],
+  ): void {
+    for (let i = 1; i < keys.length; i++) {
+      const a = keys[i - 1];
+      const b = keys[i];
+      tl.to(
+        target,
+        {
+          x: b.v[0],
+          y: b.v[1],
+          z: b.v[2],
+          duration: b.p - a.p,
+          ease: 'sine.inOut',
+        },
+        a.p,
+      );
+    }
+  }
+  function channel1(target: object, prop: string, keys: Key[]): void {
+    for (let i = 1; i < keys.length; i++) {
+      const a = keys[i - 1];
+      const b = keys[i];
+      tl.to(
+        target,
+        { [prop]: b.v, duration: b.p - a.p, ease: 'sine.inOut' },
+        a.p,
+      );
+    }
+  }
 
-  // THE BRIDGE: straight back along +Z, slightly above the deck.
-  tl.to(cp, { x: 0, y: 140, z: 1150, duration: 0.65, ease: 'sine.inOut' }, 0);
-  tl.to(lookTarget, { x: 0, y: 30, z: -700, duration: 0.65, ease: 'sine.inOut' }, 0);
-
-  // APPROACH: the travel continues; fog lifts a touch.
-  tl.to(cp, { x: 0, y: 155, z: 1350, duration: 0.15, ease: 'sine.inOut' }, 0.65);
-  tl.to(lookTarget, { x: 0, y: 25, z: -1000, duration: 0.15, ease: 'sine.inOut' }, 0.65);
-  tl.to(fog, { density: 0.00042, duration: 0.15, ease: 'sine.inOut' }, 0.65);
+  channel3(cp, CAM_KEYS);
+  channel3(lookTarget, TGT_KEYS);
+  channel1(fog, 'density', FOG_KEYS);
+  channel1(markMat, 'opacity', MARK_OPACITY_KEYS);
+  // Pad the timeline to a duration of exactly 1: setProgress(p) maps
+  // scroll progress onto tl.progress(p), i.e. time = p * duration — so
+  // the keyframe p values above only mean scroll-p when duration is 1.
+  // The end pose simply holds through the handoff beat.
+  tl.to({}, { duration: 0.08 }, 0.92);
 
   // ---------- render loop ----------
   const clock = new THREE.Clock();
