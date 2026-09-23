@@ -4,31 +4,27 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 
 /**
  * The Gray Solutions scroll-driven cinematic intro — built to Chris's
- * hand-drawn storyboard (2026-09-23). This is the authoritative spec and
- * supersedes the earlier tunnel interpretation.
+ * hand-drawn storyboard (2026-09-23), fix pass after video QA (2026-09-23).
  *
  * THE CORE IDEA: the bridge IS the logo. In logo-lockup.jpg the grey G's
  * horizontal crossbar is a perspective wedge — a bridge/road receding to a
- * vanishing point, wider at the near end and tapering away. The scene is
- * ONE cast piece, not two:
+ * vanishing point. The scene is ONE cast piece, not two:
  *
  *   - Beats 1-3: the camera sits low over the bridge deck, which reads as
- *     an endless bridge (fog + the deck running to a vanishing point).
- *     The viewer doesn't know it's part of a letterform. Scroll = moving
- *     backwards: the camera dollies back along the deck, stars streak past
- *     with velocity-scaled motion streaks, and the existing DOM story copy
- *     overlays the travel.
+ *     an endless bridge: the deck starts UNDER the camera and runs to a
+ *     CENTERED vanishing point, filling the lower frame as a perspective
+ *     triangle (storyboard frame 1). Scroll = moving backwards: the camera
+ *     dollies back along the deck, railing posts stream past, stars streak
+ *     with velocity-scaled motion streaks, and the DOM story copy overlays.
  *   - Beat 4 ("something that stands apart"): the camera pulls back and
- *     up while the fog clears. The giant chrome G — which existed from
- *     frame one, hidden only by fog and framing — is uncovered around the
- *     deck. The reveal: the bridge you've been traveling was the G's
- *     crossbar all along. The deck slots into the G's outer arc with no
- *     seam (same chrome material, volumetric overlap, no coplanar faces).
- *   - Beat 5 (pull out): the camera leaves the bridge-travel and glides
- *     into a close 3/4 framing of the massive 3D GS — grey chrome G, blue
- *     chrome S below-right, the deck still running through as the crossbar.
- *     The S was always there too; fog + framing do the revealing, never
- *     a fly-in.
+ *     up. The giant grey chrome G — opacity 0 from frame one, never
+ *     fog-reliant — ramps in on the scrubbed timeline as the camera
+ *     uncovers it. Nothing assembles or pops: it emerges from darkness
+ *     already joined to the deck (same material params, volumetric
+ *     overlap), so it reads as one piece that was always there.
+ *   - Beat 5 (pull out): the camera glides into a close 3/4 framing of
+ *     the full GS — grey chrome G, blue chrome S below-right — the deck
+ *     still running through as the crossbar.
  *   - Beat 6 (snap 3D->2D): a scale punch, then a crossfade to a plane
  *     textured with Chris's ACTUAL logo-lockup.jpg — never redrawn or
  *     reinterpreted. The DOM hero (same lockup) is then uncovered in place
@@ -45,8 +41,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
  *     position.
  *
  * Restrained by design: deck, edge lights, railings, stars, streaks, fog.
- * No assembly animations, no fly-ins, no bursts — the storyboard forbids
- * them, and reverse scrubbing stays perfectly clean.
+ * No assembly animations, no fly-ins, no bursts.
  */
 
 export interface IntroSceneCallbacks {
@@ -96,14 +91,16 @@ function randomIn(min: number, max: number): number {
 
 /* ------------------------------------------------------------------ */
 /* The bridge deck = the G's crossbar. A tapered slab (perspective     */
-/* wedge): wide at the G (near end), narrowing to the vanishing point. */
+/* wedge): wide at the G/camera end, narrowing to the vanishing point. */
+/* The deck starts UNDER the camera (DECK_Z_NEAR is behind the p=0      */
+/* camera z) so beat 1 reads as sitting above an infinite bridge.     */
 /* ------------------------------------------------------------------ */
 
-const DECK_Z_NEAR = 20; // wide end, embedded in the G's left tube
-const DECK_Z_FAR = -4200; // narrow end, lost in fog
+const DECK_Z_NEAR = 620; // wide end: just behind/under the p=0 camera
+const DECK_Z_FAR = -4200; // narrow end, melted into fog
 const DECK_W_NEAR = 40;
 const DECK_W_FAR = 4;
-const DECK_X = -170; // deck centerline: meets the G's inner-left wall
+const DECK_X = -170; // deck centerline: threads the G's left tube
 
 function deckWidthAt(z: number): number {
   const t = (DECK_Z_NEAR - z) / (DECK_Z_NEAR - DECK_Z_FAR);
@@ -160,15 +157,15 @@ export function startIntroScene(
   renderer.setClearColor(0x05070b, 1);
 
   const scene = new THREE.Scene();
-  // Fog starts DENSE — the G and S are fully hidden at p=0 — and the
-  // timeline clears it through beat 4. Driven by the timeline so
-  // scrubbing backwards re-fogs the logo exactly (no pop-in to invert).
-  const fog = new THREE.FogExp2(0x05070b, 0.0042);
+  // Gentle exponential fog: melts the far deck into black, adds atmosphere
+  // around the reveal. It is NOT the G/S hiding mechanism — those are
+  // opacity-driven on the timeline (video QA proved fog alone unreliable).
+  const fog = new THREE.FogExp2(0x05070b, 0.0016);
   scene.fog = fog;
 
   // Image-based lighting so the chrome has something to reflect.
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const envTex = pmrem.fromScene(new RoomEnvironment(), 0).texture;
   scene.environment = envTex;
 
   const camera = new THREE.PerspectiveCamera(
@@ -177,17 +174,26 @@ export function startIntroScene(
     0.5,
     12000,
   );
-  // p=0: sitting low over the bridge deck, looking down its length to
-  // the vanishing point. The G is ~530 units ahead, fully fogged.
-  camera.position.set(DECK_X, 14, 500);
+  // p=0: sitting low over the bridge deck, looking slightly DOWN its
+  // length to a CENTERED vanishing point. The deck starts under the
+  // camera (z=620 > camera z=560) and fills the lower frame.
+  camera.position.set(DECK_X, 34, 560);
   scene.add(camera); // the 2D snap plane rides parented to the camera
 
   // ---------- lights ----------
-  scene.add(new THREE.AmbientLight(0x223044, 0.9));
+  // Tuned after video QA: the chrome rendered near-black. Metals need
+  // strong direct speculars + a hot env map — ambient alone does nothing
+  // for metalness ~1. Key rakes across the G; fill lifts camera-facing
+  // surfaces so the deck top reads GREY, not black.
+  scene.add(new THREE.AmbientLight(0x2a3648, 1.1));
 
-  const key = new THREE.DirectionalLight(0xe8f0ff, 1.4);
-  key.position.set(-400, 500, 800);
+  const key = new THREE.DirectionalLight(0xf2f6ff, 3.0);
+  key.position.set(-500, 700, 900);
   scene.add(key);
+
+  const fill = new THREE.DirectionalLight(0x9fc0ff, 1.2);
+  fill.position.set(600, 200, 700);
+  scene.add(fill);
 
   const rim = new THREE.PointLight(0x2f9bff, 3000, 1600, 1.8);
   rim.position.set(400, 200, 600);
@@ -206,57 +212,65 @@ export function startIntroScene(
   haze.position.set(DECK_X, 150, -2600);
   scene.add(haze);
 
-  // ---------- shared chrome: ONE material for deck + G arc ----------
-  // The deck and the arc share this exact material instance — same
-  // lighting response, so the junction reads as one cast piece.
-  const chromeMat = new THREE.MeshStandardMaterial({
-    color: 0xf4f6f9,
-    metalness: 1.0,
-    roughness: 0.24,
-    envMapIntensity: 1.0,
-    transparent: true, // faded out at the 3D->2D snap
-  });
-
-  const blueChromeMat = new THREE.MeshStandardMaterial({
-    color: 0x2f6bff,
-    metalness: 1.0,
-    roughness: 0.28,
-    envMapIntensity: 1.0,
+  // ---------- materials ----------
+  // Deck + G arc share IDENTICAL params (separate instances so the G's
+  // opacity can ramp independently). Same lighting response => the
+  // junction reads as one cast piece. Params chosen so the metal reads
+  // light GREY on black: bright base, moderate roughness, hot env.
+  const chromeParams = {
+    color: 0xdde3ea,
+    metalness: 0.85,
+    roughness: 0.34,
+    envMapIntensity: 1.7,
     transparent: true,
+  };
+  const deckMat = new THREE.MeshStandardMaterial({ ...chromeParams }); // opacity 1: visible from frame one
+  const gMat = new THREE.MeshStandardMaterial({ ...chromeParams, opacity: 0 }); // revealed at beat 4
+
+  const sMat = new THREE.MeshStandardMaterial({
+    color: 0x2f6bff,
+    metalness: 0.85,
+    roughness: 0.32,
+    envMapIntensity: 1.6,
+    transparent: true,
+    opacity: 0, // revealed at beat 4
   });
 
   const railMat = new THREE.MeshStandardMaterial({
     color: 0x9aa4b2,
     metalness: 1.0,
     roughness: 0.35,
+    envMapIntensity: 1.2,
     transparent: true,
   });
 
+  // Blue edge strips: thick + bright enough to read at frame one
+  // (video QA: the old 0.8-wide strips were sub-pixel thin).
   const edgeMat = new THREE.MeshBasicMaterial({
-    color: 0x2f9bff,
+    color: 0x3fa9ff,
     transparent: true,
   });
 
-  // ---------- the G: a bold chrome arc, opening facing +X ----------
-  // Exists from frame one; hidden only by fog + framing. The deck's wide
-  // end is embedded in the arc's left tube — one continuous object.
+  // ---------- the G: a bold chrome arc, opening facing +X (like the mark) ----------
+  // Opacity 0 from frame one — revealed ONLY by the timeline at beat 4.
+  // The deck's wide end threads the arc's left tube: one continuous object.
   const logoGroup = new THREE.Group();
   const G_R = 170;
   const G_TUBE = 26;
   const gGeo = new THREE.TorusGeometry(G_R, G_TUBE, 24, 180, Math.PI * 2 - 1.1);
-  const gMesh = new THREE.Mesh(gGeo, chromeMat);
+  const gMesh = new THREE.Mesh(gGeo, gMat);
   gMesh.rotation.z = 0.55; // center the 1.1-rad gap on +X (the G's opening)
   logoGroup.add(gMesh);
 
   // ---------- the blue S, below-right of the G ----------
-  // Also present from frame one; revealed by fog + framing at beat 5.
-  const sMesh = new THREE.Mesh(makeSGeometry(), blueChromeMat);
+  // Also opacity 0 from frame one; revealed with the G at beat 4.
+  const sMesh = new THREE.Mesh(makeSGeometry(), sMat);
   sMesh.scale.z = 0.55; // ribbon feel, like the mark
   const sGroup = new THREE.Group();
   sGroup.add(sMesh);
   const capGeo = new THREE.SphereGeometry(24, 18, 14);
   for (const [cx, cy] of [[72, 82], [-72, -68]]) {
-    const cap = new THREE.Mesh(capGeo, blueChromeMat);
+    const cap = new THREE.Mesh(capGeo, sMat);
     cap.position.set(cx, cy, 0);
     cap.scale.z = 0.55;
     sGroup.add(cap);
@@ -269,7 +283,7 @@ export function startIntroScene(
   const deckLen = DECK_Z_NEAR - DECK_Z_FAR;
   const deck = new THREE.Mesh(
     makeTaperedSlab(deckLen, DECK_W_NEAR, DECK_W_FAR, 6),
-    chromeMat, // SAME material as the G arc: one cast piece
+    deckMat,
   );
   deck.position.set(DECK_X, 0, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
   scene.add(deck);
@@ -277,25 +291,26 @@ export function startIntroScene(
   // Glowing blue edge strips hugging the deck's tapering edges.
   for (const side of [-1, 1]) {
     const strip = new THREE.Mesh(
-      makeTaperedSlab(deckLen, 0.8, 0.8, 0.3, (t) => {
+      makeTaperedSlab(deckLen, 1.6, 1.6, 0.8, (t) => {
         const w = DECK_W_NEAR + (DECK_W_FAR - DECK_W_NEAR) * t;
-        return side * (w / 2 - 0.4);
+        return side * (w / 2 - 0.8);
       }),
       edgeMat,
     );
-    strip.position.set(DECK_X, 3.15, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
+    strip.position.set(DECK_X, 3.4, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
     scene.add(strip);
   }
 
   // Railings: instanced posts + continuous top rails, following the taper.
+  // Posts run from just behind the camera (z=600) to the far end.
   const postGeo = new THREE.BoxGeometry(0.8, 7, 0.8);
-  const postRows = 105;
+  const postRows = 120;
   const posts = new THREE.InstancedMesh(postGeo, railMat, postRows * 2);
   const dummy = new THREE.Object3D();
   let pi = 0;
   for (const side of [-1, 1]) {
     for (let i = 0; i < postRows; i++) {
-      const z = -i * 40;
+      const z = 600 - i * 40;
       dummy.position.set(DECK_X + side * (deckWidthAt(z) / 2 + 1.5), 6.5, z);
       dummy.updateMatrix();
       posts.setMatrixAt(pi++, dummy.matrix);
@@ -432,42 +447,47 @@ export function startIntroScene(
   // scrolling up rewinds the camera, the fog, the reveal, and the snap.
   //
   // Beats 1-3 (0 -> 0.45): the money sensation is MOVING BACKWARDS. The
-  // camera dollies back along the deck (+Z) while the lookAt stays down
-  // the bridge. Posts and star-streaks stream past; the G/S sit ~530+
-  // units ahead, fully fogged — not the subject.
+  // camera dollies back along the deck (+Z) while looking slightly DOWN
+  // its length to the centered vanishing point. Posts and star-streaks
+  // stream past; the G/S sit at opacity 0 — not the subject.
   //
-  // Beat 4 (0.45 -> 0.62): pull back AND up; fog clears. The G is
-  // uncovered around the deck by camera motion + fog alone — it was
-  // always there. The bridge reads as its crossbar.
+  // Beat 4 (0.45 -> 0.62): pull back AND up; the G/S opacity ramps 0->1
+  // on this timeline (NOT fog). The G emerges from darkness already
+  // joined to the deck — one cast piece, revealed, never assembled.
   //
   // Beat 5 (0.62 -> 0.8): the camera leaves the bridge-travel and glides
-  // into a close 3/4 framing of the full GS — grey G, blue S below-right
-  // (revealed by framing; it was always there too), deck running through.
+  // into a close 3/4 framing of the full GS — grey G, blue S below-right,
+  // deck running through as the crossbar.
   //
   // Beat 6 (0.8 -> 0.9): scale punch, then crossfade the whole 3D world
   // to the real 2D logo plane. The DOM then fades the canvas (0.9-1.0)
   // and uncovers the hero in place.
-  const lookTarget = new THREE.Vector3(DECK_X, 10, -600);
-  const worldFade = { v: 1 }; // 1 -> 0 drives every 3D material's opacity
-  const fadeMats: THREE.Material[] = [chromeMat, blueChromeMat, railMat, edgeMat, starMat];
+  const lookTarget = new THREE.Vector3(DECK_X, 2, -800);
+  const worldFade = { v: 1 }; // 1 -> 0 drives every visible 3D material's opacity
+  const logoReveal = { v: 0 }; // 0 -> 1 reveals the G + S during beat 4
+  const fadeMats: THREE.Material[] = [deckMat, railMat, edgeMat, starMat];
 
   const tl = gsap.timeline({ paused: true });
   const cp = camera.position;
 
   // Camera path
-  tl.to(cp, { x: DECK_X, y: 42, z: 980, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(cp, { x: DECK_X, y: 175, z: 1380, duration: 0.17, ease: 'power2.inOut' }, 0.45);
-  tl.to(cp, { x: 40, y: 130, z: 660, duration: 0.18, ease: 'power2.inOut' }, 0.62);
+  tl.to(cp, { x: DECK_X, y: 70, z: 1100, duration: 0.45, ease: 'sine.inOut' }, 0);
+  tl.to(cp, { x: -190, y: 210, z: 1050, duration: 0.17, ease: 'power2.inOut' }, 0.45);
+  tl.to(cp, { x: 130, y: 70, z: 1080, duration: 0.18, ease: 'power2.inOut' }, 0.62);
 
   // Look target
-  tl.to(lookTarget, { x: DECK_X, y: 26, z: -600, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(lookTarget, { x: -60, y: 40, z: -100, duration: 0.17, ease: 'sine.inOut' }, 0.45);
-  tl.to(lookTarget, { x: 30, y: -50, z: -40, duration: 0.18, ease: 'sine.inOut' }, 0.62);
+  tl.to(lookTarget, { x: DECK_X, y: 8, z: -800, duration: 0.45, ease: 'sine.inOut' }, 0);
+  tl.to(lookTarget, { x: -70, y: 20, z: -50, duration: 0.17, ease: 'sine.inOut' }, 0.45);
+  tl.to(lookTarget, { x: 10, y: -70, z: -30, duration: 0.18, ease: 'sine.inOut' }, 0.62);
 
-  // Fog: dense -> clear
-  tl.to(fog, { density: 0.0028, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(fog, { density: 0.0005, duration: 0.17, ease: 'sine.inOut' }, 0.45);
-  tl.to(fog, { density: 0.0003, duration: 0.18, ease: 'sine.inOut' }, 0.62);
+  // Fog: gentle melt of the far deck; the G/S hide via opacity, not fog
+  tl.to(fog, { density: 0.0009, duration: 0.45, ease: 'sine.inOut' }, 0);
+  tl.to(fog, { density: 0.0004, duration: 0.17, ease: 'sine.inOut' }, 0.45);
+  tl.to(fog, { density: 0.00025, duration: 0.18, ease: 'sine.inOut' }, 0.62);
+
+  // The G + S emerge from darkness during beat 4 — timeline-driven, so
+  // scrubbing backwards re-hides them exactly (no pop-in to invert).
+  tl.to(logoReveal, { v: 1, duration: 0.17, ease: 'sine.inOut' }, 0.45);
 
   // Snap: punch the logo, crossfade the world to the real 2D mark
   tl.to(logoGroup.scale, { x: 1.045, y: 1.045, z: 1.045, duration: 0.035, ease: 'power2.out' }, 0.8);
@@ -500,6 +520,16 @@ export function startIntroScene(
 
     // World fade for the 3D->2D snap.
     for (const m of fadeMats) m.opacity = worldFade.v;
+
+    // G + S reveal: opacity ramp × world fade. depthWrite follows the
+    // reveal so the invisible-at-p=0 geometry can't punch depth holes
+    // in the stars/deck behind it; fully reversible under scrub.
+    const lr = logoReveal.v * worldFade.v;
+    gMat.opacity = lr;
+    sMat.opacity = lr;
+    const rw = logoReveal.v > 0.002;
+    gMat.depthWrite = rw;
+    sMat.depthWrite = rw;
 
     // Star streaks: stretch along the camera's velocity vector, scaled by
     // scroll speed. Still camera -> no streaks, twinkle only.
