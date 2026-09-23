@@ -23,6 +23,13 @@ let ctx: gsap.Context | null = null;
 let tornDown = false;
 
 /**
+ * TEMP SIMPLIFICATION (2026-09-23, per Chris): forget the text for now —
+ * the bridge scroll-out is the whole shot. Phrases are parked behind this
+ * flag; set to true to bring them back. Nothing was deleted.
+ */
+const SHOW_PHRASES = false;
+
+/**
  * The story, set in giant DOM type — the full hero philosophy copy, split
  * across five blocks. Each phrase starts dim and illuminates to full SOLID
  * brightness as its scroll window passes, then dims as it leaves — all
@@ -130,21 +137,23 @@ onMounted(async () => {
       // Keep the hero's links/buttons out of the tab order until visible.
       heroWrap.inert = p < 0.95;
 
-      // Spotlight phrases: SOLID at peak (opacity 1), dim (0.12)
-      // off-center. Each phrase owns a scroll window matching the old
-      // 110vh-block layout: illuminate over the first 40vh, dim over the
-      // next 122vh. All phrases fade with the canvas so the hero arrives
-      // clean.
-      for (let i = 0; i < phraseEls.length; i++) {
-        const a = (110 * i - 2) / 600;
-        const b = (110 * i + 38) / 600;
-        const c = (110 * i + 160) / 600;
-        let o: number;
-        if (p <= a) o = 0.12;
-        else if (p <= b) o = 0.12 + 0.88 * smooth((p - a) / (b - a));
-        else if (p <= c) o = 1 - 0.88 * smooth((p - b) / (c - b));
-        else o = 0.12;
-        phraseEls[i].style.opacity = (o * (1 - canvasFade)).toFixed(3);
+      // Spotlight phrases: parked behind SHOW_PHRASES (see top of file).
+      // SOLID at peak (opacity 1), dim (0.12) off-center. Each phrase owns
+      // a scroll window matching the old 110vh-block layout: illuminate
+      // over the first 40vh, dim over the next 122vh. All phrases fade
+      // with the canvas so the hero arrives clean.
+      if (SHOW_PHRASES) {
+        for (let i = 0; i < phraseEls.length; i++) {
+          const a = (110 * i - 2) / 600;
+          const b = (110 * i + 38) / 600;
+          const c = (110 * i + 160) / 600;
+          let o: number;
+          if (p <= a) o = 0.12;
+          else if (p <= b) o = 0.12 + 0.88 * smooth((p - a) / (b - a));
+          else if (p <= c) o = 1 - 0.88 * smooth((p - b) / (c - b));
+          else o = 0.12;
+          phraseEls[i].style.opacity = (o * (1 - canvasFade)).toFixed(3);
+        }
       }
     };
 
@@ -189,7 +198,7 @@ onUnmounted(() => {
 
       <div ref="vignetteRef" class="intro-vignette" aria-hidden="true"></div>
 
-      <div class="intro-phrases" aria-hidden="true">
+      <div v-if="SHOW_PHRASES" class="intro-phrases" aria-hidden="true">
         <div v-for="(p, i) in phrases" :key="i" class="phrase-slot">
           <p
             ref="phraseRefs"

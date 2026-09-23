@@ -3,57 +3,58 @@ import { gsap } from 'gsap';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
+ * TEMP SIMPLIFICATION (2026-09-23, per Chris): the star field — stars,
+ * motion streaks, shimmer — is parked while the bridge scroll-out is the
+ * focus. Set to true to bring it all back. Nothing was deleted.
+ */
+const SHOW_STARS = false;
+
+/**
  * The Gray Solutions scroll-driven cinematic intro.
  *
- * CREATIVE RESET (2026-09-23, per Chris): stop approximating the flat PNG
- * with a torus — design an ORIGINAL 3D interpretation of the mark.
- * "Recreate it with depth... Make it yours." The concept stays his:
- * grey G + blue S + pixel accents. The 3D form is ours.
+ * SIMPLIFICATION PASS (2026-09-23, per Chris): forget stars and text —
+ * the bridge scroll-out is the whole shot. The star field (stars,
+ * streaks, shimmer) is parked behind SHOW_STARS below (off); the DOM
+ * story phrases are parked behind SHOW_PHRASES in IntroSequence.vue
+ * (off). Nothing deleted — both return in a later pass.
  *
- * THE CORE IDEA: the G's crossbar, extruded into infinity.
- *   - The grey G is a bold architectural letterform: an extruded annulus
- *     sector (radial-cut terminals, like a modern grotesque) plus a wedge
- *     crossbar with the mark's slashed end — both beveled for real depth.
- *   - The crossbar doesn't stop at the G. It KEEPS GOING, becoming the
- *     infinite bridge deck the camera travels in beats 1-3. Deck,
- *     crossbar, and G are the same chrome, volumetrically interlocked:
- *     one continuous cast form, not an assembly.
- *   - The blue S is a sculpted glossy ribbon (extruded, slash-cut
- *     terminals) tucked lower-right, with floating pixel cubes translating
- *     the mark's pixel motif into 3D.
+ * THE GEOMETRY (per Chris's schematic): the bridge IS the G's crossbar —
+ * ONE straight bar, one line. A single 64×56 chrome bar runs along Z
+ * (z −200 → 2240), centered x=0, y=0: it is BOTH the bridge deck and the
+ * crossbar. No separate crossbar mesh exists. The grey G (v4's extruded
+ * annulus sector, gap facing +X in shape space) rides in a group with
+ * rotation.y = π/2, so its face lies in the ZY plane and the bar passes
+ * through its middle along Z: interpenetrating the arc band (same chrome
+ * = one cast piece) and spanning the G's opening as the crossbar. The
+ * camera ends on +X looking down −X; the gap faces screen-right (−Z),
+ * like the mark. The blue S ribbon + pixel cubes ride in the same
+ * rotated group, landing lower-right / upper-right of the G.
  *
- * Beats (unchanged storyboard):
- *   - Beats 1-3: the camera sits low over the bridge deck — which IS the
- *     G's crossbar — running to a CENTERED vanishing point, filling the
- *     lower frame as a perspective triangle. Scroll = moving backwards:
- *     the camera dollies back along the deck, railing posts stream past,
- *     stars streak with velocity-scaled motion streaks, DOM story copy
- *     overlays the travel.
- *   - Beat 4 ("something that stands apart"): the camera pulls back and
- *     up. The monument — opacity 0 from frame one, never fog-reliant —
- *     ramps in on the scrubbed timeline as the camera uncovers it.
- *     Nothing assembles or pops: the G emerges from darkness with the
- *     deck already running through it — one piece that was always there.
- *   - Beat 5 (pull out): the camera glides into a 3/4 framing of the full
- *     GS monument — grey G, blue ribbon S, pixel cubes, deck rushing
- *     toward the viewer as the crossbar.
- *   - Beat 6 (snap 3D->2D): a scale punch, then a crossfade to a plane
+ * Beats:
+ *   - 0 → 0.45: the money shot. Camera dollies straight BACK over the
+ *     bar, (0,52,600) → (0,85,1150), looking down its length to a
+ *     centered vanishing point. Railing posts stream past.
+ *   - 0.45 → 0.62: the monument's opacity ramps 0→1 on the scrubbed
+ *     timeline (never fog-reliant); the camera starts its sweep toward
+ *     (450,200,700) with the look target gluing to the monument (0,0,0).
+ *   - 0.62 → 0.8: the sweep completes → (950,300,150). THE REVEAL: the
+ *     bar you rode lies horizontal in frame as the G's crossbar.
+ *   - 0.8 → 0.9: scale punch, then a crossfade of the 3D world to a plane
  *     textured with Chris's ACTUAL logo-lockup.jpg — the brand anchor.
  *     The DOM hero (same lockup) is then uncovered in place behind the
  *     fading canvas (see IntroSequence.vue).
  *
  * Division of labor:
- *   - Three.js owns the WORLD: bridge-crossbar, G, S, pixels, camera,
- *     fog, stars, streaks, snap plane.
+ *   - Three.js owns the WORLD: the bar, G, S, pixels, bridge furniture,
+ *     camera, fog, snap plane. (Stars/streaks/shimmer parked, off.)
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0->1 onto the timeline, so the
  *     whole sequence is fully reversible: scrolling up rewinds everything
- *     exactly. The DOM (hero, phrases, progress bar, vignette) is
- *     choreographed separately in IntroSequence.vue from the same scroll
- *     position.
+ *     exactly. The DOM (hero, progress bar, vignette) is choreographed
+ *     separately in IntroSequence.vue from the same scroll position.
  *
- * Restrained by design: deck, edge lights, railings, stars, streaks, fog.
- * No assembly animations, no fly-ins, no bursts.
+ * Restrained by design: the bar, edge lights, railings, fog. No assembly
+ * animations, no fly-ins, no bursts.
  */
 
 export interface IntroSceneCallbacks {
@@ -102,22 +103,25 @@ function randomIn(min: number, max: number): number {
 }
 
 /* ------------------------------------------------------------------ */
-/* The monument. All dimensions in world units; the G stands ~360      */
-/* tall. The deck (the crossbar, continued) runs along +Z, starting    */
-/* UNDER the p=0 camera and receding through the G to the vanishing   */
-/* point — and beyond it, behind the camera, to sell "infinite".       */
+/* THE BAR: one continuous 64×56 chrome bar along Z (z −200 → 2240),    */
+/* centered x=0, y=0. It is BOTH the bridge deck and the G's crossbar — */
+/* a single mesh; no separate crossbar exists. It starts UNDER the p=0 */
+/* camera and runs ahead through the G to the vanishing point — and    */
+/* behind the camera, to sell "infinite".                              */
+/* The G stands ~360 tall; its face is rotated into the ZY plane (see  */
+/* the monument group below) so the bar passes through its middle.     */
 /* ------------------------------------------------------------------ */
 
 const G_OUTER_R = 180;
 const G_INNER_R = 108;
-const G_GAP_HALF = THREE.MathUtils.degToRad(52); // opening faces +X, like the mark
+const G_GAP_HALF = THREE.MathUtils.degToRad(52); // opening faces +X in shape space, like the mark
 const G_DEPTH = 64;
 const G_BEVEL_T = 12;
 const G_BEVEL_S = 10;
 
-const DECK_W = 64; // == crossbar width: the deck IS the crossbar
-const DECK_H = 56; // == crossbar thickness
-const DECK_Z_FAR = -60; // ends just past the G, enveloped by the crossbar
+const DECK_W = 64; // bar width == the G's crossbar width: the bar IS the crossbar
+const DECK_H = 56; // bar thickness
+const DECK_Z_FAR = -200; // ahead of the G, past its opening toward the vanishing point
 const DECK_Z_NEAR = 2240; // far behind the camera's furthest travel
 
 /** The G's arc: a bold annulus sector with clean radial-cut terminals. */
@@ -136,30 +140,6 @@ function makeGArcGeometry(): THREE.ExtrudeGeometry {
     bevelSize: G_BEVEL_S,
     bevelSegments: 4,
     curveSegments: 128,
-  });
-  geo.translate(0, 0, -G_DEPTH / 2);
-  return geo;
-}
-
-/**
- * The G's crossbar: a wedge bar with the mark's slashed right end. Its
- * left end is buried in the arc's band; its body continues as the bridge
- * deck (same cross-section), so all three read as one cast piece.
- */
-function makeCrossbarGeometry(): THREE.ExtrudeGeometry {
-  const t = DECK_H / 2;
-  const s = new THREE.Shape();
-  s.moveTo(-195, -t);
-  s.lineTo(240, -t);
-  s.lineTo(208, t); // slashed end, like the mark
-  s.lineTo(-195, t);
-  s.closePath();
-  const geo = new THREE.ExtrudeGeometry(s, {
-    depth: G_DEPTH,
-    bevelEnabled: true,
-    bevelThickness: G_BEVEL_T,
-    bevelSize: G_BEVEL_S,
-    bevelSegments: 3,
   });
   geo.translate(0, 0, -G_DEPTH / 2);
   return geo;
@@ -285,9 +265,9 @@ export function startIntroScene(
   scene.add(haze);
 
   // ---------- materials ----------
-  // Deck + G arc + crossbar share IDENTICAL params (separate instances so
+  // The bar + the G arc share IDENTICAL params (separate instances so
   // the monument's opacity can ramp independently of the always-visible
-  // deck). Same lighting response => the junctions read as one cast
+  // bar). Same lighting response => the junctions read as one cast
   // piece. Params chosen so the metal reads light GREY on black: bright
   // base, moderate roughness, hot env.
   const chromeParams = {
@@ -340,17 +320,17 @@ export function startIntroScene(
     transparent: true,
   });
 
-  // ---------- the monument: grey G + crossbar + blue S + pixels ----------
+  // ---------- the monument: grey G + blue S + pixels ----------
   // Opacity 0 from frame one — revealed ONLY by the timeline at beat 4.
-  // The deck (below) is the crossbar continued: its far end is enveloped
-  // by the crossbar's volume, so the reveal uncovers one object.
+  // rotation.y = π/2 lays the G's face in the ZY plane (facing ±X): the
+  // bar passes through the monument's middle along Z — interpenetrating
+  // the arc band (same chrome = one cast piece) and spanning the G's
+  // opening as the crossbar. S + pixels ride along into place.
   const logoGroup = new THREE.Group();
+  logoGroup.rotation.y = Math.PI / 2;
 
   const gArc = new THREE.Mesh(makeGArcGeometry(), gMat);
   logoGroup.add(gArc);
-
-  const crossbar = new THREE.Mesh(makeCrossbarGeometry(), gMat);
-  logoGroup.add(crossbar);
 
   const sGroup = new THREE.Group();
   sGroup.add(new THREE.Mesh(makeSRibbonGeometry(), sMat));
@@ -374,9 +354,10 @@ export function startIntroScene(
   }
   scene.add(logoGroup);
 
-  // ---------- the infinite bridge = the G's crossbar, continued ----------
-  // Same cross-section as the crossbar (64 x 56), same chrome: one form.
-  // Visible from frame one; the monument fades in around its far end.
+  // ---------- THE BAR: the bridge IS the G's crossbar ----------
+  // ONE straight bar along Z — single mesh, the v4 grey chrome (it reads
+  // grey; params untouched). Visible from frame one; the monument fades
+  // in around its middle at beat 4.
   const deckLen = DECK_Z_NEAR - DECK_Z_FAR;
   const deck = new THREE.Mesh(new THREE.BoxGeometry(DECK_W, DECK_H, deckLen), deckMat);
   deck.position.set(0, 0, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
@@ -392,7 +373,7 @@ export function startIntroScene(
   // Railings: instanced posts streaming past in beats 1-3 + top rails.
   const postGeo = new THREE.BoxGeometry(2.5, 16, 2.5);
   const postZs: number[] = [];
-  for (let z = 580; z > -40; z -= 70) postZs.push(z);
+  for (let z = 1300; z > 220; z -= 70) postZs.push(z); // stream past during the 600→1150 dolly; clear of the monument
   const posts = new THREE.InstancedMesh(postGeo, railMat, postZs.length * 2);
   const dummy = new THREE.Object3D();
   let pi = 0;
@@ -429,6 +410,7 @@ export function startIntroScene(
   });
   const stars = new THREE.Points(starGeo, starMat);
   stars.frustumCulled = false;
+  stars.visible = SHOW_STARS; // parked (see SHOW_STARS)
   scene.add(stars);
 
   // Distant shimmer toward the horizon (twinkle only, ambient).
@@ -478,6 +460,7 @@ export function startIntroScene(
   });
   const shimmer = new THREE.Points(shimmerGeo, shimmerMat);
   shimmer.frustumCulled = false;
+  shimmer.visible = SHOW_STARS; // parked (see SHOW_STARS)
   scene.add(shimmer);
 
   // Motion streaks: line segments stretched along the camera's velocity
@@ -504,6 +487,7 @@ export function startIntroScene(
   });
   const streaks = new THREE.LineSegments(streakGeo, streakMat);
   streaks.frustumCulled = false;
+  streaks.visible = SHOW_STARS; // parked (see SHOW_STARS)
   scene.add(streaks);
 
   // ---------- beat 6: the REAL logo, snapped from 3D to 2D ----------
@@ -529,18 +513,18 @@ export function startIntroScene(
   // scrolling up rewinds the camera, the fog, the reveal, and the snap.
   //
   // Beats 1-3 (0 -> 0.45): the money sensation is MOVING BACKWARDS. The
-  // camera dollies back along the deck (+Z) while looking slightly DOWN
-  // its length to the centered vanishing point. Posts and star-streaks
-  // stream past; the monument sits at opacity 0 — not the subject.
+  // camera dollies straight back along the bar (+Z) while looking slightly
+  // DOWN its length to the centered vanishing point. Railing posts stream
+  // past; the monument sits at opacity 0 — not the subject.
   //
-  // Beat 4 (0.45 -> 0.62): pull back AND up; the monument's opacity ramps
-  // 0->1 on this timeline (NOT fog). The G emerges from darkness with
-  // the deck already running through it — one cast piece, revealed,
-  // never assembled.
+  // Beat 4 (0.45 -> 0.62): the monument's opacity ramps 0->1 on this
+  // timeline (NOT fog) while the camera starts its sweep. The G emerges
+  // from darkness with the bar already running through it — one piece
+  // that was always there, revealed, never assembled.
   //
-  // Beat 5 (0.62 -> 0.8): the camera leaves the bridge-travel and glides
-  // into a 3/4 framing of the full GS monument — grey G, blue ribbon S,
-  // pixel cubes, deck rushing toward the viewer as the crossbar.
+  // Beat 5 (0.62 -> 0.8): the sweep completes to (950,300,150), look
+  // target glued to the monument. THE REVEAL: the bar you rode lies
+  // horizontal in frame as the G's crossbar.
   //
   // Beat 6 (0.8 -> 0.9): scale punch, then crossfade the whole 3D world
   // to the real 2D logo plane. The DOM then fades the canvas (0.9-1.0)
@@ -555,13 +539,14 @@ export function startIntroScene(
 
   // Camera path
   tl.to(cp, { x: 0, y: 85, z: 1150, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(cp, { x: -180, y: 180, z: 950, duration: 0.17, ease: 'power2.inOut' }, 0.45);
-  tl.to(cp, { x: 640, y: 320, z: 1500, duration: 0.18, ease: 'power2.inOut' }, 0.62);
+  tl.to(cp, { x: 450, y: 200, z: 700, duration: 0.17, ease: 'power2.inOut' }, 0.45);
+  tl.to(cp, { x: 950, y: 300, z: 150, duration: 0.18, ease: 'power2.inOut' }, 0.62);
 
-  // Look target
+  // Look target — glued to the monument (0,0,0) through the whole sweep
+  // so the G never leaves frame.
   tl.to(lookTarget, { x: 0, y: 30, z: -500, duration: 0.45, ease: 'sine.inOut' }, 0);
-  tl.to(lookTarget, { x: 40, y: -40, z: 0, duration: 0.17, ease: 'sine.inOut' }, 0.45);
-  tl.to(lookTarget, { x: 30, y: -50, z: 0, duration: 0.18, ease: 'sine.inOut' }, 0.62);
+  tl.to(lookTarget, { x: 0, y: 0, z: 0, duration: 0.17, ease: 'sine.inOut' }, 0.45);
+  tl.to(lookTarget, { x: 0, y: 0, z: 0, duration: 0.18, ease: 'sine.inOut' }, 0.62);
 
   // Fog: gentle melt of the far deck; the monument hides via opacity, not fog
   tl.to(fog, { density: 0.0009, duration: 0.45, ease: 'sine.inOut' }, 0);
@@ -598,8 +583,11 @@ export function startIntroScene(
     elapsed += dt;
 
     // Ambient shimmer twinkle (time-driven; the story stays scroll-driven).
-    (shimmerMat.uniforms.uTime as { value: number }).value = elapsed;
-    (shimmerMat.uniforms.uFade as { value: number }).value = worldFade.v;
+    // Parked behind SHOW_STARS — the whole block below returns with it.
+    if (SHOW_STARS) {
+      (shimmerMat.uniforms.uTime as { value: number }).value = elapsed;
+      (shimmerMat.uniforms.uFade as { value: number }).value = worldFade.v;
+    }
 
     // World fade for the 3D->2D snap.
     for (const m of fadeMats) m.opacity = worldFade.v;
@@ -618,28 +606,31 @@ export function startIntroScene(
 
     // Star streaks: stretch along the camera's velocity vector, scaled by
     // scroll speed. Still camera -> no streaks, twinkle only.
-    camVel.copy(camera.position).sub(prevCamPos).divideScalar(Math.max(dt, 1e-4));
-    prevCamPos.copy(camera.position);
-    const speed = camVel.length();
-    smoothSpeed += (speed - smoothSpeed) * Math.min(1, dt * 5);
-    const streakLen = Math.min(120, smoothSpeed * 0.5);
-    const sOp = Math.min(0.85, smoothSpeed / 450);
-    streakMat.opacity = worldFade.v * sOp;
-    if (streakLen > 0.05 && smoothSpeed > 1e-3) {
-      const dx = (camVel.x / speed) * streakLen;
-      const dy = (camVel.y / speed) * streakLen;
-      const dz = (camVel.z / speed) * streakLen;
-      for (let i = 0; i < STREAK_N; i++) {
-        const b = streakBase[i];
-        const o = i * 6;
-        streakPos[o] = b.x;
-        streakPos[o + 1] = b.y;
-        streakPos[o + 2] = b.z;
-        streakPos[o + 3] = b.x - dx;
-        streakPos[o + 4] = b.y - dy;
-        streakPos[o + 5] = b.z - dz;
+    // Parked behind SHOW_STARS — the whole block below returns with it.
+    if (SHOW_STARS) {
+      camVel.copy(camera.position).sub(prevCamPos).divideScalar(Math.max(dt, 1e-4));
+      prevCamPos.copy(camera.position);
+      const speed = camVel.length();
+      smoothSpeed += (speed - smoothSpeed) * Math.min(1, dt * 5);
+      const streakLen = Math.min(120, smoothSpeed * 0.5);
+      const sOp = Math.min(0.85, smoothSpeed / 450);
+      streakMat.opacity = worldFade.v * sOp;
+      if (streakLen > 0.05 && smoothSpeed > 1e-3) {
+        const dx = (camVel.x / speed) * streakLen;
+        const dy = (camVel.y / speed) * streakLen;
+        const dz = (camVel.z / speed) * streakLen;
+        for (let i = 0; i < STREAK_N; i++) {
+          const b = streakBase[i];
+          const o = i * 6;
+          streakPos[o] = b.x;
+          streakPos[o + 1] = b.y;
+          streakPos[o + 2] = b.z;
+          streakPos[o + 3] = b.x - dx;
+          streakPos[o + 4] = b.y - dy;
+          streakPos[o + 5] = b.z - dz;
+        }
+        (streakGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
       }
-      (streakGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
     }
 
     // Vignette: strong at p=0 so the frame edges dissolve to black,
