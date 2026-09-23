@@ -3,11 +3,11 @@ import { gsap } from 'gsap';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
- * TEMP SIMPLIFICATION (2026-09-23, per Chris): the star field — stars,
- * motion streaks, shimmer — is parked while the bridge is the focus.
- * Set to true to bring it all back. Nothing was deleted.
+ * Stars, motion streaks, and the environmental shimmer are ON (per Chris,
+ * 2026-09-23): "you can add the starts and environmental shimmers back in".
+ * Set to false to park them again. Nothing was deleted.
  */
-const SHOW_STARS = false;
+const SHOW_STARS = true;
 
 /**
  * The Gray Solutions scroll-driven cinematic intro.
@@ -16,11 +16,11 @@ const SHOW_STARS = false;
  * intro is a pure cinematic bridge sequence built around the approved
  * standalone bridge object — a solid silver-grey trapezoid with slashed
  * ends and real thickness, running down the Z axis into infinite fog.
- * The 3D logo monument (G, crossbar, S, pixels) was REMOVED in this
- * pass; morphing the bridge into the logo itself is future work, not
- * this build. No stars, no story text (parked behind SHOW_STARS /
- * SHOW_PHRASES, off). The sequence ends in a clean canvas fade that
- * uncovers the hero, which carries his real logo.
+ * The 3D logo monument (G, crossbar, S, pixels) was REMOVED; morphing the
+ * bridge into the logo itself is future work, not this build. No story
+ * text (parked behind SHOW_PHRASES, off). The sequence ends with the
+ * bridge's far end lining up with the crossbar of his real mark —
+ * the morph beginning — then hands off to the hero.
  *
  * THE BRIDGE (approved object, recreated natively): an elongated
  * parallelogram in plan view — constant width ~130, parallel slanted
@@ -32,17 +32,27 @@ const SHOW_STARS = false;
  * approved object.
  *
  * Beats (all scroll-scrubbed, fully reversible):
- *   - 0 → 0.55: backward dolly, (0,95,520) → (0,140,1150), looking
- *     down the deck's length to a centered vanishing point.
- *   - 0.55 → 0.8: pull-back and rise — the money shot:
+ *   - 0 → 0.5: backward dolly, (0,95,520) → (0,140,1150), looking
+ *     down the deck's length to a centered vanishing point. Star
+ *     streaks fire with scroll speed.
+ *   - 0.5 → 0.68: pull-back and rise — the money shot:
  *     (0,420,1650), target (0,0,-300). The full trapezoid receding
  *     into infinite depth.
- *   - 0.8 → 0.92: the DOM fades the canvas to transparent (see
- *     IntroSequence.vue), uncovering the hero in place. No snap beat.
+ *   - 0.68 → 0.85: THE DIVE. The camera swoops forward over the deck
+ *     toward the far end: (0,200,-1900), target (0,0,-2698). Fog dips
+ *     so the slashed far end arrives crisp and centered in frame.
+ *   - 0.85 → 0.92: THE ALIGNMENT. The camera holds; his real mark
+ *     (public/logo-mark.png, background keyed to transparent) fades in
+ *     on a camera-parented plane, scaled and offset so the mark's
+ *     CROSSBAR exactly overlaps the 3D bridge's far end — the bridge
+ *     becomes the crossbar. Hold it: he must SEE it.
+ *   - 0.92 → 0.97: the 3D world fades out, holding the mark.
+ *   - 0.97 → 1.0: the DOM fades the canvas (mark and all) and uncovers
+ *     the hero in place — his real logo takes over. Standard crossfade.
  *
  * Division of labor:
- *   - Three.js owns the WORLD: the bridge, camera, fog, lights.
- *     (Stars/streaks/shimmer parked, off.)
+ *   - Three.js owns the WORLD: the bridge, stars, streaks, shimmer,
+ *     camera, fog, lights, and the mark-alignment plane.
  *   - GSAP owns the STORY — a PAUSED, scroll-scrubbed timeline.
  *     `setProgress(p)` maps scroll progress 0->1 onto the timeline, so
  *     the whole sequence is fully reversible: scrolling up rewinds
@@ -50,7 +60,7 @@ const SHOW_STARS = false;
  *     choreographed separately in IntroSequence.vue from the same
  *     scroll position.
  *
- * Restrained by design: one object, fog, light. Nothing else.
+ * Restrained by design: one object, fog, light, stars. Nothing else.
  */
 
 export interface IntroSceneCallbacks {
@@ -196,15 +206,13 @@ export function startIntroScene(
   scene.add(rim);
 
   // ---------- atmospheric haze, far behind the world ----------
-  const haze = new THREE.Mesh(
-    new THREE.PlaneGeometry(3200, 1600),
-    new THREE.MeshBasicMaterial({
-      map: makeHazeTexture(),
-      transparent: true,
-      depthWrite: false,
-      fog: false,
-    }),
-  );
+  const hazeMat = new THREE.MeshBasicMaterial({
+    map: makeHazeTexture(),
+    transparent: true,
+    depthWrite: false,
+    fog: false,
+  });
+  const haze = new THREE.Mesh(new THREE.PlaneGeometry(3200, 1600), hazeMat);
   haze.position.set(0, 150, -2600);
   scene.add(haze);
 
@@ -217,6 +225,7 @@ export function startIntroScene(
     metalness: 1.0,
     roughness: 0.3,
     envMapIntensity: 1.6,
+    transparent: true, // the handoff beat fades the world out (worldFade)
   });
 
   // ---------- THE BRIDGE ----------
@@ -320,41 +329,102 @@ export function startIntroScene(
   streaks.visible = SHOW_STARS; // parked (see SHOW_STARS)
   scene.add(streaks);
 
+  // ---------- THE ALIGNMENT: his real mark over the bridge's far end ----------
+  // public/logo-mark.png: his mark unchanged, background keyed to
+  // transparent (derived from public/logo-lockup.jpg). Measured crossbar
+  // bounds in the image (fractions of 464x423): x 0.2586-0.8772,
+  // y 0.3073-0.4374 (fw 0.6185, fh 0.1300, center 0.5679/0.3723).
+  //
+  // The plane is parented to the camera and placed so the mark's
+  // CROSSBAR exactly overlaps the 3D bridge's far end at the dive's end
+  // pose (camera (0,200,-1900), target (0,0,-2698)):
+  //   - the far end edge's apparent angular width (0.2006, tangent) sets
+  //     the plane width: Pw = 0.2006 * 36 / 0.6185 = 11.6773
+  //     (verified numerically: crossbar corners land at NDC x ±0.102,
+  //     the 3D end edge spans NDC x -0.115..+0.089)
+  //   - the plane is offset so the crossbar's center lands on the
+  //     camera's optical axis = frame center
+  //   - rotation.x = +14.07° about the camera's X axis makes the plane
+  //     vertical in world space, matching the camera's downward look
+  //     angle — the mark reads upright, like a poster on a wall seen
+  //     from slightly above, while its crossbar sits on the bridge end
+  // The bridge IS the crossbar: the morph beginning. The plane holds
+  // through the world fade; the DOM crossfades it into the hero's logo.
+  const MARK_PW = 11.6773;
+  const MARK_PH = 10.6458; // Pw / (464/423) — the mark's own aspect
+  const MARK_TILT = 0.2456; // 14.07°: the camera's downward look angle
+  const markTex = new THREE.TextureLoader().load('/logo-mark.png');
+  markTex.colorSpace = THREE.SRGBColorSpace;
+  const markMat = new THREE.MeshBasicMaterial({
+    map: markTex,
+    transparent: true,
+    opacity: 0,
+    fog: false,
+    toneMapped: false, // the brand mark keeps its own colors
+  });
+  const markPlane = new THREE.Mesh(new THREE.PlaneGeometry(MARK_PW, MARK_PH), markMat);
+  markPlane.position.set(-0.7929, -1.3187, -36.3305);
+  markPlane.rotation.x = MARK_TILT;
+  camera.add(markPlane);
+  scene.add(camera); // camera-parented objects only render when the camera is in the scene
+
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
   // Normalized duration 1. Everything below is a pure function of p, so
-  // scrolling up rewinds the camera and the fog exactly.
+  // scrolling up rewinds the camera, the fog, the mark, and the world
+  // fade exactly.
   //
-  // Beats 1-2 (0 -> 0.55): the money sensation is MOVING BACKWARDS. The
+  // Beats 1-2 (0 -> 0.5): the money sensation is MOVING BACKWARDS. The
   // camera dollies straight back along the bridge (+Z) while looking
-  // slightly DOWN its length to the centered vanishing point. The far
-  // end stays swallowed by fog — infinite.
+  // slightly DOWN its length to the centered vanishing point. Star
+  // streaks fire with scroll speed; the far end stays swallowed by fog
+  // — infinite.
   //
-  // Beat 3 (0.55 -> 0.8): pull-back and rise — THE MONEY SHOT. Straight
+  // Beat 3 (0.5 -> 0.68): pull-back and rise — THE MONEY SHOT. Straight
   // back along Z and up → (0,420,1650), target (0,0,-300). No X movement
   // anywhere: the full trapezoid receding into infinite depth.
   //
-  // Beat 4 (0.8 -> 0.92): the DOM fades the canvas to transparent and
-  // uncovers the hero (which carries his real logo) in place behind it.
-  // Nothing in the 3D scene changes here — the handoff is a clean fade.
+  // Beat 4 (0.68 -> 0.85): THE DIVE. The camera swoops forward OVER the
+  // deck toward the far end → (0,200,-1900), target (0,0,-2698). Fog
+  // dips so the slashed far end arrives crisp and centered in frame —
+  // this is the moment he asked to see.
+  //
+  // Beat 5 (0.85 -> 0.92): THE ALIGNMENT. The camera holds; his real
+  // mark fades in with its crossbar exactly over the 3D bridge's far
+  // end. Hold it — the 3D bridge becomes the crossbar.
+  //
+  // Beat 6 (0.92 -> 0.97): the 3D world (bridge, stars, shimmer, haze)
+  // fades out, HOLDING the mark. The DOM then crossfades the canvas —
+  // mark and all — into the hero (0.92 -> 1.0), whose real logo takes
+  // over. Standard crossfade.
   const lookTarget = new THREE.Vector3(0, 25, -700);
+  const worldFade = { v: 1 }; // 1 -> 0 fades the 3D world during beat 6; the mark holds
 
   const tl = gsap.timeline({ paused: true });
   const cp = camera.position;
 
-  // Camera path: the travel shot, then the pull-back. The camera never
-  // moves in X — the reveal is symmetric and centered.
-  tl.to(cp, { x: 0, y: 140, z: 1150, duration: 0.55, ease: 'sine.inOut' }, 0);
-  tl.to(cp, { x: 0, y: 420, z: 1650, duration: 0.25, ease: 'power2.inOut' }, 0.55);
+  // Camera path: the travel shot, the pull-back, then the dive. The
+  // camera never moves in X — the reveal is symmetric and centered.
+  tl.to(cp, { x: 0, y: 140, z: 1150, duration: 0.5, ease: 'sine.inOut' }, 0);
+  tl.to(cp, { x: 0, y: 420, z: 1650, duration: 0.18, ease: 'power2.inOut' }, 0.5);
+  tl.to(cp, { x: 0, y: 200, z: -1900, duration: 0.17, ease: 'power2.inOut' }, 0.68);
 
   // Look target — eases from the vanishing point toward the deck's
-  // mid-distance and stays glued there through the pull-back.
-  tl.to(lookTarget, { x: 0, y: 30, z: -700, duration: 0.55, ease: 'sine.inOut' }, 0);
-  tl.to(lookTarget, { x: 0, y: 0, z: -300, duration: 0.25, ease: 'sine.inOut' }, 0.55);
+  // mid-distance, then dives with the camera to the far end.
+  tl.to(lookTarget, { x: 0, y: 30, z: -700, duration: 0.5, ease: 'sine.inOut' }, 0);
+  tl.to(lookTarget, { x: 0, y: 0, z: -300, duration: 0.18, ease: 'sine.inOut' }, 0.5);
+  tl.to(lookTarget, { x: 0, y: 0, z: -2698, duration: 0.17, ease: 'power2.inOut' }, 0.68);
 
-  // Fog: the far end melts into the void; near/mid stays solid. At the
-  // money shot the deck is ~90% clear a few hundred units out, ~55%
-  // clear at the look target, and gone by ~4300.
-  tl.to(fog, { density: 0.00038, duration: 0.25, ease: 'sine.inOut' }, 0.55);
+  // Fog: the far end melts into the void during the travel; the dip
+  // during the dive leaves the far end crisp (~99.5% clear at 728 out)
+  // for the alignment.
+  tl.to(fog, { density: 0.00038, duration: 0.18, ease: 'sine.inOut' }, 0.5);
+  tl.to(fog, { density: 0.0001, duration: 0.17, ease: 'sine.inOut' }, 0.68);
+
+  // The alignment: his mark fades in, crossbar over the bridge's end.
+  tl.to(markMat, { opacity: 1, duration: 0.07, ease: 'power1.out' }, 0.85);
+
+  // The handoff: the 3D world fades, holding the mark.
+  tl.to(worldFade, { v: 0, duration: 0.05, ease: 'power1.in' }, 0.92);
 
   // ---------- render loop ----------
   const clock = new THREE.Clock();
@@ -376,15 +446,20 @@ export function startIntroScene(
     elapsed += dt;
 
     // Ambient shimmer twinkle (time-driven; the story stays scroll-driven).
-    // Parked behind SHOW_STARS — the whole block below returns with it.
     if (SHOW_STARS) {
       (shimmerMat.uniforms.uTime as { value: number }).value = elapsed;
-      (shimmerMat.uniforms.uFade as { value: number }).value = 1;
+      (shimmerMat.uniforms.uFade as { value: number }).value = worldFade.v;
     }
+
+    // World fade for the handoff beat: the 3D world goes, the mark holds.
+    // Timeline-driven, so scrubbing backwards restores everything exactly.
+    const wf = worldFade.v;
+    bridgeMat.opacity = wf;
+    starMat.opacity = 0.75 * wf;
+    hazeMat.opacity = wf;
 
     // Star streaks: stretch along the camera's velocity vector, scaled by
     // scroll speed. Still camera -> no streaks, twinkle only.
-    // Parked behind SHOW_STARS — the whole block below returns with it.
     if (SHOW_STARS) {
       camVel.copy(camera.position).sub(prevCamPos).divideScalar(Math.max(dt, 1e-4));
       prevCamPos.copy(camera.position);
@@ -392,7 +467,7 @@ export function startIntroScene(
       smoothSpeed += (speed - smoothSpeed) * Math.min(1, dt * 5);
       const streakLen = Math.min(120, smoothSpeed * 0.5);
       const sOp = Math.min(0.85, smoothSpeed / 450);
-      streakMat.opacity = sOp;
+      streakMat.opacity = worldFade.v * sOp;
       if (streakLen > 0.05 && smoothSpeed > 1e-3) {
         const dx = (camVel.x / speed) * streakLen;
         const dy = (camVel.y / speed) * streakLen;
@@ -454,6 +529,7 @@ export function startIntroScene(
     });
     envTex.dispose();
     pmrem.dispose();
+    markTex.dispose();
     renderer.dispose();
   };
 
