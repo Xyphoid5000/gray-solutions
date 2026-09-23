@@ -3,41 +3,54 @@ import { gsap } from 'gsap';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
- * The Gray Solutions scroll-driven cinematic intro.
+ * The Gray Solutions scroll-driven cinematic intro — built to Chris's
+ * hand-drawn storyboard (2026-09-23). This is the authoritative spec and
+ * supersedes the earlier tunnel interpretation.
  *
- * Chris's confirmed vision (2026-09-23): a Three.js BRIDGE-based
- * sequence. The viewer starts sitting in 3D space above an INFINITE
- * BRIDGE, with distant shimmer/sparkle effects. A tunnel-like element
- * forms part of the grey "G"; the "S" is blue chrome. The bridge deck
- * threads straight through the G's tunnel bore as its endlessly deep
- * middle bar — you start on the bar, deep inside the logo's space.
+ * THE CORE IDEA: the bridge IS the logo. In logo-lockup.jpg the grey G's
+ * horizontal crossbar is a perspective wedge — a bridge/road receding to a
+ * vanishing point, wider at the near end and tapering away. The scene is
+ * ONE cast piece, not two:
  *
- * Scroll choreography: the camera ONLY dollies straight back and up
- * (pure translation, one fixed lookAt — no rotation, no arcs, no
- * lateral drift). Fog starts dense so the G is fully hidden, then
- * lifts: the G's top arch comes into view first, then its side, as one
- * monumental chrome sculpture beside its blue S.
- *
- * The hero lives INSIDE the intro's sticky stage behind the canvas for
- * the whole sequence (see IntroSequence.vue) — at the end the canvas
- * fades and the hero is revealed in place. You started inside it.
+ *   - Beats 1-3: the camera sits low over the bridge deck, which reads as
+ *     an endless bridge (fog + the deck running to a vanishing point).
+ *     The viewer doesn't know it's part of a letterform. Scroll = moving
+ *     backwards: the camera dollies back along the deck, stars streak past
+ *     with velocity-scaled motion streaks, and the existing DOM story copy
+ *     overlays the travel.
+ *   - Beat 4 ("something that stands apart"): the camera pulls back and
+ *     up while the fog clears. The giant chrome G — which existed from
+ *     frame one, hidden only by fog and framing — is uncovered around the
+ *     deck. The reveal: the bridge you've been traveling was the G's
+ *     crossbar all along. The deck slots into the G's outer arc with no
+ *     seam (same chrome material, volumetric overlap, no coplanar faces).
+ *   - Beat 5 (pull out): the camera leaves the bridge-travel and glides
+ *     into a close 3/4 framing of the massive 3D GS — grey chrome G, blue
+ *     chrome S below-right, the deck still running through as the crossbar.
+ *     The S was always there too; fog + framing do the revealing, never
+ *     a fly-in.
+ *   - Beat 6 (snap 3D->2D): a scale punch, then a crossfade to a plane
+ *     textured with Chris's ACTUAL logo-lockup.jpg — never redrawn or
+ *     reinterpreted. The DOM hero (same lockup) is then uncovered in place
+ *     behind the fading canvas (see IntroSequence.vue).
  *
  * Division of labor:
- *   - Three.js owns the WORLD: bridge, G, S, camera, fog, sparkles.
+ *   - Three.js owns the WORLD: bridge-as-crossbar, G, S, camera, fog,
+ *     stars, streaks, snap plane.
  *   - GSAP owns the STORY — but as a PAUSED, scroll-scrubbed timeline.
- *     `setProgress(p)` maps scroll progress 0→1 onto the timeline, so
- *     the whole sequence is fully reversible: scrolling up rewinds the
- *     camera exactly. The DOM (hero, phrases, progress bar, vignette)
- *     is choreographed separately in IntroSequence.vue from the same
- *     scroll position.
+ *     `setProgress(p)` maps scroll progress 0->1 onto the timeline, so the
+ *     whole sequence is fully reversible: scrolling up rewinds everything
+ *     exactly. The DOM (hero, phrases, progress bar, vignette) is
+ *     choreographed separately in IntroSequence.vue from the same scroll
+ *     position.
  *
- * NOTE: the G and S letterforms are hand-authored 3D interpretations
- * of the mark's anatomy — Chris's supplied logo is the source of
- * truth for the real brand assets.
+ * Restrained by design: deck, edge lights, railings, stars, streaks, fog.
+ * No assembly animations, no fly-ins, no bursts — the storyboard forbids
+ * them, and reverse scrubbing stays perfectly clean.
  */
 
 export interface IntroSceneCallbacks {
-  /** Called with the vignette level (0..1); strong at p=0, gone by p≈0.35. */
+  /** Called with the vignette level (0..1); strong at p=0, gone by p≈0.4. */
   onVignetteLevel?: (v: number) => void;
 }
 
@@ -81,51 +94,55 @@ function randomIn(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-/**
- * The G: a bold geometric arch with a clean gap on the right side.
- * Outer radius 150, inner counter radius 95 — the opening spans ±0.7
- * rad (≈ ±40°) around +X. Extruded 100 deep: the counter becomes a
- * genuine tunnel bore, and the bridge deck threads straight through
- * it. A luminous ring liner sits inside the bore so the opening reads
- * as a tunnel mouth, not a flat hole.
- */
-function makeGShape(): THREE.Shape {
-  const R = 150;
-  const r = 95;
-  const gap = 0.7;
-  const shape = new THREE.Shape();
-  // Clockwise from -gap the LONG way round to +gap: the arc wraps the
-  // left, top, and bottom, leaving the opening on the right.
-  shape.absarc(0, 0, R, -gap, gap, true);
-  shape.closePath();
-  const hole = new THREE.Path();
-  hole.absarc(0, 0, r, -gap, gap, true);
-  hole.closePath();
-  shape.holes.push(hole);
-  return shape;
+/* ------------------------------------------------------------------ */
+/* The bridge deck = the G's crossbar. A tapered slab (perspective     */
+/* wedge): wide at the G (near end), narrowing to the vanishing point. */
+/* ------------------------------------------------------------------ */
+
+const DECK_Z_NEAR = 20; // wide end, embedded in the G's left tube
+const DECK_Z_FAR = -4200; // narrow end, lost in fog
+const DECK_W_NEAR = 40;
+const DECK_W_FAR = 4;
+const DECK_X = -170; // deck centerline: meets the G's inner-left wall
+
+function deckWidthAt(z: number): number {
+  const t = (DECK_Z_NEAR - z) / (DECK_Z_NEAR - DECK_Z_FAR);
+  return DECK_W_NEAR + (DECK_W_FAR - DECK_W_NEAR) * t;
 }
 
-/** The blue S: a smooth tube swept along an S centerline. */
+/**
+ * A box tapered along Z: width wNear at local z=+len/2 (near), wFar at
+ * local z=-len/2 (far). xCenterAt(t) offsets the slab sideways per t
+ * (0 = near, 1 = far) — used for the glowing edge strips and rails that
+ * hug the deck's tapering edges.
+ */
+function makeTaperedSlab(
+  len: number,
+  wNear: number,
+  wFar: number,
+  h: number,
+  xCenterAt: (t: number) => number = () => 0,
+): THREE.BoxGeometry {
+  const geo = new THREE.BoxGeometry(1, h, len, 1, 1, Math.max(8, Math.floor(len / 60)));
+  const pos = geo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const z = pos.getZ(i);
+    const t = 0.5 - z / len; // 0 at near (+len/2), 1 at far (-len/2)
+    const w = wNear + (wFar - wNear) * t;
+    pos.setX(i, pos.getX(i) * w + xCenterAt(t));
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** The blue S: a smooth tube swept along an S centerline, flattened a touch. */
 function makeSGeometry(): THREE.TubeGeometry {
   const pts = [
-    new THREE.Vector3(38, 72, 0),
-    new THREE.Vector3(8, 80, 0),
-    new THREE.Vector3(-30, 68, 0),
-    new THREE.Vector3(-42, 40, 0),
-    new THREE.Vector3(-30, 12, 0),
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(30, -12, 0),
-    new THREE.Vector3(42, -40, 0),
-    new THREE.Vector3(30, -68, 0),
-    new THREE.Vector3(8, -80, 0),
-    new THREE.Vector3(-38, -72, 0),
-  ];
-  const curve = new THREE.CatmullRomCurve3(pts);
-  return new THREE.TubeGeometry(curve, 72, 15, 20, false);
+    [72, 82], [28, 106], [-32, 100], [-72, 62], [-68, 22],
+    [-28, -2], [28, -14], [70, -40], [66, -80], [24, -104], [-34, -98], [-72, -68],
+  ].map(([x, y]) => new THREE.Vector3(x, y, 0));
+  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 90, 24, 18, false);
 }
-
-/** The one fixed lookAt for the entire journey. Never animated. */
-const LOOK_AT = new THREE.Vector3(0, 60, -180);
 
 export function startIntroScene(
   canvas: HTMLCanvasElement,
@@ -143,10 +160,10 @@ export function startIntroScene(
   renderer.setClearColor(0x05070b, 1);
 
   const scene = new THREE.Scene();
-  // Fog starts DENSE — the G is fully hidden at p=0 — and the timeline
-  // lifts it to near-clear by p=1. Driven by the timeline so scrubbing
-  // backwards re-fogs the G exactly.
-  const fog = new THREE.FogExp2(0x05070b, 0.03);
+  // Fog starts DENSE — the G and S are fully hidden at p=0 — and the
+  // timeline clears it through beat 4. Driven by the timeline so
+  // scrubbing backwards re-fogs the logo exactly (no pop-in to invert).
+  const fog = new THREE.FogExp2(0x05070b, 0.0042);
   scene.fog = fog;
 
   // Image-based lighting so the chrome has something to reflect.
@@ -158,33 +175,27 @@ export function startIntroScene(
     58,
     window.innerWidth / window.innerHeight,
     0.5,
-    9000,
+    12000,
   );
-  // p=0: sitting in 3D space just above the infinite bridge deck
-  // (top surface y=0), deep inside the logo's space with the G's
-  // tunnel looming ahead, fully fogged. From here the camera ONLY
-  // dollies straight back and up.
-  camera.position.set(0, 9, 60);
+  // p=0: sitting low over the bridge deck, looking down its length to
+  // the vanishing point. The G is ~530 units ahead, fully fogged.
+  camera.position.set(DECK_X, 14, 500);
+  scene.add(camera); // the 2D snap plane rides parented to the camera
 
   // ---------- lights ----------
   scene.add(new THREE.AmbientLight(0x223044, 0.9));
 
-  const key = new THREE.DirectionalLight(0xe8f0ff, 1.2);
-  key.position.set(-160, 260, 320);
+  const key = new THREE.DirectionalLight(0xe8f0ff, 1.4);
+  key.position.set(-400, 500, 800);
   scene.add(key);
 
-  const rim = new THREE.PointLight(0x2f9bff, 2200, 900, 1.8);
-  rim.position.set(260, 130, 120);
+  const rim = new THREE.PointLight(0x2f9bff, 3000, 1600, 1.8);
+  rim.position.set(400, 200, 600);
   scene.add(rim);
 
-  // Cool glow inside the G's tunnel bore.
-  const tunnelGlow = new THREE.PointLight(0x2f9bff, 1800, 520, 1.8);
-  tunnelGlow.position.set(0, 70, -180);
-  scene.add(tunnelGlow);
-
-  // ---------- atmospheric haze, far behind the G ----------
+  // ---------- atmospheric haze, far behind the world ----------
   const haze = new THREE.Mesh(
-    new THREE.PlaneGeometry(2400, 1200),
+    new THREE.PlaneGeometry(3200, 1600),
     new THREE.MeshBasicMaterial({
       map: makeHazeTexture(),
       transparent: true,
@@ -192,39 +203,147 @@ export function startIntroScene(
       fog: false,
     }),
   );
-  haze.position.set(0, 120, -1100);
+  haze.position.set(DECK_X, 150, -2600);
   scene.add(haze);
 
-  // ---------- stars ----------
+  // ---------- shared chrome: ONE material for deck + G arc ----------
+  // The deck and the arc share this exact material instance — same
+  // lighting response, so the junction reads as one cast piece.
+  const chromeMat = new THREE.MeshStandardMaterial({
+    color: 0xf4f6f9,
+    metalness: 1.0,
+    roughness: 0.24,
+    envMapIntensity: 1.0,
+    transparent: true, // faded out at the 3D->2D snap
+  });
+
+  const blueChromeMat = new THREE.MeshStandardMaterial({
+    color: 0x2f6bff,
+    metalness: 1.0,
+    roughness: 0.28,
+    envMapIntensity: 1.0,
+    transparent: true,
+  });
+
+  const railMat = new THREE.MeshStandardMaterial({
+    color: 0x9aa4b2,
+    metalness: 1.0,
+    roughness: 0.35,
+    transparent: true,
+  });
+
+  const edgeMat = new THREE.MeshBasicMaterial({
+    color: 0x2f9bff,
+    transparent: true,
+  });
+
+  // ---------- the G: a bold chrome arc, opening facing +X ----------
+  // Exists from frame one; hidden only by fog + framing. The deck's wide
+  // end is embedded in the arc's left tube — one continuous object.
+  const logoGroup = new THREE.Group();
+  const G_R = 170;
+  const G_TUBE = 26;
+  const gGeo = new THREE.TorusGeometry(G_R, G_TUBE, 24, 180, Math.PI * 2 - 1.1);
+  const gMesh = new THREE.Mesh(gGeo, chromeMat);
+  gMesh.rotation.z = 0.55; // center the 1.1-rad gap on +X (the G's opening)
+  logoGroup.add(gMesh);
+
+  // ---------- the blue S, below-right of the G ----------
+  // Also present from frame one; revealed by fog + framing at beat 5.
+  const sMesh = new THREE.Mesh(makeSGeometry(), blueChromeMat);
+  sMesh.scale.z = 0.55; // ribbon feel, like the mark
+  const sGroup = new THREE.Group();
+  sGroup.add(sMesh);
+  const capGeo = new THREE.SphereGeometry(24, 18, 14);
+  for (const [cx, cy] of [[72, 82], [-72, -68]]) {
+    const cap = new THREE.Mesh(capGeo, blueChromeMat);
+    cap.position.set(cx, cy, 0);
+    cap.scale.z = 0.55;
+    sGroup.add(cap);
+  }
+  sGroup.position.set(150, -260, -40);
+  logoGroup.add(sGroup);
+  scene.add(logoGroup);
+
+  // ---------- the infinite bridge = the G's crossbar ----------
+  const deckLen = DECK_Z_NEAR - DECK_Z_FAR;
+  const deck = new THREE.Mesh(
+    makeTaperedSlab(deckLen, DECK_W_NEAR, DECK_W_FAR, 6),
+    chromeMat, // SAME material as the G arc: one cast piece
+  );
+  deck.position.set(DECK_X, 0, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
+  scene.add(deck);
+
+  // Glowing blue edge strips hugging the deck's tapering edges.
+  for (const side of [-1, 1]) {
+    const strip = new THREE.Mesh(
+      makeTaperedSlab(deckLen, 0.8, 0.8, 0.3, (t) => {
+        const w = DECK_W_NEAR + (DECK_W_FAR - DECK_W_NEAR) * t;
+        return side * (w / 2 - 0.4);
+      }),
+      edgeMat,
+    );
+    strip.position.set(DECK_X, 3.15, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
+    scene.add(strip);
+  }
+
+  // Railings: instanced posts + continuous top rails, following the taper.
+  const postGeo = new THREE.BoxGeometry(0.8, 7, 0.8);
+  const postRows = 105;
+  const posts = new THREE.InstancedMesh(postGeo, railMat, postRows * 2);
+  const dummy = new THREE.Object3D();
+  let pi = 0;
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < postRows; i++) {
+      const z = -i * 40;
+      dummy.position.set(DECK_X + side * (deckWidthAt(z) / 2 + 1.5), 6.5, z);
+      dummy.updateMatrix();
+      posts.setMatrixAt(pi++, dummy.matrix);
+    }
+  }
+  posts.instanceMatrix.needsUpdate = true;
+  scene.add(posts);
+
+  for (const side of [-1, 1]) {
+    const rail = new THREE.Mesh(
+      makeTaperedSlab(deckLen, 0.6, 0.6, 0.6, (t) => {
+        const w = DECK_W_NEAR + (DECK_W_FAR - DECK_W_NEAR) * t;
+        return side * (w / 2 + 1.5);
+      }),
+      railMat,
+    );
+    rail.position.set(DECK_X, 10.2, (DECK_Z_NEAR + DECK_Z_FAR) / 2);
+    scene.add(rail);
+  }
+
+  // ---------- stars: twinkle always, STREAK on scroll (beat 2) ----------
   const starGeo = new THREE.BufferGeometry();
   const starPos: number[] = [];
-  for (let i = 0; i < 1500; i++) {
-    starPos.push(randomIn(-1200, 1200), randomIn(-300, 700), randomIn(-2000, 800));
+  for (let i = 0; i < 1200; i++) {
+    starPos.push(randomIn(-1300, 900), randomIn(-150, 750), randomIn(-2700, 1600));
   }
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
   const starMat = new THREE.PointsMaterial({
     color: 0x93a7c4,
-    size: 1.6,
+    size: 1.8,
     sizeAttenuation: true,
     transparent: true,
-    opacity: 0.7,
+    opacity: 0.75,
     depthWrite: false,
-    fog: false,
   });
-  scene.add(new THREE.Points(starGeo, starMat));
+  const stars = new THREE.Points(starGeo, starMat);
+  stars.frustumCulled = false;
+  scene.add(stars);
 
-  // ---------- distant shimmer: twinkling sparkles toward the horizon ----------
-  // ShaderMaterial ignores scene.fog, so the shimmer stays visible deep
-  // in the fog — the "distant sparkle" of the vision. Twinkle is ambient
-  // (time-driven); the story itself stays scroll-driven.
-  const SHIMMER_N = 900;
+  // Distant shimmer toward the horizon (twinkle only, ambient).
+  const SHIMMER_N = 700;
   const shimmerGeo = new THREE.BufferGeometry();
   const shimmerPos = new Float32Array(SHIMMER_N * 3);
   const shimmerPhase = new Float32Array(SHIMMER_N);
   for (let i = 0; i < SHIMMER_N; i++) {
-    shimmerPos[i * 3] = randomIn(-550, 550);
-    shimmerPos[i * 3 + 1] = randomIn(-80, 280);
-    shimmerPos[i * 3 + 2] = randomIn(-1700, 320);
+    shimmerPos[i * 3] = randomIn(-900, 700);
+    shimmerPos[i * 3 + 1] = randomIn(-80, 420);
+    shimmerPos[i * 3 + 2] = randomIn(-2400, 400);
     shimmerPhase[i] = Math.random() * Math.PI * 2;
   }
   shimmerGeo.setAttribute('position', new THREE.BufferAttribute(shimmerPos, 3));
@@ -232,6 +351,7 @@ export function startIntroScene(
   const shimmerMat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
+      uFade: { value: 1 },
       uColor: { value: new THREE.Color(0xbfe0ff) },
     },
     transparent: true,
@@ -251,155 +371,109 @@ export function startIntroScene(
     `,
     fragmentShader: /* glsl */ `
       uniform vec3 uColor;
+      uniform float uFade;
       varying float vTw;
       void main() {
         float d = length(gl_PointCoord - 0.5);
-        float a = smoothstep(0.5, 0.05, d) * (0.12 + 0.88 * vTw);
+        float a = smoothstep(0.5, 0.05, d) * (0.12 + 0.88 * vTw) * uFade;
         gl_FragColor = vec4(uColor, a);
       }
     `,
   });
-  scene.add(new THREE.Points(shimmerGeo, shimmerMat));
+  const shimmer = new THREE.Points(shimmerGeo, shimmerMat);
+  shimmer.frustumCulled = false;
+  scene.add(shimmer);
 
-  // ---------- the infinite bridge ----------
-  const deckMat = new THREE.MeshStandardMaterial({
-    color: 0x39424c,
-    metalness: 0.85,
-    roughness: 0.45,
-  });
-  const darkMetal = new THREE.MeshStandardMaterial({
-    color: 0x1c2127,
-    metalness: 0.8,
-    roughness: 0.55,
-  });
-
-  // Deck: top surface at y=0, running to ±Z infinity.
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(30, 4, 6000), deckMat);
-  deck.position.set(0, -2, -1000);
-  scene.add(deck);
-
-  // Under-girder.
-  const girder = new THREE.Mesh(new THREE.BoxGeometry(22, 12, 6000), darkMetal);
-  girder.position.set(0, -10, -1000);
-  scene.add(girder);
-
-  // Edge light strips — the infinite leading lines, in logo blue.
-  const edgeMat = new THREE.MeshBasicMaterial({ color: 0x2f9bff });
-  for (const sx of [-13.6, 13.6]) {
-    const strip = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.3, 6000), edgeMat);
-    strip.position.set(sx, 0.2, -1000);
-    scene.add(strip);
+  // Motion streaks: line segments stretched along the camera's velocity
+  // vector, length + opacity scaled by scroll speed. At rest they vanish
+  // and only the twinkle remains — exactly the storyboard's beat 2.
+  const STREAK_N = 300;
+  const streakPos = new Float32Array(STREAK_N * 6);
+  const streakBase: { x: number; y: number; z: number }[] = [];
+  for (let i = 0; i < STREAK_N; i++) {
+    streakBase.push({
+      x: randomIn(-1300, 900),
+      y: randomIn(-150, 750),
+      z: randomIn(-2700, 1600),
+    });
   }
-
-  // Railings: posts (instanced) + continuous top rails.
-  const railMat = new THREE.MeshStandardMaterial({
-    color: 0x9aa4b2,
-    metalness: 1.0,
-    roughness: 0.35,
+  const streakGeo = new THREE.BufferGeometry();
+  streakGeo.setAttribute('position', new THREE.BufferAttribute(streakPos, 3));
+  const streakMat = new THREE.LineBasicMaterial({
+    color: 0xaac8ff,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
   });
-  const postGeo = new THREE.BoxGeometry(0.8, 7, 0.8);
-  const postCount = 150;
-  const posts = new THREE.InstancedMesh(postGeo, railMat, postCount * 2);
-  const dummy = new THREE.Object3D();
-  let pi = 0;
-  for (const sx of [-14.5, 14.5]) {
-    for (let i = 0; i < postCount; i++) {
-      dummy.position.set(sx, 3.5, -3980 + i * 40);
-      dummy.updateMatrix();
-      posts.setMatrixAt(pi++, dummy.matrix);
-    }
-  }
-  posts.instanceMatrix.needsUpdate = true;
-  scene.add(posts);
+  const streaks = new THREE.LineSegments(streakGeo, streakMat);
+  streaks.frustumCulled = false;
+  scene.add(streaks);
 
-  for (const sx of [-14.5, 14.5]) {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 6000), railMat);
-    rail.position.set(sx, 7.2, -1000);
-    scene.add(rail);
-  }
-
-  // ---------- the chrome G: grey, with a real tunnel bore ----------
-  const chromeMat = new THREE.MeshStandardMaterial({
-    color: 0xf4f6f9,
-    metalness: 1.0,
-    roughness: 0.22,
-    envMapIntensity: 1.0,
+  // ---------- beat 6: the REAL logo, snapped from 3D to 2D ----------
+  // Chris's actual mark — a plane textured with public/logo-lockup.jpg,
+  // parented to the camera so it fills the frame for the snap.
+  const snapTex = new THREE.TextureLoader().load('/logo-lockup.jpg');
+  snapTex.colorSpace = THREE.SRGBColorSpace;
+  const snapMat = new THREE.MeshBasicMaterial({
+    map: snapTex,
+    transparent: true,
+    opacity: 0,
+    fog: false,
+    toneMapped: false,
   });
-
-  const gGeo = new THREE.ExtrudeGeometry(makeGShape(), {
-    depth: 100,
-    bevelEnabled: true,
-    bevelThickness: 3,
-    bevelSize: 3,
-    bevelSegments: 2,
-    curveSegments: 96,
-  });
-  gGeo.center();
-  const gMesh = new THREE.Mesh(gGeo, chromeMat);
-  // The bridge deck (top y=0) threads the G's tunnel bore as its
-  // endlessly deep middle bar.
-  gMesh.position.set(0, 70, -180);
-  scene.add(gMesh);
-
-  // Luminous ring liner inside the bore — the tunnel mouth.
-  const linerGeo = new THREE.TorusGeometry(95, 9, 20, 140, Math.PI * 2 - 1.4);
-  const linerMat = new THREE.MeshStandardMaterial({
-    color: 0x11161c,
-    emissive: 0x2f9bff,
-    emissiveIntensity: 0.85,
-    metalness: 0.6,
-    roughness: 0.4,
-  });
-  const liner = new THREE.Mesh(linerGeo, linerMat);
-  liner.rotation.z = 0.7; // align the ring's gap with the G's gap (+X)
-  liner.position.set(0, 70, -180);
-  scene.add(liner);
-
-  // ---------- the blue S ----------
-  const blueChromeMat = new THREE.MeshStandardMaterial({
-    color: 0x3a7bff,
-    metalness: 1.0,
-    roughness: 0.25,
-    envMapIntensity: 1.0,
-  });
-  const sMesh = new THREE.Mesh(makeSGeometry(), blueChromeMat);
-  sMesh.position.set(215, 70, -215);
-  scene.add(sMesh);
-  // Cap the S's open tube ends.
-  const capGeo = new THREE.SphereGeometry(15, 20, 16);
-  for (const end of [
-    new THREE.Vector3(38, 72, 0),
-    new THREE.Vector3(-38, -72, 0),
-  ]) {
-    const cap = new THREE.Mesh(capGeo, blueChromeMat);
-    cap.position.copy(end).add(sMesh.position);
-    scene.add(cap);
-  }
+  const snapPlane = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), snapMat);
+  snapPlane.position.set(0, 0, -32);
+  snapPlane.scale.setScalar(1.07);
+  camera.add(snapPlane);
 
   // ---------- THE STORY: one paused timeline, scrubbed by scroll ----------
-  // Normalized duration 1. The camera moves by PURE TRANSLATION only —
-  // x stays 0 the whole way: no lateral drift, no arcs, no roll, and
-  // the lookAt never moves. Distances from the fixed lookAt grow
-  // strictly: ~245 → ~511 → ~741 → ~984.
+  // Normalized duration 1. Everything below is a pure function of p, so
+  // scrolling up rewinds the camera, the fog, the reveal, and the snap.
   //
-  // Phase 1 (0→0.35): slow drift back and up, still low over the deck;
-  // the G stays fully fogged — only bridge, rails, shimmer.
-  // Phase 2 (0.35→0.7): the fog lifts — the G's top arch comes into
-  // view first, then its side, then the blue S.
-  // Phase 3 (0.7→1): FAST accelerating pullback — power3.in so the
-  // motion rushes outward into the wide shot of the sculpture.
+  // Beats 1-3 (0 -> 0.45): the money sensation is MOVING BACKWARDS. The
+  // camera dollies back along the deck (+Z) while the lookAt stays down
+  // the bridge. Posts and star-streaks stream past; the G/S sit ~530+
+  // units ahead, fully fogged — not the subject.
+  //
+  // Beat 4 (0.45 -> 0.62): pull back AND up; fog clears. The G is
+  // uncovered around the deck by camera motion + fog alone — it was
+  // always there. The bridge reads as its crossbar.
+  //
+  // Beat 5 (0.62 -> 0.8): the camera leaves the bridge-travel and glides
+  // into a close 3/4 framing of the full GS — grey G, blue S below-right
+  // (revealed by framing; it was always there too), deck running through.
+  //
+  // Beat 6 (0.8 -> 0.9): scale punch, then crossfade the whole 3D world
+  // to the real 2D logo plane. The DOM then fades the canvas (0.9-1.0)
+  // and uncovers the hero in place.
+  const lookTarget = new THREE.Vector3(DECK_X, 10, -600);
+  const worldFade = { v: 1 }; // 1 -> 0 drives every 3D material's opacity
+  const fadeMats: THREE.Material[] = [chromeMat, blueChromeMat, railMat, edgeMat, starMat];
+
   const tl = gsap.timeline({ paused: true });
-  const camPos = camera.position;
+  const cp = camera.position;
 
-  tl.to(camPos, { y: 34, z: 330, duration: 0.35, ease: 'sine.inOut' }, 0);
-  tl.to(fog, { density: 0.014, duration: 0.35, ease: 'sine.inOut' }, 0);
+  // Camera path
+  tl.to(cp, { x: DECK_X, y: 42, z: 980, duration: 0.45, ease: 'sine.inOut' }, 0);
+  tl.to(cp, { x: DECK_X, y: 175, z: 1380, duration: 0.17, ease: 'power2.inOut' }, 0.45);
+  tl.to(cp, { x: 40, y: 130, z: 660, duration: 0.18, ease: 'power2.inOut' }, 0.62);
 
-  tl.to(camPos, { y: 95, z: 560, duration: 0.35, ease: 'power2.inOut' }, 0.35);
-  tl.to(fog, { density: 0.006, duration: 0.2, ease: 'sine.inOut' }, 0.35);
-  tl.to(fog, { density: 0.0016, duration: 0.15, ease: 'sine.inOut' }, 0.55);
+  // Look target
+  tl.to(lookTarget, { x: DECK_X, y: 26, z: -600, duration: 0.45, ease: 'sine.inOut' }, 0);
+  tl.to(lookTarget, { x: -60, y: 40, z: -100, duration: 0.17, ease: 'sine.inOut' }, 0.45);
+  tl.to(lookTarget, { x: 30, y: -50, z: -40, duration: 0.18, ease: 'sine.inOut' }, 0.62);
 
-  tl.to(camPos, { y: 150, z: 800, duration: 0.3, ease: 'power3.in' }, 0.7);
-  tl.to(fog, { density: 0.0007, duration: 0.3, ease: 'power1.in' }, 0.7);
+  // Fog: dense -> clear
+  tl.to(fog, { density: 0.0028, duration: 0.45, ease: 'sine.inOut' }, 0);
+  tl.to(fog, { density: 0.0005, duration: 0.17, ease: 'sine.inOut' }, 0.45);
+  tl.to(fog, { density: 0.0003, duration: 0.18, ease: 'sine.inOut' }, 0.62);
+
+  // Snap: punch the logo, crossfade the world to the real 2D mark
+  tl.to(logoGroup.scale, { x: 1.045, y: 1.045, z: 1.045, duration: 0.035, ease: 'power2.out' }, 0.8);
+  tl.to(worldFade, { v: 0, duration: 0.06, ease: 'power1.in' }, 0.82);
+  tl.to(snapMat, { opacity: 1, duration: 0.06, ease: 'power1.out' }, 0.8);
+  tl.to(snapPlane.scale, { x: 1, y: 1, z: 1, duration: 0.08, ease: 'power3.out' }, 0.8);
 
   // ---------- render loop ----------
   const clock = new THREE.Clock();
@@ -410,6 +484,9 @@ export function startIntroScene(
   let lastVignette = -1;
 
   const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  const prevCamPos = camera.position.clone();
+  const camVel = new THREE.Vector3();
+  let smoothSpeed = 0;
 
   const tick = () => {
     if (disposed) return;
@@ -417,22 +494,50 @@ export function startIntroScene(
     const dt = Math.min(clock.getDelta(), 0.05);
     elapsed += dt;
 
-    // Ambient shimmer twinkle.
+    // Ambient shimmer twinkle (time-driven; the story stays scroll-driven).
     (shimmerMat.uniforms.uTime as { value: number }).value = elapsed;
+    (shimmerMat.uniforms.uFade as { value: number }).value = worldFade.v;
 
-    // Vignette: a pure function of timeline progress — strong at p=0 so
-    // the frame edges dissolve to black (only bridge + shimmer visible),
-    // fully gone by p≈0.35. Deterministic and reversible under scrub.
+    // World fade for the 3D->2D snap.
+    for (const m of fadeMats) m.opacity = worldFade.v;
+
+    // Star streaks: stretch along the camera's velocity vector, scaled by
+    // scroll speed. Still camera -> no streaks, twinkle only.
+    camVel.copy(camera.position).sub(prevCamPos).divideScalar(Math.max(dt, 1e-4));
+    prevCamPos.copy(camera.position);
+    const speed = camVel.length();
+    smoothSpeed += (speed - smoothSpeed) * Math.min(1, dt * 5);
+    const streakLen = Math.min(120, smoothSpeed * 0.5);
+    const sOp = Math.min(0.85, smoothSpeed / 450);
+    streakMat.opacity = worldFade.v * sOp;
+    if (streakLen > 0.05 && smoothSpeed > 1e-3) {
+      const dx = (camVel.x / speed) * streakLen;
+      const dy = (camVel.y / speed) * streakLen;
+      const dz = (camVel.z / speed) * streakLen;
+      for (let i = 0; i < STREAK_N; i++) {
+        const b = streakBase[i];
+        const o = i * 6;
+        streakPos[o] = b.x;
+        streakPos[o + 1] = b.y;
+        streakPos[o + 2] = b.z;
+        streakPos[o + 3] = b.x - dx;
+        streakPos[o + 4] = b.y - dy;
+        streakPos[o + 5] = b.z - dz;
+      }
+      (streakGeo.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+    }
+
+    // Vignette: strong at p=0 so the frame edges dissolve to black,
+    // gone by p≈0.4. Deterministic and reversible under scrub.
     if (cb.onVignetteLevel) {
-      const v = clamp01((0.35 - tl.progress()) / 0.35);
+      const v = clamp01((0.4 - tl.progress()) / 0.4);
       if (Math.abs(v - lastVignette) > 0.002) {
         lastVignette = v;
         cb.onVignetteLevel(v);
       }
     }
 
-    // The one fixed lookAt — the camera never rotates on its own.
-    camera.lookAt(LOOK_AT);
+    camera.lookAt(lookTarget);
 
     if (visible && !document.hidden) {
       renderer.render(scene, camera);
@@ -453,6 +558,7 @@ export function startIntroScene(
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', onResize);
     tl.kill();
+    snapTex.dispose();
     scene.traverse((obj) => {
       const inst = obj as THREE.InstancedMesh;
       if (inst.isInstancedMesh) inst.dispose();
