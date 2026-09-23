@@ -124,18 +124,18 @@ onMounted(async () => {
       scene?.setProgress(p);
       bar.style.transform = `scaleX(${p.toFixed(4)})`;
 
-      // Crossfade the canvas out as the hero arrives; pause rendering
-      // once it's fully gone.
-      const canvasFade = clamp01((p - 0.9) / 0.1);
+      // Crossfade the canvas out as the hero arrives (0.8 -> 0.92);
+      // pause rendering once it's fully gone.
+      const canvasFade = clamp01((p - 0.8) / 0.12);
       canvas.style.opacity = (1 - canvasFade).toFixed(3);
-      scene?.setVisible(p < 0.985);
+      scene?.setVisible(p < 0.95);
 
       // The hero was there the whole time — revealed in place behind the
       // fading canvas. It never slides up; we started inside it.
-      const heroO = clamp01((p - 0.88) / 0.12);
+      const heroO = clamp01((p - 0.78) / 0.14);
       heroWrap.style.opacity = heroO.toFixed(3);
       // Keep the hero's links/buttons out of the tab order until visible.
-      heroWrap.inert = p < 0.95;
+      heroWrap.inert = p < 0.9;
 
       // Spotlight phrases: parked behind SHOW_PHRASES (see top of file).
       // SOLID at peak (opacity 1), dim (0.12) off-center. Each phrase owns
