@@ -16,11 +16,15 @@ const barWrapRef = ref<HTMLElement | null>(null);
 const barRef = ref<HTMLSpanElement | null>(null);
 const vignetteRef = ref<HTMLElement | null>(null);
 const veilRef = ref<HTMLElement | null>(null);
+const zoomRef = ref<HTMLElement | null>(null);
+const zoomImgRef = ref<HTMLImageElement | null>(null);
 const phraseRefs = ref<HTMLElement[]>([]);
 
 let scene: IntroSceneHandle | null = null;
 let ctx: gsap.Context | null = null;
 let tornDown = false;
+let lastP = 0;
+let applyProgressFn: ((p: number) => void) | null = null;
 
 /**
  * TEMP SIMPLIFICATION (2026-09-23, per Chris): forget the text for now —
@@ -28,6 +32,72 @@ let tornDown = false;
  * flag; set to true to bring them back. Nothing was deleted.
  */
 const SHOW_PHRASES = false;
+
+/**
+ * ZOOM OUT (2026-09-23, Chris): "when you are about to hit the end, the
+ * zoom on the logo zooms out rapidly." His mark drops in HUGE over the
+ * bridge — the crossbar IS the bridge — then whips down to exactly where
+ * the hero's logo sits while the canvas fades.
+ *
+ * Measured from the assets (PIL, 2026-09-23):
+ * - public/logo-mark.png is 464x423. Its crossbar: x 120..407, y 130..185.
+ * - mark.png -> public/logo-lockup.jpg (1254x1254, the hero's asset):
+ *   lockup_px = 1.15 * mark_px + (341, 321.5)
+ *   (crossbar template-matched via FFT NCC, mapped rect visually verified
+ *   against the G/S/pixels — it hugs the mark exactly).
+ *
+ * The landed transform is solved at runtime from the hero img's own rect,
+ * so it tracks responsive sizes; the zoomed transform centers the
+ * crossbar on the viewport with its width filling the frame. All math is
+ * deterministic — scrubbing back reverses the zoom exactly.
+ */
+const MARK_W = 464;
+const MARK_H = 423;
+const CB_X0 = 120;
+const CB_X1 = 407;
+const CB_Y0 = 130;
+const CB_Y1 = 185;
+const MAP_S = 1.15;
+const MAP_OX = 341;
+const MAP_OY = 321.5;
+const LOCKUP = 1254;
+
+const zoom = { sBig: 1, txBig: 0, tyBig: 0, sEnd: 1, txEnd: 0, tyEnd: 0 };
+
+function layoutZoom() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const L0 = (vw - MARK_W) / 2;
+  const T0 = (vh - MARK_H) / 2;
+  // Zoomed: the crossbar fills the frame, centered on the viewport.
+  const cbW = CB_X1 - CB_X0;
+  const cbCx = (CB_X0 + CB_X1) / 2;
+  const cbCy = (CB_Y0 + CB_Y1) / 2;
+  const sBig = (1.15 * vw) / cbW;
+  zoom.sBig = sBig;
+  zoom.txBig = vw / 2 - L0 - cbCx * sBig;
+  zoom.tyBig = vh / 2 - T0 - cbCy * sBig;
+  // Landed: the mark coincides with the mark inside the hero's lockup.
+  // (r.width for both axes: the lockup is square, and height:auto can
+  // report 0 before the image loads — width is CSS-driven and stable.)
+  const heroImg = heroWrapRef.value?.querySelector(
+    '.hero-mark',
+  ) as HTMLImageElement | null;
+  const r = heroImg?.getBoundingClientRect();
+  if (r && r.width > 0) {
+    const sEnd = (MAP_S * r.width) / LOCKUP;
+    zoom.sEnd = sEnd;
+    zoom.txEnd = r.left + (MAP_OX / LOCKUP) * r.width - L0;
+    zoom.tyEnd = r.top + (MAP_OY / LOCKUP) * r.width - T0;
+  }
+}
+
+/** Re-solve the zoom geometry (resize, font settle, reveal settle). */
+function relayoutZoom() {
+  if (tornDown) return;
+  layoutZoom();
+  applyProgressFn?.(lastP);
+}
 
 /**
  * The story, set in giant DOM type — the full hero philosophy copy, split
@@ -70,6 +140,7 @@ const smooth = (t: number) => {
 function teardown() {
   if (tornDown) return;
   tornDown = true;
+  window.removeEventListener('resize', relayoutZoom);
   ctx?.revert();
   ctx = null;
   scene?.dispose();
@@ -121,14 +192,34 @@ onMounted(async () => {
     // exactly. Do NOT use ScrollTrigger enter events inside the sticky
     // stage; positions are unreliable there.
     const applyProgress = (p: number) => {
+      lastP = p;
       scene?.setProgress(p);
       bar.style.transform = `scaleX(${p.toFixed(4)})`;
 
-      // Crossfade the canvas out as the hero arrives (0.92 -> 1.0). The
-      // 3D world has already faded in-scene (0.92 -> 0.97, holding the
-      // mark); this canvas fade carries the mark into the hero, whose
-      // real logo takes over. Pause rendering once it's fully gone.
-      const canvasFade = clamp01((p - 0.92) / 0.08);
+      // ZOOM OUT (0.80 -> 1.0): his mark drops in HUGE over the bridge —
+      // the crossbar IS the bridge — then whips down to exactly where
+      // the hero's logo sits. Exponential scale interpolation = constant
+      // zoom velocity; ease-out = rapid. Fully scrub-reversible.
+      const zoomEl = zoomRef.value;
+      const zoomImg = zoomImgRef.value;
+      if (zoomEl && zoomImg) {
+        const zT = clamp01((p - 0.8) / 0.2);
+        const ze = 1 - Math.pow(1 - zT, 2.2);
+        const zs = zoom.sBig * Math.pow(zoom.sEnd / zoom.sBig, ze);
+        const ztx = zoom.txBig + (zoom.txEnd - zoom.txBig) * ze;
+        const zty = zoom.tyBig + (zoom.tyEnd - zoom.tyBig) * ze;
+        zoomImg.style.transform =
+          `translate(${ztx.toFixed(1)}px, ${zty.toFixed(1)}px) scale(${zs.toFixed(5)})`;
+        // Fade in fast over the bridge, hold through the whip, then out
+        // as the hero lands.
+        const zO = smooth((p - 0.8) / 0.04) * (1 - smooth((p - 0.965) / 0.035));
+        zoomEl.style.opacity = zO.toFixed(3);
+        zoomEl.style.visibility = zO > 0.002 ? 'visible' : 'hidden';
+      }
+
+      // The canvas fades as the mark whips down; pause rendering once
+      // it's fully gone.
+      const canvasFade = clamp01((p - 0.84) / 0.16);
       canvas.style.opacity = (1 - canvasFade).toFixed(3);
       scene?.setVisible(p < 0.995);
 
@@ -177,8 +268,19 @@ onMounted(async () => {
 
     // Set the initial state deterministically (in case ScrollTrigger
     // hasn't fired onUpdate yet).
+    applyProgressFn = applyProgress;
+    layoutZoom();
     applyProgress(0);
+
+    // Re-solve the zoom geometry once the display font settles and once
+    // the hero's scroll-in reveal has cleared its transform.
+    if (document.fonts) {
+      document.fonts.ready.then(() => relayoutZoom()).catch(() => {});
+    }
+    window.setTimeout(relayoutZoom, 1600);
   }, sectionRef.value);
+
+  window.addEventListener('resize', relayoutZoom);
 });
 
 onUnmounted(() => {
@@ -197,6 +299,13 @@ onUnmounted(() => {
       </div>
 
       <canvas ref="canvasRef" class="intro-canvas" aria-hidden="true"></canvas>
+
+      <!-- ZOOM OUT (0.80 -> 1.0): his mark drops in huge over the bridge —
+           the crossbar IS the bridge — then whips down to exactly where
+           the hero's logo sits. -->
+      <div ref="zoomRef" class="intro-zoomlogo" aria-hidden="true">
+        <img ref="zoomImgRef" src="/logo-mark.png" alt="" />
+      </div>
 
       <div ref="vignetteRef" class="intro-vignette" aria-hidden="true"></div>
 
@@ -272,6 +381,29 @@ onUnmounted(() => {
     #000 100%
   );
   opacity: 1;
+}
+
+/* The zoom-out mark (0.80 -> 1.0): huge over the bridge, whipping down to
+   the hero's logo position. Transform is fully JS-driven (layoutZoom +
+   scroll progress); the base box is just the mark's natural size,
+   centered, with a top-left transform origin for the computed math. */
+.intro-zoomlogo {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.intro-zoomlogo img {
+  position: absolute;
+  left: calc(50% - 232px);
+  top: calc(50% - 211.5px);
+  width: 464px;
+  height: 423px;
+  transform-origin: 0 0;
+  will-change: transform;
 }
 
 /* Giant story type, overlaid on the stage. Each slot fills the stage;
