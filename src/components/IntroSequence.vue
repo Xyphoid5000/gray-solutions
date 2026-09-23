@@ -48,7 +48,8 @@ const SHOW_PHRASES = false;
  *
  * The landed transform is solved at runtime from the hero img's own rect,
  * so it tracks responsive sizes; the zoomed transform centers the
- * crossbar on the viewport with its width filling the frame. All math is
+ * crossbar on the viewport with the crossbar covering the frame (cover
+ * semantics — correct on any aspect ratio). All math is
  * deterministic — scrubbing back reverses the zoom exactly.
  */
 const MARK_W = 464;
@@ -69,11 +70,15 @@ function layoutZoom() {
   const vh = window.innerHeight;
   const L0 = (vw - MARK_W) / 2;
   const T0 = (vh - MARK_H) / 2;
-  // Zoomed: the crossbar fills the frame, centered on the viewport.
+  // Zoomed: the crossbar COVERS the viewport — no S, no pixels, just the
+  // crossbar's silver-grey filling the frame — centered on the viewport.
+  // Cover semantics: scale = max(vw/cbW, vh/cbH). Width-only math fails on
+  // portrait (2026-09-23 bug: crossbar rendered tiny, S + pixels visible).
   const cbW = CB_X1 - CB_X0;
+  const cbH = CB_Y1 - CB_Y0;
   const cbCx = (CB_X0 + CB_X1) / 2;
   const cbCy = (CB_Y0 + CB_Y1) / 2;
-  const sBig = (1.15 * vw) / cbW;
+  const sBig = Math.max(vw / cbW, vh / cbH);
   zoom.sBig = sBig;
   zoom.txBig = vw / 2 - L0 - cbCx * sBig;
   zoom.tyBig = vh / 2 - T0 - cbCy * sBig;
