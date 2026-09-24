@@ -8,7 +8,7 @@ import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
-import { neighbor, type ChapterMeta } from './router';
+import { neighbor, chapters, type ChapterMeta } from './router';
 import { returnToContact } from './lib/ui';
 import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
 
@@ -35,7 +35,7 @@ const modalChapter = ref<ChapterMeta | null>(null);
 
 function goToChapter(path: string) {
   modalChapter.value = null;
-  // Let the modal close before the page dissolves in.
+  // Let the modal close before the page turns.
   setTimeout(() => router.push(path), 320);
 }
 
@@ -63,46 +63,113 @@ watch(modalChapter, (ch) => {
   }
 });
 
-/* ---------- chapter dissolve (no flips, just ink) ---------- */
+/* ---------- page turns (a real book, not a slideshow) ---------- */
+// Which way the reader is moving through the book: +1 forward, -1 back.
+let turnDir = 1;
+router.beforeEach((to, from) => {
+  const ti = chapters.findIndex((c) => c.path === to.path);
+  const fi = chapters.findIndex((c) => c.path === from.path);
+  turnDir = ti >= fi ? 1 : -1;
+});
+
 function beforeEnter(el: Element) {
   const page = el as HTMLElement;
   scrollToTopImmediate();
-  gsap.set(page, { opacity: 0, y: 26 });
+  if (reducedMotion) {
+    gsap.set(page, { opacity: 1 });
+    return;
+  }
+  if (turnDir >= 0) {
+    // Turning forward: the new page waits beneath the turning page.
+    gsap.set(page, { opacity: 0, zIndex: 1 });
+  } else {
+    // Turning back: the new page swings in from the spine,
+    // edge-on and dimmed like paper catching the light.
+    gsap.set(page, {
+      opacity: 1,
+      zIndex: 2,
+      transformOrigin: 'left center',
+      backfaceVisibility: 'hidden',
+      rotationY: -105,
+      filter: 'brightness(0.35)',
+    });
+  }
 }
 
 function enter(el: Element, done: () => void) {
   const page = el as HTMLElement;
   if (reducedMotion) {
-    gsap.set(page, { opacity: 1, y: 0, clearProps: 'all' });
+    gsap.set(page, { clearProps: 'all' });
     done();
     return;
   }
-  gsap.to(page, {
-    opacity: 1,
-    y: 0,
-    duration: 0.75,
-    ease: 'power3.out',
-    delay: 0.12,
-    onComplete: () => {
-      gsap.set(page, { clearProps: 'opacity,transform' });
-      done();
-    },
-  });
+  const finish = () => {
+    gsap.set(page, { clearProps: 'all' });
+    done();
+  };
+  if (turnDir >= 0) {
+    gsap.to(page, {
+      opacity: 1,
+      duration: 0.7,
+      ease: 'power1.out',
+      delay: 0.1,
+      onComplete: finish,
+    });
+  } else {
+    gsap.to(page, {
+      rotationY: 0,
+      filter: 'brightness(1)',
+      duration: 0.75,
+      ease: 'power3.out',
+      onComplete: finish,
+    });
+  }
 }
 
 function leave(el: Element, done: () => void) {
   const page = el as HTMLElement;
-  gsap.set(page, { position: 'absolute', inset: '0', width: '100%' });
   if (reducedMotion) {
     done();
     return;
   }
-  gsap.to(page, {
-    opacity: 0,
-    duration: 0.4,
-    ease: 'power2.in',
-    onComplete: done,
-  });
+  if (turnDir >= 0) {
+    // Turning forward: the page lifts off the spine and swings left,
+    // darkening as it turns away from the light.
+    gsap.set(page, {
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      zIndex: 2,
+      transformOrigin: 'left center',
+      backfaceVisibility: 'hidden',
+    });
+    gsap.to(page, {
+      rotationY: -105,
+      filter: 'brightness(0.35)',
+      duration: 0.65,
+      ease: 'power2.in',
+      onComplete: done,
+    });
+  } else {
+    // Turning back: the old page simply yields beneath the incoming one.
+    gsap.set(page, {
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      zIndex: 1,
+    });
+    gsap.to(page, {
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power2.in',
+      onComplete: done,
+    });
+  }
+}
+
+function cancelTurn(el: Element) {
+  gsap.killTweensOf(el);
+  gsap.set(el as HTMLElement, { clearProps: 'all' });
 }
 
 function afterEnter() {
@@ -249,6 +316,8 @@ onUnmounted(() => {
         @before-enter="beforeEnter"
         @enter="enter"
         @leave="leave"
+        @enter-cancelled="cancelTurn"
+        @leave-cancelled="cancelTurn"
         @after-enter="afterEnter"
       >
         <component :is="Component" :key="route.path" class="book-page" />

@@ -1340,15 +1340,34 @@ a {
 }
 
 /* ---------- planner tab rail ---------- */
-.tab-rail {
+/* Both rails share one vertical rhythm: every page owns a fixed grid
+   row on either rail. Tabs hang from the top like a real planner —
+   turning a page moves a tab left or right, never up or down. */
+.tab-rails {
+  --tab-row: 55px; /* tab height + gap */
   position: fixed;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  inset: 0;
   z-index: 900;
   display: flex;
-  flex-direction: column;
-  gap: 7px;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-top: calc(var(--nav-h) + 1.25rem);
+  pointer-events: none;
+}
+.tab-rails .tab-rail {
+  position: static;
+  top: auto;
+  right: auto;
+  left: auto;
+  transform: none;
+  display: grid;
+  grid-auto-rows: var(--tab-row);
+  pointer-events: auto;
+}
+@media (max-width: 640px) {
+  .tab-rails {
+    --tab-row: 50px;
+  }
 }
 .tab {
   width: 34px;

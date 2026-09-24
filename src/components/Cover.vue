@@ -135,39 +135,63 @@ function land(power: number) {
   }
 }
 
+/**
+ * How the book must be transformed — squared to camera, centered, and
+ * scaled — so its cover exactly fills the viewport, never more.
+ * Measures the book flattened (resting 3D tilt would shrink the reading)
+ * and restores the resting pose before returning.
+ */
+function coverFit() {
+  const book = bookRef.value;
+  if (!book) return null;
+  const rest = {
+    x: gsap.getProperty(book, 'x'),
+    y: gsap.getProperty(book, 'y'),
+    rotationX: gsap.getProperty(book, 'rotationX'),
+    rotationY: gsap.getProperty(book, 'rotationY'),
+    rotationZ: gsap.getProperty(book, 'rotationZ'),
+  };
+  gsap.set(book, { x: 0, y: 0, rotationX: 0, rotationY: 0, rotationZ: 0 });
+  const r = book.getBoundingClientRect();
+  gsap.set(book, rest);
+  const scale =
+    Math.min(window.innerWidth / r.width, window.innerHeight / r.height) *
+    0.985;
+  return {
+    scale,
+    x: window.innerWidth / 2 - (r.left + r.width / 2),
+    y: window.innerHeight / 2 - (r.top + r.height / 2),
+  };
+}
+
 function open() {
   if (reducedMotion()) {
-    router.push('/about');
+    router.push('/premise');
     return;
   }
   introTl?.kill();
   const book = bookRef.value;
-  // Dive into the front cover: square the book to camera, zoom the
-  // scene until the cover fills the frame — then the router's normal
+  if (!book) {
+    router.push('/premise');
+    return;
+  }
+  const fit = coverFit();
+  // Dive into the front cover: square the book to camera and grow it
+  // until the cover fills the frame — then the router's normal
   // page-turn carries us into the book.
-  const tl = gsap.timeline({ onComplete: () => router.push('/about') });
+  const tl = gsap.timeline({ onComplete: () => router.push('/premise') });
   tl.to('.cover-ui, .cover-kicker', { opacity: 0, y: -24, duration: 0.45, ease: 'power2.in' }, 0)
     .to('.cover-glow', { opacity: 0.2, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.book-shadow', { opacity: 0, scale: 1.5, duration: 0.9, ease: 'power2.in' }, 0)
     .to(
       book,
       {
-        y: 0,
-        scaleX: 1,
-        scaleY: 1,
+        x: fit ? fit.x : 0,
+        y: fit ? fit.y : 0,
+        scale: fit ? fit.scale : 1,
         rotationX: 0,
         rotationY: 0,
         rotationZ: 0,
-        duration: 1.3,
-        ease: 'power2.inOut',
-      },
-      0.1,
-    )
-    .to(
-      '.cover-scene',
-      {
-        scale: 2.8,
-        transformOrigin: '50% 40%',
         duration: 1.3,
         ease: 'power2.inOut',
       },
@@ -188,26 +212,34 @@ function playReturn() {
     document.getElementById('contact')?.scrollIntoView();
     return;
   }
-  // Start where open() left off: squared to camera, deep in the cover.
+  // Start where open() left off: squared to camera, centered, filling
+  // the frame — then ease back out to the resting presentation.
+  const fit = coverFit();
   gsap.set(book, {
-    y: 0,
-    scaleX: 1,
-    scaleY: 1,
+    x: fit ? fit.x : 0,
+    y: fit ? fit.y : 0,
+    scale: fit ? fit.scale : 1,
     rotationX: 0,
     rotationY: 0,
     rotationZ: 0,
     transformPerspective: 1400,
   });
-  gsap.set('.cover-scene', { scale: 2.8, transformOrigin: '50% 40%' });
   gsap.set(['.cover-kicker', '.cover-ui > *'], { opacity: 0, y: 18 });
   gsap.set('.cover-glow', { opacity: 0.25 });
   gsap.set('.book-shadow', { opacity: 0, scale: 1.4 });
 
   const tl = gsap.timeline();
-  tl.to('.cover-scene', { scale: 1, duration: 1.9, ease: 'power2.inOut' }, 0.25)
-    .to(
+  tl.to(
       book,
-      { rotationX: 8, rotationY: -22, duration: 1.9, ease: 'power2.inOut' },
+      {
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotationX: 8,
+        rotationY: -22,
+        duration: 1.9,
+        ease: 'power2.inOut',
+      },
       0.25,
     )
     .to('.cover-glow', { opacity: 1, duration: 1.4, ease: 'power1.inOut' }, 0.5)
