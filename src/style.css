@@ -898,9 +898,6 @@ a {
   padding: clamp(5rem, 12vw, 9rem) 0;
   border-top: 1px solid var(--line-soft);
 }
-.about-standalone {
-  padding-top: clamp(6rem, 12vw, 9rem);
-}
 .about-portrait {
   width: 128px;
   height: 128px;
@@ -958,32 +955,6 @@ a {
   margin: 3rem 0 0;
   font-size: 1.15rem;
   color: var(--ink);
-}
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5em;
-  padding: 0;
-  margin-bottom: 3rem;
-  border: 0;
-  background: none;
-  color: var(--faint);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: color 0.25s;
-}
-.back-link:hover {
-  color: var(--ember);
-}
-.back-link .arrow {
-  transition: transform 0.25s ease;
-}
-.back-link:hover .arrow {
-  transform: translateX(-4px);
 }
 @media (max-width: 640px) {
   .about-facts {

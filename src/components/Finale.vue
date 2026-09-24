@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 
-const router = useRouter();
+const emit = defineEmits<{
+  about: [];
+  contact: [];
+}>();
 
 const LINKS = [
   {
@@ -58,10 +60,6 @@ onUnmounted(() => {
   ctx?.revert();
   ctx = null;
 });
-
-function startStory() {
-  router.push({ path: '/', hash: '#contact' });
-}
 </script>
 
 <template>
@@ -78,7 +76,7 @@ function startStory() {
         >
       </h2>
       <p>
-        <button class="link-more" @click="router.push('/about')">
+        <button class="link-more" @click="emit('about')">
           More about me <span class="arrow" aria-hidden="true">&rarr;</span>
         </button>
       </p>
@@ -90,7 +88,7 @@ function startStory() {
           together.
         </p>
         <div class="fin-actions">
-          <button class="btn btn-solid" @click="startStory">
+          <button class="btn btn-solid" @click="emit('contact')">
             Start your story <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
           <nav class="fin-links" aria-label="Elsewhere">

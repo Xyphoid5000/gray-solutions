@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { ref, type Component } from 'vue';
 import Cover from './components/Cover.vue';
-import About from './components/About.vue';
 import Finale from './components/Finale.vue';
 import Premise from './components/Premise.vue';
 import Craft from './components/Craft.vue';
@@ -22,7 +21,6 @@ export interface ChapterMeta {
 
 const components: Record<string, Component> = {
   '/': Cover,
-  '/about': About,
   '/finale': Finale,
   '/premise': Premise,
   '/craft': Craft,
@@ -40,8 +38,7 @@ export const chapters: ChapterMeta[] = [
 ];
 
 /**
- * The book's chapter sequence. /about is intentionally NOT a chapter —
- * it lives off the book as a standalone details page.
+ * The book's chapter sequence.
  */
 export function isChapter(path: string): boolean {
   return chapters.some((c) => c.path === path);
@@ -52,15 +49,10 @@ export const navDirection = ref<'forward' | 'back'>('forward');
 
 export const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    // The book, in order…
-    ...chapters.map((c) => ({
-      path: c.path,
-      component: components[c.path],
-    })),
-    // …plus the about page, which lives off the book entirely.
-    { path: '/about', component: components['/about'] },
-  ],
+  routes: chapters.map((c) => ({
+    path: c.path,
+    component: components[c.path],
+  })),
   scrollBehavior: () => ({ top: 0 }),
 });
 

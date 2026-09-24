@@ -9,7 +9,7 @@ import PageTurner from './components/PageTurner.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
 import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
-import { returnToContact } from './lib/ui';
+import { returnToSection } from './lib/ui';
 import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -49,7 +49,20 @@ function goToContact() {
     if (form) scrollSlowTo(form);
     return;
   }
-  returnToContact.value = true;
+  returnToSection.value = 'contact';
+  router.push('/');
+}
+
+/**
+ * Same cinematic return, but landing on the about-me section instead.
+ */
+function goToAbout() {
+  if (route.path === '/') {
+    const about = document.getElementById('about');
+    if (about) scrollSlowTo(about);
+    return;
+  }
+  returnToSection.value = 'about';
   router.push('/');
 }
 
@@ -292,7 +305,7 @@ function onTouchMove(e: TouchEvent) {
   // scrollable page now (the form lives under the book), so pushing
   // at its bottom must never whisk the reader away mid-form.
   const path = router.currentRoute.value.path;
-  if (path === '/finale' || path === '/about' || path === '/') return;
+  if (path === '/finale' || path === '/') return;
   if (atBottom() && dy < -4) {
     pushAccum += -dy;
     if (pushAccum > 120) {
@@ -372,7 +385,13 @@ onUnmounted(() => {
         @leave-cancelled="cancelTurn"
         @after-enter="afterEnter"
       >
-        <component :is="Component" :key="route.path" class="book-page" />
+        <component
+          :is="Component"
+          :key="route.path"
+          class="book-page"
+          @about="goToAbout"
+          @contact="goToContact"
+        />
       </Transition>
     </RouterView>
   </div>

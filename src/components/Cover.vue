@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
-import { returnToContact } from '../lib/ui';
+import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 
 const router = useRouter();
@@ -206,11 +206,11 @@ function open() {
  * the book closes, the camera eases back out to the full scene, and
  * then we drift slowly down to the form.
  */
-function playReturn() {
+function playReturn(target: 'contact' | 'about') {
   const book = bookRef.value;
   if (!book) return;
   if (reducedMotion()) {
-    document.getElementById('contact')?.scrollIntoView();
+    document.getElementById(target)?.scrollIntoView();
     return;
   }
   // Start where open() left off: squared to camera, centered, filling
@@ -255,8 +255,8 @@ function playReturn() {
       1.1,
     )
     .add(() => {
-      const form = document.getElementById('contact');
-      if (form) scrollSlowTo(form);
+      const el = document.getElementById(target);
+      if (el) scrollSlowTo(el);
     }, 2.1);
 }
 
@@ -271,11 +271,12 @@ onMounted(() => {
 
   gsap.set(shadow, { xPercent: -50, opacity: 0, scale: 0.5, transformOrigin: '50% 50%' });
 
-  // Asked for the contact form from inside the book? Skip the drop —
+  // Asked for a home-page section from inside the book? Skip the drop —
   // play the return: the book closes, we zoom back out, slow scroll.
-  if (returnToContact.value) {
-    returnToContact.value = false;
-    playReturn();
+  const returnTarget = returnToSection.value;
+  if (returnTarget) {
+    returnToSection.value = null;
+    playReturn(returnTarget);
     return;
   }
 
@@ -364,7 +365,7 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
-    <section v-reveal class="about-section" aria-label="About me">
+    <section v-reveal id="about" class="about-section" aria-label="About me">
       <div class="wrap">
         <AboutMe />
       </div>
