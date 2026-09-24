@@ -11,8 +11,8 @@ import CurlHint from './components/CurlHint.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
 import { neighbor, type ChapterMeta } from './router';
-import { hasSwiped } from './lib/ui';
-import { setLenis, scrollToTopImmediate, stopScroll, startScroll } from './lib/scroll';
+import { hasSwiped, returnToContact } from './lib/ui';
+import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -39,6 +39,20 @@ function goToChapter(path: string) {
   modalChapter.value = null;
   // Let the modal close before the page dissolves in.
   setTimeout(() => router.push(path), 320);
+}
+
+/**
+ * The reader asked for the contact form: the book closes, we zoom
+ * back out to the cover, then drift slowly down to the form.
+ */
+function goToContact() {
+  if (route.path === '/') {
+    const form = document.getElementById('contact');
+    if (form) scrollSlowTo(form);
+    return;
+  }
+  returnToContact.value = true;
+  router.push('/');
 }
 
 watch(modalChapter, (ch) => {
@@ -164,8 +178,11 @@ function onTouchMove(e: TouchEvent) {
     pushAccum = 0;
     return;
   }
-  // The last page has nowhere to turn.
-  if (router.currentRoute.value.path === '/epilogue') return;
+  // The last page has nowhere to turn — and the cover is a
+  // scrollable page now (the form lives under the book), so pushing
+  // at its bottom must never whisk the reader away mid-form.
+  const path = router.currentRoute.value.path;
+  if (path === '/epilogue' || path === '/') return;
   if (atBottom() && dy < -4) {
     pushAccum += -dy;
     if (pushAccum > 120) {
@@ -242,7 +259,7 @@ onUnmounted(() => {
     </RouterView>
   </div>
   <PageTurner />
-  <TabRail @select="modalChapter = $event" />
+  <TabRail @select="modalChapter = $event" @contact="goToContact" />
   <Transition name="modal">
     <ChapterModal
       v-if="modalChapter"

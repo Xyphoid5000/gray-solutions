@@ -5,6 +5,7 @@ import { chapters, type ChapterMeta } from '../router';
 const route = useRoute();
 const emit = defineEmits<{
   select: [chapter: ChapterMeta];
+  contact: [];
 }>();
 </script>
 
@@ -21,6 +22,14 @@ const emit = defineEmits<{
       @click="emit('select', ch)"
     >
       <span class="tab-num" aria-hidden="true">{{ i + 1 }}</span>
+    </button>
+    <button
+      class="tab tab-contact"
+      aria-label="Contact — open the contact form"
+      title="Contact"
+      @click="emit('contact')"
+    >
+      <span class="tab-num" aria-hidden="true">&#9993;</span>
     </button>
   </nav>
 </template>

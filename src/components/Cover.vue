@@ -2,6 +2,9 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
+import ContactForm from './ContactForm.vue';
+import { returnToContact } from '../lib/ui';
+import { scrollSlowTo } from '../lib/scroll';
 
 const router = useRouter();
 
@@ -172,6 +175,58 @@ function open() {
     );
 }
 
+/**
+ * The reverse journey: the reader asked for the contact form from
+ * somewhere inside the book. We arrive already dived into the cover —
+ * the book closes, the camera eases back out to the full scene, and
+ * then we drift slowly down to the form.
+ */
+function playReturn() {
+  const book = bookRef.value;
+  if (!book) return;
+  if (reducedMotion()) {
+    document.getElementById('contact')?.scrollIntoView();
+    return;
+  }
+  // Start where open() left off: squared to camera, deep in the cover.
+  gsap.set(book, {
+    y: 0,
+    scaleX: 1,
+    scaleY: 1,
+    rotationX: 0,
+    rotationY: 0,
+    rotationZ: 0,
+    transformPerspective: 1400,
+  });
+  gsap.set('.cover-scene', { scale: 2.8, transformOrigin: '50% 40%' });
+  gsap.set(['.cover-kicker', '.cover-ui > *'], { opacity: 0, y: 18 });
+  gsap.set('.cover-glow', { opacity: 0.25 });
+  gsap.set('.book-shadow', { opacity: 0, scale: 1.4 });
+
+  const tl = gsap.timeline();
+  tl.to('.cover-scene', { scale: 1, duration: 1.9, ease: 'power2.inOut' }, 0.25)
+    .to(
+      book,
+      { rotationX: 8, rotationY: -22, duration: 1.9, ease: 'power2.inOut' },
+      0.25,
+    )
+    .to('.cover-glow', { opacity: 1, duration: 1.4, ease: 'power1.inOut' }, 0.5)
+    .to(
+      '.book-shadow',
+      { opacity: 0.6, scale: 1, duration: 1.2, ease: 'power2.out' },
+      0.7,
+    )
+    .to(
+      ['.cover-kicker', '.cover-ui > *'],
+      { opacity: 1, y: 0, duration: 0.8, stagger: 0.08, ease: 'power3.out' },
+      1.1,
+    )
+    .add(() => {
+      const form = document.getElementById('contact');
+      if (form) scrollSlowTo(form);
+    }, 2.1);
+}
+
 onMounted(() => {
   sprite = makeSprite();
   sizeCanvas();
@@ -182,6 +237,14 @@ onMounted(() => {
   if (!book || !shadow) return;
 
   gsap.set(shadow, { xPercent: -50, opacity: 0, scale: 0.5, transformOrigin: '50% 50%' });
+
+  // Asked for the contact form from inside the book? Skip the drop —
+  // play the return: the book closes, we zoom back out, slow scroll.
+  if (returnToContact.value) {
+    returnToContact.value = false;
+    playReturn();
+    return;
+  }
 
   if (reducedMotion()) {
     gsap.set(['.cover-kicker', '.cover-ui > *'], { opacity: 1, y: 0 });
@@ -235,36 +298,54 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="cover book-page" aria-label="Cover">
-    <div class="cover-glow" aria-hidden="true"></div>
-    <div class="cover-scene">
-      <p class="cover-kicker">A portfolio &middot; by Chris Gray</p>
-      <div ref="stageRef" class="book-stage">
-        <div ref="shadowRef" class="book-shadow" aria-hidden="true"></div>
-        <div ref="bookRef" class="book3d" aria-hidden="true">
-          <div class="b-face b-back"></div>
-          <div class="b-face b-spine"><span>Gray Solutions</span></div>
-          <div class="b-face b-top"></div>
-          <div class="b-face b-pages"></div>
-          <div class="b-face b-front">
-            <div class="b-cover-frame">
-              <span class="b-mark">G.</span>
-              <p class="b-title">Gray<br />Solutions<em>.</em></p>
-              <p class="b-tag"><em>Websites that tell stories.</em></p>
-              <p class="b-by">Chris Gray</p>
+  <div class="cover-page">
+    <section class="cover" aria-label="Cover">
+      <div class="cover-glow" aria-hidden="true"></div>
+      <div class="cover-scene">
+        <p class="cover-kicker">A portfolio &middot; by Chris Gray</p>
+        <div ref="stageRef" class="book-stage">
+          <div ref="shadowRef" class="book-shadow" aria-hidden="true"></div>
+          <div ref="bookRef" class="book3d" aria-hidden="true">
+            <div class="b-face b-back"></div>
+            <div class="b-face b-spine"><span>Gray Solutions</span></div>
+            <div class="b-face b-top"></div>
+            <div class="b-face b-pages"></div>
+            <div class="b-face b-front">
+              <div class="b-cover-frame">
+                <span class="b-mark">G.</span>
+                <p class="b-title">Gray<br />Solutions<em>.</em></p>
+                <p class="b-tag"><em>Websites that tell stories.</em></p>
+                <p class="b-by">Chris Gray</p>
+              </div>
             </div>
           </div>
+          <canvas ref="canvasRef" class="dust-canvas" aria-hidden="true"></canvas>
         </div>
-        <canvas ref="canvasRef" class="dust-canvas" aria-hidden="true"></canvas>
-      </div>
-      <div class="cover-ui">
-        <div class="cover-cta">
-          <button class="btn btn-solid" @click="open()">
-            Open the book <span class="arrow" aria-hidden="true">&rarr;</span>
-          </button>
+        <div class="cover-ui">
+          <div class="cover-cta">
+            <button class="btn btn-solid" @click="open()">
+              Open the book <span class="arrow" aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
+          <p class="cover-hint">Eight pages &middot; best read front to back</p>
         </div>
-        <p class="cover-hint">Eight pages &middot; best read front to back</p>
       </div>
-    </div>
-  </section>
+    </section>
+    <section id="contact" class="cover-contact" aria-label="Contact">
+      <div class="wrap">
+        <p v-reveal class="contact-kicker">Contact</p>
+        <h2 v-reveal class="contact-title">
+          Let&rsquo;s write <em>your story.</em>
+        </h2>
+        <p v-reveal class="contact-sub">
+          Tell me about your business, your goals, and where your website
+          stands today. Everything below is wrapped into one email —
+          straight to my inbox.
+        </p>
+        <div v-reveal>
+          <ContactForm />
+        </div>
+      </div>
+    </section>
+  </div>
 </template>

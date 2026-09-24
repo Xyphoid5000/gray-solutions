@@ -1568,3 +1568,181 @@ a {
     transition: none;
   }
 }
+
+/* ---------- contact: lives under the book, on the cover ---------- */
+.cover-page .cover {
+  padding-bottom: 2rem; /* the form section carries the turner clearance */
+}
+.cover-contact {
+  position: relative;
+  padding: 5rem 0 7rem;
+  border-top: 1px solid var(--line-soft);
+  background: radial-gradient(
+    70% 40% at 50% 0%,
+    rgba(232, 163, 61, 0.06),
+    transparent 70%
+  );
+}
+.contact-kicker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin: 0 0 1.2rem;
+}
+.contact-title {
+  font-family: var(--serif);
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  margin: 0 0 1.1rem;
+  text-wrap: balance;
+}
+.contact-title em {
+  font-style: italic;
+  color: var(--ember);
+}
+.contact-sub {
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  max-width: 54ch;
+  margin: 0 0 2.6rem;
+}
+
+/* ---------- contact form ---------- */
+.contact-form {
+  display: grid;
+  gap: 1.35rem;
+  max-width: 620px;
+}
+.contact-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.35rem;
+}
+.field {
+  display: grid;
+  gap: 0.55rem;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.field > span,
+.field > legend {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0;
+}
+.field > span em {
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--faint);
+}
+.contact-form input[type='text'],
+.contact-form input[type='email'],
+.contact-form input[type='tel'],
+.contact-form input[type='url'],
+.contact-form textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.95rem 1.1rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+.contact-form textarea {
+  resize: vertical;
+  min-height: 130px;
+}
+.contact-form ::placeholder {
+  color: var(--faint);
+}
+.contact-form input:focus,
+.contact-form textarea:focus {
+  outline: none;
+  border-color: var(--ember);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.15);
+}
+.radio-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 0.2rem;
+}
+.radio-pill {
+  position: relative;
+}
+.radio-pill input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.radio-pill span {
+  display: inline-block;
+  padding: 0.7rem 1.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, color 0.25s,
+    box-shadow 0.25s;
+}
+.radio-pill span:hover {
+  border-color: var(--ember);
+  color: var(--ink);
+}
+.radio-pill input:checked + span {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: #14100a;
+}
+.radio-pill input:focus-visible + span {
+  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.3);
+}
+.contact-submit {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.contact-submit small {
+  color: var(--faint);
+  font-size: 0.85rem;
+}
+
+/* ---------- the envelope tab ---------- */
+.tab-contact {
+  color: var(--ember);
+  border-color: rgba(232, 163, 61, 0.5);
+}
+.tab-contact:hover {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: #14100a;
+  transform: translateX(-4px);
+}
+
+@media (max-width: 640px) {
+  .contact-row-2 {
+    grid-template-columns: 1fr;
+  }
+  .cover-contact {
+    padding: 4rem 0 6rem;
+  }
+}

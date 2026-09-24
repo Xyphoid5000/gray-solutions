@@ -1,10 +1,20 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { siteConfig } from '../config';
+import { returnToContact } from '../lib/ui';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const router = useRouter();
+
+function startProject() {
+  // Close the book, zoom back out, drift down to the contact form.
+  returnToContact.value = true;
+  router.push('/');
+}
 
 let ctx: gsap.Context | null = null;
 
@@ -43,9 +53,9 @@ onUnmounted(() => ctx?.revert());
         I&rsquo;ll build it.
       </p>
       <div v-reveal class="epilogue-ctas">
-        <a :href="`mailto:${siteConfig.email}`" class="btn btn-solid">
+        <button class="btn btn-solid" @click="startProject()">
           Start your story <span class="arrow" aria-hidden="true">&rarr;</span>
-        </a>
+        </button>
         <a
           :href="siteConfig.github"
           target="_blank"

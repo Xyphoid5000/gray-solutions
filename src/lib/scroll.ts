@@ -34,6 +34,15 @@ export function scrollToElement(el: HTMLElement): void {
   }
 }
 
+/** Slow, cinematic scroll to an element — the contact-form reveal. */
+export function scrollSlowTo(el: HTMLElement): void {
+  if (lenis) {
+    lenis.scrollTo(el, { duration: 3.4 });
+  } else {
+    el.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
 /** Jump to the very top without animation (page turns). */
 export function scrollToTopImmediate(): void {
   if (lenis) {
