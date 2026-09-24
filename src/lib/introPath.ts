@@ -3,43 +3,45 @@
  * truth for the timeline built in `three/intro.ts`. Everything is a
  * pure function of p (0..1), so scrolling up rewinds exactly.
  *
- * THE CONCEPT (2026-09-23, Chris's words): "I see you pulled the logo
- * out into its own asset with a transparent background or so it seems.
- * So just remove the cross bar from that and replace it with the
- * bridge. Then it should come into view from behind the camera and the
- * end of the bridge should be at the same z increment as the logo so
- * that it gives the illusion that we started inside of the logo."
+ * THE CONCEPT (Chris's words, 2026-09-23 + 2026-09-24):
+ * "just remove the cross bar from that [logo asset] and replace it
+ * with the bridge. Then it should come into view from behind the
+ * camera and the end of the bridge should be at the same z increment
+ * as the logo so that it gives the illusion that we started inside
+ * of the logo."
+ * "The reveal should end with the logo large and in charge. Right
+ * before that though it should detail the bridge as the crossbar."
+ * "The camera shouldn't raise up like it does." / "the camera should
+ * move down and then the logo should appear" / "you should see the
+ * end side of the bridge".
  *
- * The 3D bridge IS the logo's crossbar. The camera starts INSIDE the
- * bridge span (inside the crossbar), traveling +Z away from the logo —
- * which sits behind the camera at z=-1, unseen. At the end the camera
- * yaws 180° and the logo comes into view FROM BEHIND THE CAMERA: the
- * mark (crossbar removed -> transparent slot) with the bridge you've
- * been riding plugging into that slot. The reveal: you were inside the
- * logo the whole time.
+ * The 3D bridge IS the logo's crossbar — a short solid bar, never a
+ * road. The camera starts right against it: we started inside the
+ * logo. The camera moves DOWN (never up) and the logo fades in around
+ * the bar — the bridge detailing AS the crossbar, slashed end face
+ * visible, one continuous object. Then the dolly settles on the full
+ * mark LARGE in frame: the logo, large and in charge. Then handoff.
  *
  * World layout:
  *   - Mark (logo-mark-no-crossbar.png, 464x423): vertical plane at
  *     z=-1, facing +Z. Crossbar center on the bridge axis (x=0, y=0).
- *   - Bridge: its -Z end face at z=0 ("the same z as the logo"), the
- *     rearmost corner of the slashed end exactly at z=0, extending
- *     +Z ~4690. Width 130 = the crossbar's world width, so the bridge
- *     reads AS the crossbar; the opaque mark occludes the deck
- *     everywhere except through the transparent crossbar slot.
+ *   - Bridge: short solid trapezoid bar. Its logo end (rearmost corner
+ *     of the slash) sits exactly at z=0 — the same z increment as the
+ *     logo — extending +Z ~345. Width 130 = the crossbar's world
+ *     width. The opaque mark occludes everything except through the
+ *     transparent crossbar slot, so the bridge reads AS the crossbar.
  *
  * Beats:
- *   - 0 -> 0.1:  grey-void resolve (fog 0.0011 -> 0.0005).
- *   - 0.1 -> 0.70: THE TRAVEL — dolly +Z inside the bridge span
- *     (0,95,500)->(0,140,1400), x=0, looking +Z down the deck. Stars,
- *     scroll streaks, shimmer ON; the far end lost in fog = infinite.
- *     The logo sits behind the camera, unseen.
- *   - 0.70 -> 0.85: THE TURN — the camera yaws 180° (one parametric
- *     cubic-Bezier sweep of the look target, sine.inOut — a deliberate
- *     turn-around, no whip, no hitch) to face -Z. THE LOGO COMES INTO
- *     VIEW FROM BEHIND THE CAMERA, fading in 0.70->0.82 as the turn
- *     completes. Level yaw: camera y stays 140, no rise, no dive.
- *   - 0.85 -> 0.92: HOLD the full logo — bridge running into its mark.
- *   - 0.92 -> 1.0: DOM handoff (canvas fades, hero reveals) — see
+ *   - 0 -> 0.18: INSIDE. Camera just above the deck, nearly touching
+ *     it — grey fills the frame. Grey-void resolve
+ *     (fog 0.0011 -> 0.00045). A slow settle, nothing more.
+ *   - 0.18 -> 0.52: DETAIL. The camera dollies back and DOWN (y 30 ->
+ *     10; it never rises) while the mark fades in 0.30 -> 0.52. The
+ *     slashed end face of the bar shows; the G arc and S appear around
+ *     it — the bridge detailing as the crossbar.
+ *   - 0.52 -> 0.78: REVEAL. Settle onto the full mark, LARGE in frame.
+ *     Hold 0.78 -> 0.86.
+ *   - 0.86 -> 1.0: DOM handoff (canvas fades, hero reveals) — see
  *     `introOutro.ts`.
  */
 
@@ -80,63 +82,6 @@ export function sampleKeys3(keys: Key3[], p: number): [number, number, number] {
   return [sampleKeys(ka, p), sampleKeys(kb, p), sampleKeys(kc, p)];
 }
 
-/* ---------------- camera ---------------- */
-// Inside the bridge span, traveling +Z away from the logo (which sits
-// behind the camera at z=-1). The turn is a LEVEL yaw: y stays 140,
-// z drifts 1400->1450. No rise, no dive, no swoop.
-export const CAM_KEYS: Key3[] = [
-  { p: 0.0, v: [0, 95, 500] },
-  { p: 0.1, v: [0, 100, 620] },
-  { p: 0.7, v: [0, 140, 1400] },
-  { p: 0.85, v: [0, 140, 1450] },
-  { p: 0.92, v: [0, 140, 1450] },
-];
-
-// The look target during the travel (0 -> 0.70): down the deck, +Z.
-// The turn itself (0.70 -> 0.85) is parametric — see TURN_BEZIER below.
-export const TGT_KEYS: Key3[] = [
-  { p: 0.0, v: [0, 25, 1300] },
-  { p: 0.1, v: [0, 28, 1500] },
-  { p: 0.7, v: [0, 30, 2225] },
-];
-
-/* ---------------- THE TURN (0.70 -> 0.85) ---------------- */
-// One cubic-Bezier sweep of the look target from "down the deck" to
-// "on the mark" — C-infinity smooth, so the 180° yaw has no keyframe
-// hitches; the tween's sine.inOut makes it a deliberate turn-around.
-// The arc swings through +X, staying ~700+ units from the camera the
-// whole way (no lookAt singularity), and lands exactly on the mark.
-export const TURN_P0 = 0.7;
-export const TURN_P1 = 0.85;
-export const TURN_BEZIER: [number, number, number][] = [
-  [0, 30, 2225], // == TGT_KEYS end: continuous with the travel
-  [950, 70, 1900], // swinging out to +X...
-  [950, 50, 900], // ...abeam the camera...
-  [0, 5, 0], // ...settling onto the mark.
-];
-
-/** Evaluate the turn Bezier at t (0..1). Pure — used by the timeline and by tests. */
-export function turnTarget(t: number): [number, number, number] {
-  const x = Math.min(1, Math.max(0, t));
-  const u = 1 - x;
-  const [p0, p1, p2, p3] = TURN_BEZIER;
-  return [
-    u * u * u * p0[0] + 3 * u * u * x * p1[0] + 3 * u * x * x * p2[0] + x * x * x * p3[0],
-    u * u * u * p0[1] + 3 * u * u * x * p1[1] + 3 * u * x * x * p2[1] + x * x * x * p3[1],
-    u * u * u * p0[2] + 3 * u * u * x * p1[2] + 3 * u * x * x * p2[2] + x * x * x * p3[2],
-  ];
-}
-
-/* ---------------- fog (FogExp2 density) ---------------- */
-// 0.0005 keeps the +Z far end swallowed (infinite) during the travel;
-// 0.00035 for the turn/hold so the bridge-to-logo read is clear.
-export const FOG_KEYS: Key[] = [
-  { p: 0.0, v: 0.0011 },
-  { p: 0.1, v: 0.0005 },
-  { p: 0.7, v: 0.0005 },
-  { p: 0.85, v: 0.00035 },
-];
-
 /* ---------------- the world mark (no crossbar) ---------------- */
 // logo-mark-no-crossbar.png is 464x423: logo-mark.png with the crossbar
 // keyed to transparent (feathered). Crossbar fractions (measured, image
@@ -156,10 +101,46 @@ export const MARK_Y = (CB_FCY - 0.5) * MARK_H;
 // with the logo, no coplanar risk.
 export const MARK_Z = -1;
 
-// The logo was behind the camera the whole time; it fades in as the
-// turn completes — "comes into view from behind the camera".
+/* ---------------- camera ---------------- */
+// INSIDE: p=0 has the camera just above the deck (top face ~y=32),
+// nearly touching it — we started inside the logo. DETAIL: dolly back
+// and DOWN (y 30 -> 10 — the camera never rises) while the mark fades
+// in around the bar. REVEAL: settle back to the full mark, large.
+// x stays 0 throughout; the move is a straight, level retreat.
+export const CAM_KEYS: Key3[] = [
+  { p: 0.0, v: [0, 34, 60] },
+  { p: 0.18, v: [0, 30, 85] },
+  { p: 0.52, v: [0, 10, 300] },
+  { p: 0.78, v: [0, 16, 430] },
+  { p: 0.86, v: [0, 16, 430] },
+];
+
+// Look target: down the deck into the fog (inside beat), then onto the
+// bar's slashed near end as the mark appears (detail beat), then the
+// mark center for the large logo shot (reveal/hold).
+export const TGT_KEYS: Key3[] = [
+  { p: 0.0, v: [0, 26, 280] },
+  { p: 0.18, v: [0, 24, 300] },
+  { p: 0.52, v: [0, 2, 120] },
+  { p: 0.78, v: [MARK_X, MARK_Y, MARK_Z] },
+  { p: 0.86, v: [MARK_X, MARK_Y, MARK_Z] },
+];
+
+/* ---------------- fog (FogExp2 density) ---------------- */
+// Opens heavy so the inside beat is a grey void that resolves; thins
+// to 0.0003 so the detail and logo beats read crisp and solid.
+export const FOG_KEYS: Key[] = [
+  { p: 0.0, v: 0.0011 },
+  { p: 0.18, v: 0.00045 },
+  { p: 0.52, v: 0.0003 },
+  { p: 0.78, v: 0.0003 },
+];
+
+/* ---------------- mark fade ---------------- */
+// The logo comes into view as the camera moves down and back: it was
+// there all along, unseen — the reveal that we started inside it.
 export const MARK_OPACITY_KEYS: Key[] = [
   { p: 0.0, v: 0 },
-  { p: 0.7, v: 0 },
-  { p: 0.82, v: 1 },
+  { p: 0.3, v: 0 },
+  { p: 0.52, v: 1 },
 ];
