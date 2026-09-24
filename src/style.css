@@ -285,6 +285,26 @@ a {
   font-style: normal;
   color: var(--ember);
 }
+.nav-contact {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ember);
+  background: transparent;
+  border: 1px solid rgba(232, 163, 61, 0.45);
+  border-radius: 999px;
+  padding: 0.55rem 1.2rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.25s, color 0.25s, border-color 0.25s;
+}
+.nav-contact:hover {
+  background: var(--ember);
+  border-color: var(--ember);
+  color: #14100a;
+}
 
 /* ---------- hero / prologue ---------- */
 .prologue {
@@ -1340,63 +1360,6 @@ a {
   transform: translateX(-50%) translateY(10px);
 }
 
-/* ---------- corner curls (touch devices) ---------- */
-.curl-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 800;
-  pointer-events: none;
-  display: none;
-}
-@media (pointer: coarse) {
-  .curl-layer {
-    display: block;
-  }
-}
-.curl-hint {
-  position: absolute;
-  right: 0;
-  width: 54px;
-  height: 54px;
-}
-.curl-hint.top {
-  top: calc(var(--nav-h) + 0.4rem);
-}
-.curl-hint.bottom {
-  bottom: 3.6rem; /* just above the page-turner */
-}
-.curl-fold {
-  position: absolute;
-  inset: 0;
-  transform-origin: bottom right;
-  filter: drop-shadow(-3px -3px 5px rgba(0, 0, 0, 0.5));
-  animation: curl-beckon 4.6s ease-in-out infinite;
-}
-.curl-hint.bottom .curl-fold {
-  background: linear-gradient(to top left, #ece0c2 0 48%, rgba(236, 224, 194, 0) 52%);
-}
-.curl-hint.top .curl-fold {
-  background: linear-gradient(to bottom left, #ece0c2 0 48%, rgba(236, 224, 194, 0) 52%);
-  transform-origin: top right;
-}
-/* The corner lifts, holds, settles — a quiet "there's more". */
-@keyframes curl-beckon {
-  0%, 58%, 100% {
-    transform: scale(0.42);
-    opacity: 0.7;
-  }
-  78% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .curl-fold {
-    animation: none;
-    transform: scale(0.42);
-    opacity: 0.7;
-  }
-}
 
 .fade-enter-active,
 .fade-leave-active {
@@ -1475,6 +1438,25 @@ a {
   }
   .tab.active {
     width: 33px;
+  }
+}
+
+/* The left rail mirrors the right: backward navigation. */
+.tab-rail-left {
+  right: auto;
+  left: 0;
+}
+.tab-rail-left .tab {
+  border-radius: 0 10px 10px 0;
+  border-right: 1px solid var(--line);
+  border-left: none;
+}
+.tab-rail-left .tab:hover {
+  transform: translateX(4px);
+}
+@media (max-width: 640px) {
+  .tab-rail-left .tab {
+    border-radius: 0 8px 8px 0;
   }
 }
 

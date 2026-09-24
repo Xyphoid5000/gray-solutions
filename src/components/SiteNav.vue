@@ -2,6 +2,9 @@
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+const emit = defineEmits<{
+  contact: [];
+}>();
 </script>
 
 <template>
@@ -16,6 +19,9 @@ const router = useRouter();
         <span class="brand-mark" aria-hidden="true">G.</span>
         <span>Gray Solutions<em>.</em></span>
       </a>
+      <button class="nav-contact" @click="emit('contact')">
+        Contact me
+      </button>
     </div>
   </header>
 </template>

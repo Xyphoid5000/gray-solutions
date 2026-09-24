@@ -17,12 +17,29 @@ onMounted(() => {
   const root = document.querySelector<HTMLElement>('.prologue');
   if (!root || reducedMotion()) return;
   ctx = gsap.context(() => {
-    const tl = gsap.timeline({ defaults: { ease: 'power4.out' }, delay: 0.15 });
-    tl.from('.hero-title .h-line-inner', {
-      y: '115%',
-      duration: 1.25,
-      stagger: 0.14,
-    });
+    // A single-screen title page: everything arrives on a fixed
+    // timeline — no scroll triggers to miss.
+    const tl = gsap.timeline({ delay: 0.15 });
+    tl.from(
+      '.hero-kicker',
+      { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
+      0,
+    )
+      .to(
+        '.hero-title .h-line-inner',
+        { y: 0, duration: 1.25, ease: 'power4.out', stagger: 0.14 },
+        0.1,
+      )
+      .from(
+        '.hero-ctas',
+        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
+        0.55,
+      )
+      .from(
+        '.hero-meta',
+        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
+        0.7,
+      );
   }, root);
 });
 
@@ -33,7 +50,7 @@ onUnmounted(() => ctx?.revert());
   <section class="prologue book-page" aria-label="Prologue">
     <div class="prologue-glow" aria-hidden="true"></div>
     <div class="wrap">
-      <p v-reveal class="hero-kicker">Gray Solutions &middot; a portfolio</p>
+      <p class="hero-kicker">Gray Solutions &middot; a portfolio</p>
       <h1 class="hero-title">
         <span class="h-line"
           ><span class="h-line-inner">Every website</span></span
@@ -47,7 +64,7 @@ onUnmounted(() => ctx?.revert());
           ></span
         >
       </h1>
-      <div v-reveal class="hero-ctas">
+      <div class="hero-ctas">
         <a
           href="#/premise"
           class="btn btn-solid"
@@ -62,7 +79,7 @@ onUnmounted(() => ctx?.revert());
           >Skip to the proof</a
         >
       </div>
-      <p v-reveal class="hero-meta">
+      <p class="hero-meta">
         <span>Chris Gray</span
         ><span class="dot" aria-hidden="true">&middot;</span>
         <span>Design &amp; Engineering</span

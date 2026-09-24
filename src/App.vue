@@ -7,7 +7,6 @@ import { RouterView, useRouter, useRoute } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
 import SwipeHint from './components/SwipeHint.vue';
-import CurlHint from './components/CurlHint.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
 import { neighbor, type ChapterMeta } from './router';
@@ -244,7 +243,7 @@ onUnmounted(() => {
 
 <template>
   <div class="grain" aria-hidden="true"></div>
-  <SiteNav />
+  <SiteNav @contact="goToContact" />
   <div ref="viewport" class="book-viewport">
     <RouterView v-slot="{ Component, route }">
       <Transition
@@ -259,7 +258,11 @@ onUnmounted(() => {
     </RouterView>
   </div>
   <PageTurner />
-  <TabRail @select="modalChapter = $event" @contact="goToContact" />
+  <TabRail
+    v-if="route.path !== '/'"
+    @select="modalChapter = $event"
+    @contact="goToContact"
+  />
   <Transition name="modal">
     <ChapterModal
       v-if="modalChapter"
@@ -270,5 +273,4 @@ onUnmounted(() => {
     />
   </Transition>
   <SwipeHint />
-  <CurlHint />
 </template>

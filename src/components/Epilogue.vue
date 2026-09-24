@@ -25,8 +25,8 @@ onMounted(() => {
 
   ctx = gsap.context(() => {
     // The closing line lands like a final chord.
-    gsap.from('.epilogue-title .h-line-inner', {
-      y: '115%',
+    gsap.to('.epilogue-title .h-line-inner', {
+      y: 0,
       duration: 1.2,
       ease: 'power4.out',
       stagger: 0.12,
