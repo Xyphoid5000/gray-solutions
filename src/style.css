@@ -1119,70 +1119,6 @@ a {
   padding-top: clamp(6rem, 12vw, 10rem);
 }
 
-/* ---------- cover ---------- */
-.cover {
-  min-height: 100svh;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  overflow: clip;
-  padding: calc(var(--nav-h) + 3rem) 0 7rem;
-}
-.cover-glow {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(60% 45% at 50% 42%, rgba(232, 163, 61, 0.13), transparent 65%),
-    radial-gradient(80% 60% at 50% 110%, rgba(180, 95, 34, 0.1), transparent 60%);
-  pointer-events: none;
-}
-.cover-inner {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.cover-kicker {
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: var(--ember);
-  margin: 0 0 1.8rem;
-}
-.cover-title {
-  font-family: var(--serif);
-  font-weight: 480;
-  font-size: clamp(3.6rem, 13vw, 8.5rem);
-  line-height: 0.98;
-  letter-spacing: -0.02em;
-  margin: 0 0 1.6rem;
-  text-wrap: balance;
-}
-.cover-title em {
-  font-style: italic;
-  color: var(--ember);
-  font-weight: 400;
-}
-.cover-sub {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: clamp(1.35rem, 3.4vw, 2.1rem);
-  color: var(--muted);
-  margin: 0 0 2.6rem;
-}
-.cover-cta .btn {
-  font-size: 1.02rem;
-  padding: 1.05rem 2.2rem;
-}
-.cover-hint {
-  margin: 2.2rem 0 0;
-  color: var(--faint);
-  font-size: 0.85rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
 /* ---------- page turner (persistent chrome) ---------- */
 .page-turner {
   position: fixed;
@@ -1364,5 +1300,219 @@ a {
   .page-turner {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+}
+
+/* ---------- cover: the falling book ---------- */
+.cover {
+  min-height: 100svh;
+  overflow: clip;
+  padding: calc(var(--nav-h) + 1rem) 0 6rem;
+}
+.cover-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 45% at 50% 42%, rgba(232, 163, 61, 0.13), transparent 65%),
+    radial-gradient(80% 60% at 50% 110%, rgba(180, 95, 34, 0.1), transparent 60%);
+  pointer-events: none;
+}
+.cover-scene {
+  position: relative;
+  min-height: calc(100svh - var(--nav-h) - 7rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  will-change: transform;
+}
+.cover-kicker {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin: 0 0 0.6rem;
+  text-align: center;
+}
+
+/* the stage the book lands on */
+.book-stage {
+  position: relative;
+  width: 100%;
+  height: 50svh;
+  min-height: 330px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  perspective: 1400px;
+}
+.book-shadow {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: min(72vw, 340px);
+  height: 46px;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(0, 0, 0, 0.6), transparent 70%);
+  filter: blur(7px);
+  pointer-events: none;
+}
+
+/* the 3D book */
+.book3d {
+  --t: 34px; /* cover-to-cover thickness */
+  position: relative;
+  width: min(64vw, 290px);
+  aspect-ratio: 5 / 7;
+  margin-bottom: 12px;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.b-face {
+  position: absolute;
+}
+.b-front {
+  inset: 0;
+  transform: translateZ(calc(var(--t) / 2));
+  background: linear-gradient(155deg, #201910 0%, #14110b 52%, #0d0b08 100%);
+  border: 1px solid rgba(232, 163, 61, 0.3);
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+}
+.b-cover-frame {
+  flex: 1;
+  margin: 13px;
+  border: 1px solid rgba(232, 163, 61, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.2rem 0.8rem;
+  gap: 0.55rem;
+}
+.b-mark {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ember);
+  font-size: 1.5rem;
+}
+.b-title {
+  font-family: var(--serif);
+  font-weight: 480;
+  font-size: clamp(1.9rem, 8vw, 2.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--ink);
+}
+.b-title em {
+  font-style: italic;
+  color: var(--ember);
+  font-weight: 400;
+}
+.b-tag {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 0.98rem;
+  margin: 0.35rem 0 0;
+}
+.b-by {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: auto 0 0;
+}
+.b-back {
+  inset: 0;
+  transform: rotateY(180deg) translateZ(calc(var(--t) / 2));
+  background: #0e0c09;
+  border: 1px solid rgba(232, 163, 61, 0.18);
+}
+.b-spine {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--t);
+  transform: rotateY(-90deg) translateZ(calc(var(--t) / 2));
+  background: linear-gradient(to bottom, #1a140d, #100d08);
+  border-left: 1px solid rgba(232, 163, 61, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.b-spine span {
+  writing-mode: vertical-rl;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--ember);
+  white-space: nowrap;
+}
+.b-pages {
+  top: 1.5%;
+  bottom: 1.5%;
+  right: 0;
+  width: var(--t);
+  transform: rotateY(90deg) translateZ(calc(var(--t) / 2));
+  background: repeating-linear-gradient(
+    to bottom,
+    #d3c096 0 2px,
+    #a68f63 2px 3px
+  );
+}
+.b-top {
+  left: 1.5%;
+  right: 1.5%;
+  top: 0;
+  height: var(--t);
+  transform: rotateX(90deg) translateZ(calc(var(--t) / 2));
+  background: repeating-linear-gradient(
+    to right,
+    #d3c096 0 2px,
+    #a68f63 2px 3px
+  );
+}
+
+.dust-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* cover ui */
+.cover-ui {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1.4rem;
+}
+.cover-cta .btn {
+  font-size: 1.02rem;
+  padding: 1.05rem 2.2rem;
+  animation: cta-breathe 3.2s ease-in-out infinite;
+}
+@keyframes cta-breathe {
+  0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+  50% { box-shadow: 0 10px 42px rgba(232, 163, 61, 0.35); }
+}
+.cover-hint {
+  margin: 1.4rem 0 0;
+  color: var(--faint);
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-cta .btn {
+    animation: none;
   }
 }
