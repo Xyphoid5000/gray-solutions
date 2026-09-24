@@ -285,14 +285,16 @@ function onTouchEnd(e: TouchEvent) {
       if (dx < 0 && !atEnd) return;
       if (dx > 0 && !atStart) return;
     }
+    // Swipe either way: if there's a page to turn to, turn — if we're
+    // at the edge of the book, the swipe closes it and drifts down to
+    // the contact form instead.
+    const path = router.currentRoute.value.path;
     if (dx < 0) {
-      nextPage();
-    } else if (router.currentRoute.value.path === '/') {
-      // Nowhere left to turn back to — a rightward swipe on the cover
-      // closes the book and drifts down to the contact form.
-      goToContact();
+      if (neighbor(path, 1)) nextPage();
+      else goToContact();
     } else {
-      prevPage();
+      if (neighbor(path, -1)) prevPage();
+      else goToContact();
     }
   }
 }
