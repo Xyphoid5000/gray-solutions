@@ -55,14 +55,14 @@ import ChapterHeading from './ChapterHeading.vue';
         </div>
       </div>
     </div>
-  </section>
-  <div class="marquee" aria-hidden="true">
-    <div class="marquee-track">
-      <span v-for="n in 2" :key="n">
-        <template v-for="word in ['beginning', 'middle', 'end']" :key="word">
-          {{ word }} <b>&mdash;</b>
-        </template>
-      </span>
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span v-for="n in 2" :key="n">
+          <template v-for="word in ['beginning', 'middle', 'end']" :key="word">
+            {{ word }} <b>&mdash;</b>
+          </template>
+        </span>
+      </div>
     </div>
-  </div>
+  </section>
 </template>

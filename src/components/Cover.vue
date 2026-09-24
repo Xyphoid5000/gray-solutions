@@ -374,12 +374,20 @@ function playReturn(target: 'contact' | 'about') {
     .add(() => {
       const el = document.getElementById(target);
       if (el) {
-        scrollSlowTo(el, () => {
-          // The return scroll is done — the scroll pose takes over from
-          // here (at the about/contact depth it already faces away).
+        let spinOn = false;
+        const enableSpin = () => {
+          if (spinOn) return;
+          spinOn = true;
+          // The return scroll is done (or was grabbed mid-flight) — the
+          // scroll pose takes over from here.
           spinEnabled = true;
           updateSpinFromScroll();
-        });
+        };
+        scrollSlowTo(el, enableSpin);
+        // Fallback: Lenis only fires onComplete on a clean finish. If the
+        // reader grabs the scroll mid-return, re-enable on a timer so the
+        // book can never get stuck facing away.
+        window.setTimeout(enableSpin, 3800);
       } else {
         spinEnabled = true;
       }
