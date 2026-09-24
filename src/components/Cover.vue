@@ -33,6 +33,112 @@ let motes: Mote[] = [];
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// --- Rotatable book -------------------------------------------------
+// The book can be spun by dragging it (front, back, sides). Scrolling
+// the home page also steers it: at the top it faces the reader, and by
+// the about section it has turned its back — so scrolling back up
+// rotates it around to face the reader again. `autoY` is the scroll
+// pose, `manualY`/`manualX` are the drag offset (which scrolling eases
+// back toward zero so the intended pose re-asserts itself).
+const REST_Y = -22;
+const REST_X = 8;
+const AWAY_Y = REST_Y + 180;
+
+let autoY = REST_Y;
+let manualY = 0;
+let manualX = 0;
+let spinEnabled = false;
+let dragging = false;
+
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, v));
+
+function applySpin() {
+  const book = bookRef.value;
+  if (!book) return;
+  gsap.set(book, {
+    rotationY: autoY + manualY,
+    rotationX: REST_X + manualX,
+    transformPerspective: 1400,
+  });
+}
+
+function updateSpinFromScroll() {
+  const about = document.getElementById('about');
+  const book = bookRef.value;
+  if (!about || !book) return;
+  const aboutTop = about.getBoundingClientRect().top + window.scrollY;
+  const max = Math.max(1, aboutTop - window.innerHeight * 0.3);
+  const p = clamp(window.scrollY / max, 0, 1);
+  autoY = REST_Y + p * 180;
+  // Scrolling re-asserts the intended pose; ease the manual offset away.
+  manualY *= 0.86;
+  manualX *= 0.86;
+  if (Math.abs(manualY) < 0.05) manualY = 0;
+  if (Math.abs(manualX) < 0.05) manualX = 0;
+  applySpin();
+}
+
+function onScrollSpin() {
+  if (!spinEnabled || dragging || reducedMotion()) return;
+  updateSpinFromScroll();
+}
+
+// Drag-to-rotate on the stage. Horizontal drags spin the book;
+// vertical drags are left to the page (touch-action: pan-y).
+let dragPointerId: number | null = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragLastX = 0;
+let dragLastY = 0;
+let dragCommitted = false;
+
+function onStagePointerDown(e: PointerEvent) {
+  if (!spinEnabled) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  dragPointerId = e.pointerId;
+  dragStartX = dragLastX = e.clientX;
+  dragStartY = dragLastY = e.clientY;
+  dragCommitted = false;
+}
+
+function onStagePointerMove(e: PointerEvent) {
+  if (e.pointerId !== dragPointerId) return;
+  if (e.pointerType === 'mouse' && e.buttons === 0) {
+    // Released off-stage — end the drag so hover can't spin the book.
+    dragPointerId = null;
+    dragCommitted = false;
+    dragging = false;
+    return;
+  }
+  const dxTotal = e.clientX - dragStartX;
+  const dyTotal = e.clientY - dragStartY;
+  if (!dragCommitted) {
+    if (Math.abs(dxTotal) > 14 && Math.abs(dxTotal) > Math.abs(dyTotal) * 1.3) {
+      dragCommitted = true;
+    } else {
+      // Primarily vertical (or still ambiguous) — let the page scroll.
+      if (Math.abs(dyTotal) > 14 || Math.abs(dxTotal) > 48) dragPointerId = null;
+      return;
+    }
+  }
+  const dx = e.clientX - dragLastX;
+  const dy = e.clientY - dragLastY;
+  dragLastX = e.clientX;
+  dragLastY = e.clientY;
+  dragging = true;
+  manualY = clamp(manualY + dx * 0.5, -320, 320);
+  manualX = clamp(manualX + dy * 0.3, -30, 34);
+  applySpin();
+}
+
+function endStageDrag(e: PointerEvent) {
+  if (e.pointerId !== dragPointerId) return;
+  dragPointerId = null;
+  dragCommitted = false;
+  dragging = false;
+}
+
 function makeSprite(): HTMLCanvasElement {
   const s = document.createElement('canvas');
   s.width = s.height = 64;
@@ -171,6 +277,9 @@ function open() {
     return;
   }
   introTl?.kill();
+  spinEnabled = false;
+  dragging = false;
+  dragPointerId = null;
   const book = bookRef.value;
   if (!book) {
     router.push('/premise');
@@ -213,8 +322,16 @@ function playReturn(target: 'contact' | 'about') {
     document.getElementById(target)?.scrollIntoView();
     return;
   }
+  // The book turns its back as it lands — scrolling back up will swing
+  // it around to face the reader again.
+  spinEnabled = false;
+  dragging = false;
+  dragPointerId = null;
+  autoY = AWAY_Y;
+  manualY = 0;
+  manualX = 0;
   // Start where open() left off: squared to camera, centered, filling
-  // the frame — then ease back out to the resting presentation.
+  // the frame — then ease back out, turning its back to the reader.
   const fit = coverFit();
   gsap.set(book, {
     x: fit ? fit.x : 0,
@@ -237,7 +354,7 @@ function playReturn(target: 'contact' | 'about') {
         y: 0,
         scale: 1,
         rotationX: 8,
-        rotationY: -22,
+        rotationY: AWAY_Y,
         duration: 1.9,
         ease: 'power2.inOut',
       },
@@ -256,7 +373,16 @@ function playReturn(target: 'contact' | 'about') {
     )
     .add(() => {
       const el = document.getElementById(target);
-      if (el) scrollSlowTo(el);
+      if (el) {
+        scrollSlowTo(el, () => {
+          // The return scroll is done — the scroll pose takes over from
+          // here (at the about/contact depth it already faces away).
+          spinEnabled = true;
+          updateSpinFromScroll();
+        });
+      } else {
+        spinEnabled = true;
+      }
     }, 2.1);
 }
 
@@ -264,6 +390,7 @@ onMounted(() => {
   sprite = makeSprite();
   sizeCanvas();
   window.addEventListener('resize', sizeCanvas);
+  window.addEventListener('scroll', onScrollSpin, { passive: true });
 
   const book = bookRef.value;
   const shadow = shadowRef.value;
@@ -284,6 +411,8 @@ onMounted(() => {
     gsap.set(['.cover-kicker', '.cover-ui > *'], { opacity: 1, y: 0 });
     gsap.set(shadow, { opacity: 0.6, scale: 1 });
     gsap.set(book, { rotationX: 8, rotationY: -22, transformPerspective: 1400 });
+    // Manual drag still works; the scroll pose stays put.
+    spinEnabled = true;
     return;
   }
 
@@ -318,7 +447,16 @@ onMounted(() => {
       ['.cover-kicker', '.cover-ui > *'],
       { opacity: 1, y: 0, duration: 0.7, stagger: 0.1, ease: 'power3.out' },
       '-=0.35',
-    );
+    )
+    .add(() => {
+      // The drop is done — hand the book to the reader: draggable, and
+      // scroll-linked from here on.
+      autoY = REST_Y;
+      manualY = 0;
+      manualX = 0;
+      spinEnabled = true;
+      updateSpinFromScroll();
+    });
 });
 
 onUnmounted(() => {
@@ -327,7 +465,11 @@ onUnmounted(() => {
   cancelAnimationFrame(raf);
   looping = false;
   motes = [];
+  spinEnabled = false;
+  dragging = false;
+  dragPointerId = null;
   window.removeEventListener('resize', sizeCanvas);
+  window.removeEventListener('scroll', onScrollSpin);
 });
 </script>
 
@@ -337,7 +479,15 @@ onUnmounted(() => {
       <div class="cover-glow" aria-hidden="true"></div>
       <div class="cover-scene">
         <p class="cover-kicker">A portfolio &middot; by Chris Gray</p>
-        <div ref="stageRef" class="book-stage">
+        <div
+          ref="stageRef"
+          class="book-stage"
+          @pointerdown="onStagePointerDown"
+          @pointermove="onStagePointerMove"
+          @pointerup="endStageDrag"
+          @pointercancel="endStageDrag"
+          @pointerleave="endStageDrag"
+        >
           <div ref="shadowRef" class="book-shadow" aria-hidden="true"></div>
           <div ref="bookRef" class="book3d" aria-hidden="true">
             <div class="b-face b-back"></div>

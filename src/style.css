@@ -1281,6 +1281,12 @@ a {
   align-items: flex-end;
   justify-content: center;
   perspective: 1400px;
+  /* Horizontal drags spin the book; vertical drags scroll the page. */
+  touch-action: pan-y;
+  cursor: grab;
+}
+.book-stage:active {
+  cursor: grabbing;
 }
 .book-shadow {
   position: absolute;

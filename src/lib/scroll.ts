@@ -35,11 +35,12 @@ export function scrollToElement(el: HTMLElement): void {
 }
 
 /** Slow, cinematic scroll to an element — the contact-form reveal. */
-export function scrollSlowTo(el: HTMLElement): void {
+export function scrollSlowTo(el: HTMLElement, onComplete?: () => void): void {
   if (lenis) {
-    lenis.scrollTo(el, { duration: 3.4 });
+    lenis.scrollTo(el, { duration: 3.4, onComplete });
   } else {
     el.scrollIntoView({ behavior: 'smooth' });
+    if (onComplete) window.setTimeout(onComplete, 700);
   }
 }
 

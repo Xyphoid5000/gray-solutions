@@ -285,10 +285,13 @@ function onTouchEnd(e: TouchEvent) {
       if (dx < 0 && !atEnd) return;
       if (dx > 0 && !atStart) return;
     }
+    // The home page book owns horizontal drags (drag-to-rotate), so
+    // there is no swipe page navigation there.
+    const path = router.currentRoute.value.path;
+    if (path === '/') return;
     // Swipe either way: if there's a page to turn to, turn — if we're
     // at the edge of the book, the swipe closes it and drifts down to
     // the contact form instead.
-    const path = router.currentRoute.value.path;
     if (dx < 0) {
       if (neighbor(path, 1)) nextPage();
       else goToContact();
