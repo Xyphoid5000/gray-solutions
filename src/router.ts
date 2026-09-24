@@ -6,7 +6,6 @@ import Premise from './components/Premise.vue';
 import Craft from './components/Craft.vue';
 import Proof from './components/Proof.vue';
 import StoryArc from './components/StoryArc.vue';
-import Epilogue from './components/Epilogue.vue';
 
 export interface ChapterMeta {
   path: string;
@@ -27,7 +26,6 @@ const components: Record<string, Component> = {
   '/craft': Craft,
   '/proof': Proof,
   '/arc': StoryArc,
-  '/epilogue': Epilogue,
 };
 
 export const chapters: ChapterMeta[] = [
@@ -37,7 +35,6 @@ export const chapters: ChapterMeta[] = [
   { path: '/proof', num: '03', label: 'Chapter 03 — The Proof', short: '03 · Proof', logline: "Don't take my word for it." },
   { path: '/arc', num: '04', label: 'Chapter 04 — The Arc', short: '04 · Arc', logline: 'Every project follows the arc.' },
   { path: '/about', num: '\u00A7', label: 'About the author', short: 'About', logline: 'The guy behind the book.' },
-  { path: '/epilogue', num: '\u00B6', label: 'Epilogue', short: 'Epilogue', logline: "Let's write yours." },
 ];
 
 /** Which way the page turns: forward (next page) or back (previous page). */

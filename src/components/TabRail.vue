@@ -43,11 +43,10 @@ const rightTabs = computed<RailTab[]>(() => {
 /** The contact envelope sits in its own row beneath the last page. */
 const contactRow = computed(() => chapters.length + 1);
 
-type Glyph = 'num' | 'avatar' | 'pen' | 'mark';
+type Glyph = 'num' | 'avatar' | 'mark';
 function glyph(ch: ChapterMeta): Glyph {
   if (/^\d+$/.test(ch.num)) return 'num';
   if (ch.path === '/about') return 'avatar';
-  if (ch.path === '/epilogue') return 'pen';
   return 'mark';
 }
 
@@ -91,9 +90,6 @@ function tabLabel(ch: ChapterMeta): string {
           <circle cx="12" cy="8" r="4" />
           <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
         </svg>
-        <span v-else-if="glyph(t.ch) === 'pen'" class="tab-num" aria-hidden="true"
-          >&#10002;&#65038;</span
-        >
         <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
       </button>
     </nav>
@@ -129,9 +125,6 @@ function tabLabel(ch: ChapterMeta): string {
           <circle cx="12" cy="8" r="4" />
           <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
         </svg>
-        <span v-else-if="glyph(t.ch) === 'pen'" class="tab-num" aria-hidden="true"
-          >&#10002;&#65038;</span
-        >
         <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
       </button>
       <button

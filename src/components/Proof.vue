@@ -80,7 +80,7 @@ const router = useRouter();
               they&rsquo;d done first.
             </p>
           </div>
-          <button class="btn btn-solid" @click="router.push('/epilogue')">
+          <button class="btn btn-solid" @click="router.push('/about')">
             Claim the page <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
         </article>

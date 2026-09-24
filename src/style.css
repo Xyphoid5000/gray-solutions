@@ -811,6 +811,26 @@ a {
 .epilogue-links a:hover {
   color: var(--ember);
 }
+/* The book's closing beat, folded into the About page. */
+.fin {
+  margin-top: 6rem;
+  padding-top: 3.5rem;
+  border-top: 1px solid var(--line-soft);
+}
+.fin-ornament {
+  color: var(--ember);
+  font-size: 1.4rem;
+  margin: 0 0 2.2rem;
+}
+.fin .epilogue-title,
+.fin .epilogue-sub {
+  margin-left: 0;
+  margin-right: 0;
+}
+.fin .epilogue-ctas,
+.fin .epilogue-links {
+  justify-content: flex-start;
+}
 
 /* ---------- footer ---------- */
 .site-footer {

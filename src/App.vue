@@ -179,7 +179,7 @@ function onTouchMove(e: TouchEvent) {
   // scrollable page now (the form lives under the book), so pushing
   // at its bottom must never whisk the reader away mid-form.
   const path = router.currentRoute.value.path;
-  if (path === '/epilogue' || path === '/') return;
+  if (path === '/about' || path === '/') return;
   if (atBottom() && dy < -4) {
     pushAccum += -dy;
     if (pushAccum > 120) {
