@@ -2,100 +2,108 @@
 import { onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { siteConfig } from '../config';
-import { returnToContact } from '../lib/ui';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const router = useRouter();
 
-function startProject() {
-  // Close the book, zoom back out, drift down to the contact form.
-  returnToContact.value = true;
-  router.push('/');
-}
-
-const reducedMotion = () =>
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LINKS = [
+  {
+    label: 'GitHub',
+    href: 'https://github.com/Xyphoid5000',
+    external: true,
+  },
+  {
+    label: 'Email',
+    href: 'mailto:c90gray@gmail.com?subject=Let%27s%20write%20my%20story',
+    external: false,
+  },
+  {
+    label: 'LinkedIn',
+    href: 'https://www.linkedin.com/in/chris-gray-b0b50b1b4',
+    external: true,
+  },
+];
 
 let ctx: gsap.Context | null = null;
 
 onMounted(() => {
-  const root = document.querySelector<HTMLElement>('.prologue');
-  if (!root || reducedMotion()) return;
   ctx = gsap.context(() => {
-    // A single-screen title page: the headline arrives on a fixed
-    // timeline — no scroll triggers to miss.
-    const tl = gsap.timeline({ delay: 0.15 });
-    tl.from(
-      '.hero-kicker',
-      { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-      0,
-    )
-      .to(
-        '.hero-title .h-line-inner',
-        { y: 0, duration: 1.25, ease: 'power4.out', stagger: 0.14 },
-        0.1,
-      )
-      .from(
-        '.hero-sub',
-        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.5,
+    gsap.fromTo(
+      '.prologue .h-line-inner',
+      { yPercent: 115 },
+      {
+        yPercent: 0,
+        duration: 1.1,
+        ease: 'power4.out',
+        stagger: 0.1,
+        delay: 0.15,
+      },
+    );
+    gsap.utils.toArray<HTMLElement>('.finale [v-reveal], .finale .fin').forEach((el) => {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: 26 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.9,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        },
       );
-  }, root);
+    });
+  }, document.querySelector('.prologue') as HTMLElement);
 });
 
-onUnmounted(() => ctx?.revert());
+onUnmounted(() => {
+  ctx?.revert();
+  ctx = null;
+});
+
+function startStory() {
+  router.push({ path: '/', hash: '#contact' });
+}
 </script>
 
 <template>
-  <section class="prologue book-page" aria-label="The end">
-    <div class="prologue-glow" aria-hidden="true"></div>
+  <section class="prologue book-page finale" aria-label="About the author">
     <div class="wrap">
-      <p class="hero-kicker">About the author</p>
-      <h1 class="hero-title">
+      <p class="kicker">
+        <span class="k-num">&#10022;</span> About the author
+      </p>
+      <h2 class="h-display">
         <span class="h-line"
-          ><span class="h-line-inner">Hi, I&rsquo;m <em>Chris.</em></span></span
+          ><span class="h-line-inner"
+            >Hi, I&rsquo;m Chris and I write stories.</span
+          ></span
         >
-      </h1>
-      <p class="hero-sub">
-        I build websites that tell stories.
+      </h2>
+      <p>
         <button class="link-more" @click="router.push('/about')">
           More about me <span class="arrow" aria-hidden="true">&rarr;</span>
         </button>
       </p>
-
-      <div v-reveal class="fin" aria-label="The end">
-        <p class="fin-ornament" aria-hidden="true">&#10087;</p>
-        <p class="ch-kicker">The end</p>
-        <h2 class="epilogue-title">Let&rsquo;s write <em>yours.</em></h2>
-        <p class="epilogue-sub">
-          Tell me what your business does and who it&rsquo;s for. I&rsquo;ll
-          tell you the story your website should be telling &mdash; and then
-          I&rsquo;ll build it.
+      <div class="fin">
+        <h3>Let&rsquo;s start creating yours.</h3>
+        <p>
+          Got a business with a story worth telling? Tell me where you are
+          and where you want to be — we&rsquo;ll write the next chapter
+          together.
         </p>
-        <div class="epilogue-ctas">
-          <button class="btn btn-solid" @click="startProject()">
-            Start your story
-            <span class="arrow" aria-hidden="true">&rarr;</span>
+        <div class="fin-actions">
+          <button class="btn btn-solid" @click="startStory">
+            Start your story <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
-          <a
-            :href="siteConfig.github"
-            target="_blank"
-            rel="noopener"
-            class="btn btn-ghost"
-          >
-            GitHub
-          </a>
+          <nav class="fin-links" aria-label="Elsewhere">
+            <a
+              v-for="l in LINKS"
+              :key="l.label"
+              :href="l.href"
+              :target="l.external ? '_blank' : undefined"
+              :rel="l.external ? 'noopener' : undefined"
+              >{{ l.label }}</a
+            >
+          </nav>
         </div>
-        <nav class="epilogue-links" aria-label="Elsewhere">
-          <a :href="`mailto:${siteConfig.email}`">{{ siteConfig.email }}</a>
-          <a :href="siteConfig.github" target="_blank" rel="noopener">GitHub</a>
-          <a :href="siteConfig.linkedIn" target="_blank" rel="noopener"
-            >LinkedIn</a
-          >
-        </nav>
       </div>
     </div>
   </section>

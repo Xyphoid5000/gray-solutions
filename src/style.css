@@ -394,13 +394,12 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
-  margin-left: 0.6em;
   padding: 0;
   border: 0;
   background: none;
   color: var(--ember);
   font: inherit;
-  font-size: 0.92em;
+  font-size: 1.02rem;
   font-style: italic;
   cursor: pointer;
   white-space: nowrap;
@@ -835,23 +834,161 @@ a {
 }
 /* The book's closing beat, folded into the About page. */
 .fin {
-  margin-top: 6rem;
-  padding-top: 3.5rem;
+  margin-top: 5rem;
+  padding-top: 3rem;
   border-top: 1px solid var(--line-soft);
 }
-.fin-ornament {
+.fin h3 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  letter-spacing: -0.01em;
+  margin: 0 0 1rem;
+}
+.fin > p {
+  color: var(--muted);
+  max-width: 52ch;
+  margin: 0 0 2.4rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+.fin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.4rem 2.4rem;
+}
+.fin-links {
+  display: flex;
+  gap: 1.8rem;
+  flex-wrap: wrap;
+}
+.fin-links a {
+  color: var(--faint);
+  text-decoration: none;
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+  transition: color 0.25s;
+}
+.fin-links a:hover {
   color: var(--ember);
-  font-size: 1.4rem;
-  margin: 0 0 2.2rem;
 }
-.fin .epilogue-title,
-.fin .epilogue-sub {
-  margin-left: 0;
-  margin-right: 0;
+
+/* Kicker line with a glyph numeral (about pages). */
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin: 0 0 1.4rem;
 }
-.fin .epilogue-ctas,
-.fin .epilogue-links {
-  justify-content: flex-start;
+.kicker .k-num {
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+/* ---------- about me (home section + standalone page) ---------- */
+.about-section {
+  padding: clamp(5rem, 12vw, 9rem) 0;
+  border-top: 1px solid var(--line-soft);
+}
+.about-standalone {
+  padding-top: clamp(6rem, 12vw, 9rem);
+}
+.about-portrait {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 0 2.4rem;
+  background:
+    radial-gradient(circle at 35% 30%, #2a241a 0%, #14110b 70%);
+  border: 1px solid var(--line);
+  box-shadow: 0 0 0 6px rgba(232, 163, 61, 0.08);
+  overflow: hidden;
+}
+.about-monogram {
+  font-family: var(--serif);
+  font-size: 2.8rem;
+  font-weight: 500;
+  color: var(--ember);
+  letter-spacing: 0.02em;
+}
+.about-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.about-me .h-display {
+  margin-bottom: 1.6rem;
+}
+.about-facts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.8rem 3rem;
+  margin: 3rem 0 0;
+  padding: 0;
+}
+.about-facts > div {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 1.1rem;
+}
+.about-facts dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin-bottom: 0.55rem;
+}
+.about-facts dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+  font-size: 0.98rem;
+}
+.about-signoff {
+  margin: 3rem 0 0;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0;
+  margin-bottom: 3rem;
+  border: 0;
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.25s;
+}
+.back-link:hover {
+  color: var(--ember);
+}
+.back-link .arrow {
+  transition: transform 0.25s ease;
+}
+.back-link:hover .arrow {
+  transform: translateX(-4px);
+}
+@media (max-width: 640px) {
+  .about-facts {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- footer ---------- */

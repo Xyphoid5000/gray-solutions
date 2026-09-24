@@ -43,10 +43,9 @@ const rightTabs = computed<RailTab[]>(() => {
 /** The contact envelope sits in its own row beneath the last page. */
 const contactRow = computed(() => chapters.length + 1);
 
-type Glyph = 'num' | 'avatar' | 'pen' | 'mark';
+type Glyph = 'num' | 'pen' | 'mark';
 function glyph(ch: ChapterMeta): Glyph {
   if (/^\d+$/.test(ch.num)) return 'num';
-  if (ch.path === '/about') return 'avatar';
   if (ch.path === '/finale') return 'pen';
   return 'mark';
 }
@@ -76,21 +75,6 @@ function tabLabel(ch: ChapterMeta): string {
         <span v-if="glyph(t.ch) === 'num'" class="tab-num" aria-hidden="true">{{
           tabNum(t.ch)
         }}</span>
-        <svg
-          v-else-if="glyph(t.ch) === 'avatar'"
-          class="tab-icon"
-          viewBox="0 0 24 24"
-          width="17"
-          height="17"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
-        </svg>
         <svg
           v-else-if="glyph(t.ch) === 'pen'"
           class="tab-icon"
@@ -130,21 +114,6 @@ function tabLabel(ch: ChapterMeta): string {
         <span v-if="glyph(t.ch) === 'num'" class="tab-num" aria-hidden="true">{{
           tabNum(t.ch)
         }}</span>
-        <svg
-          v-else-if="glyph(t.ch) === 'avatar'"
-          class="tab-icon"
-          viewBox="0 0 24 24"
-          width="17"
-          height="17"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
-        </svg>
         <svg
           v-else-if="glyph(t.ch) === 'pen'"
           class="tab-icon"

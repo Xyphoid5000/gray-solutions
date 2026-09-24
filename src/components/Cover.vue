@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import ContactForm from './ContactForm.vue';
+import AboutMe from './AboutMe.vue';
 import { returnToContact } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 
@@ -359,8 +360,13 @@ onUnmounted(() => {
               Open the book <span class="arrow" aria-hidden="true">&rarr;</span>
             </button>
           </div>
-          <p class="cover-hint">Seven pages &middot; best read front to back</p>
+          <p class="cover-hint">Six pages &middot; best read front to back</p>
         </div>
+      </div>
+    </section>
+    <section v-reveal class="about-section" aria-label="About me">
+      <div class="wrap">
+        <AboutMe />
       </div>
     </section>
     <section id="contact" class="cover-contact" aria-label="Contact">

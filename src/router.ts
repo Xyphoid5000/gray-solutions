@@ -36,19 +36,31 @@ export const chapters: ChapterMeta[] = [
   { path: '/craft', num: '02', label: 'Chapter 02 — The Craft', short: '02 · Craft', logline: 'What I actually do.' },
   { path: '/proof', num: '03', label: 'Chapter 03 — The Proof', short: '03 · Proof', logline: "Don't take my word for it." },
   { path: '/arc', num: '04', label: 'Chapter 04 — The Arc', short: '04 · Arc', logline: 'Every project follows the arc.' },
-  { path: '/about', num: '\u00A7', label: 'About me', short: 'About', logline: 'The guy behind the book.' },
   { path: '/finale', num: '\u2712', label: 'The end', short: 'The End', logline: 'Let\u2019s write yours.' },
 ];
+
+/**
+ * The book's chapter sequence. /about is intentionally NOT a chapter —
+ * it lives off the book as a standalone details page.
+ */
+export function isChapter(path: string): boolean {
+  return chapters.some((c) => c.path === path);
+}
 
 /** Which way the page turns: forward (next page) or back (previous page). */
 export const navDirection = ref<'forward' | 'back'>('forward');
 
 export const router = createRouter({
   history: createWebHistory(),
-  routes: chapters.map((c) => ({
-    path: c.path,
-    component: components[c.path],
-  })),
+  routes: [
+    // The book, in order…
+    ...chapters.map((c) => ({
+      path: c.path,
+      component: components[c.path],
+    })),
+    // …plus the about page, which lives off the book entirely.
+    { path: '/about', component: components['/about'] },
+  ],
   scrollBehavior: () => ({ top: 0 }),
 });
 

@@ -1,102 +1,44 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { siteConfig } from '../config';
+import AboutMe from './AboutMe.vue';
 
-gsap.registerPlugin(ScrollTrigger);
-
-const reducedMotion = () =>
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const router = useRouter();
 
 let ctx: gsap.Context | null = null;
 
 onMounted(() => {
-  const root = document.querySelector<HTMLElement>('.prologue');
-  if (!root || reducedMotion()) return;
   ctx = gsap.context(() => {
-    const tl = gsap.timeline({ delay: 0.15 });
-    tl.from(
-      '.hero-kicker',
-      { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-      0,
-    )
-      .to(
-        '.hero-title .h-line-inner',
-        { y: 0, duration: 1.25, ease: 'power4.out', stagger: 0.14 },
-        0.1,
-      )
-      .from(
-        '.hero-sub',
-        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.5,
-      )
-      .from(
-        '.hero-meta',
-        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.62,
+    gsap.utils.toArray<HTMLElement>('.about-standalone .about-me > *').forEach((el) => {
+      gsap.fromTo(
+        el,
+        { opacity: 0, y: 26 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.9,
+          ease: 'power3.out',
+          scrollTrigger: { trigger: el, start: 'top 90%' },
+        },
       );
-  }, root);
+    });
+  });
 });
 
-onUnmounted(() => ctx?.revert());
+onUnmounted(() => {
+  ctx?.revert();
+  ctx = null;
+});
 </script>
 
 <template>
-  <section class="prologue book-page" aria-label="About me">
-    <div class="prologue-glow" aria-hidden="true"></div>
+  <div class="about-standalone">
     <div class="wrap">
-      <p class="hero-kicker">About me</p>
-      <h1 class="hero-title">
-        <span class="h-line"
-          ><span class="h-line-inner"
-            >The guy behind the <em>book.</em></span
-          ></span
-        >
-      </h1>
-      <p class="hero-sub">
-        Senior software engineer by day &mdash; C# backends, Vue frontends,
-        databases that behave. Through Gray Solutions I build story-driven
-        websites for businesses that deserve better than a template.
-      </p>
-      <ul v-reveal="0.1" class="author-facts">
-        <li>
-          <span class="fact-k">Day job</span>
-          <span class="fact-v"
-            ><strong>Senior software engineer</strong> &mdash; C#, Vue 3,
-            TypeScript</span
-          >
-        </li>
-        <li>
-          <span class="fact-k">Side quest</span>
-          <span class="fact-v"
-            ><strong>Gray Solutions</strong> &mdash; story-driven client
-            websites</span
-          >
-        </li>
-        <li>
-          <span class="fact-k">After hours</span>
-          <span class="fact-v">Drums, keys, and worship-team Sundays</span>
-        </li>
-        <li>
-          <span class="fact-k">Based in</span>
-          <span class="fact-v">{{ siteConfig.location }}</span>
-        </li>
-        <li>
-          <span class="fact-k">Currently</span>
-          <span class="fact-v"
-            >Booking select projects &mdash;
-            <strong>one story at a time</strong></span
-          >
-        </li>
-      </ul>
-      <p class="hero-meta">
-        <span>Chris Gray</span
-        ><span class="dot" aria-hidden="true">&middot;</span>
-        <span>Design &amp; Engineering</span
-        ><span class="dot" aria-hidden="true">&middot;</span>
-        <span>Est. MMXXVI</span>
-      </p>
+      <button class="back-link" @click="router.push('/finale')">
+        <span class="arrow" aria-hidden="true">&larr;</span> Back to the story
+      </button>
+      <AboutMe />
     </div>
-  </section>
+  </div>
 </template>

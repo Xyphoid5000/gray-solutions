@@ -8,7 +8,7 @@ import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
-import { neighbor, chapters, type ChapterMeta } from './router';
+import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
 import { returnToContact } from './lib/ui';
 import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
 
@@ -292,7 +292,7 @@ function onTouchMove(e: TouchEvent) {
   // scrollable page now (the form lives under the book), so pushing
   // at its bottom must never whisk the reader away mid-form.
   const path = router.currentRoute.value.path;
-  if (path === '/finale' || path === '/') return;
+  if (path === '/finale' || path === '/about' || path === '/') return;
   if (atBottom() && dy < -4) {
     pushAccum += -dy;
     if (pushAccum > 120) {
@@ -314,6 +314,7 @@ function onKey(e: KeyboardEvent) {
     return;
   }
   if (modalChapter.value) return; // arrows shouldn't turn pages under the modal
+  if (!isChapter(route.path)) return; // the about page sits off the book
   if (e.key === 'ArrowRight') nextPage();
   else if (e.key === 'ArrowLeft') prevPage();
 }
@@ -375,9 +376,9 @@ onUnmounted(() => {
       </Transition>
     </RouterView>
   </div>
-  <PageTurner />
+  <PageTurner v-if="isChapter(route.path)" />
   <TabRail
-    v-if="route.path !== '/'"
+    v-if="isChapter(route.path) && route.path !== '/'"
     @select="modalChapter = $event"
     @contact="goToContact"
   />
