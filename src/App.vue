@@ -7,6 +7,7 @@ import { RouterView, useRouter } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
 import SwipeHint from './components/SwipeHint.vue';
+import CurlHint from './components/CurlHint.vue';
 import { navDirection, neighbor } from './router';
 import { hasSwiped } from './lib/ui';
 import { setLenis, scrollToTopImmediate } from './lib/scroll';
@@ -115,23 +116,29 @@ function afterEnter() {
 const viewport = ref<HTMLElement | null>(null);
 let touchX = 0;
 let touchY = 0;
-let touchBlocked = false;
+let stripEl: HTMLElement | null = null;
 
 function onTouchStart(e: TouchEvent) {
   const t = e.touches[0];
   touchX = t.clientX;
   touchY = t.clientY;
-  // Never hijack a gesture that starts inside a natively-scrollable
-  // region (the Proof project strip) — that strip owns its swipes.
-  touchBlocked = !!(e.target as HTMLElement).closest?.('.proof-strip');
+  stripEl = (e.target as HTMLElement).closest?.('.proof-strip') as HTMLElement | null;
 }
 function onTouchEnd(e: TouchEvent) {
-  if (touchBlocked) return;
   const t = e.changedTouches[0];
   const dx = t.clientX - touchX;
   const dy = t.clientY - touchY;
   // A deliberate horizontal swipe — never hijack a vertical scroll.
   if (Math.abs(dx) > 72 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (stripEl) {
+      // The strip owns swipes it can still scroll through — but at
+      // its edge, the gesture belongs to the page turn.
+      const max = stripEl.scrollWidth - stripEl.clientWidth;
+      const atStart = stripEl.scrollLeft <= 8;
+      const atEnd = stripEl.scrollLeft >= max - 8;
+      if (dx < 0 && !atEnd) return;
+      if (dx > 0 && !atStart) return;
+    }
     hasSwiped.value = true;
     if (dx < 0) nextPage();
     else prevPage();
@@ -193,4 +200,5 @@ onUnmounted(() => {
   </div>
   <PageTurner />
   <SwipeHint />
+  <CurlHint />
 </template>

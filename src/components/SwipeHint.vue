@@ -5,17 +5,15 @@ import { hasSwiped } from '../lib/ui';
 
 const route = useRoute();
 
-const show = computed(() => !hasSwiped.value);
-const label = computed(() =>
-  route.path === '/' ? 'swipe to open the book' : 'swipe to turn the page',
-);
+// The cover has its own button — no hint needed there.
+const show = computed(() => !hasSwiped.value && route.path !== '/');
 </script>
 
 <template>
   <Transition name="hint">
     <div v-if="show" class="swipe-hint" aria-hidden="true">
       <span class="swipe-arrow left">&larr;</span>
-      <span>{{ label }}</span>
+      <span>swipe to turn the page</span>
       <span class="swipe-arrow right">&rarr;</span>
     </div>
   </Transition>

@@ -1574,3 +1574,70 @@ a {
   opacity: 0;
   transform: translateX(-50%) translateY(10px);
 }
+
+/* ---------- corner curls (touch devices) ---------- */
+.curl-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 800;
+  pointer-events: none;
+  display: none;
+}
+@media (pointer: coarse) {
+  .curl-layer {
+    display: block;
+  }
+}
+.curl-hint {
+  position: absolute;
+  right: 0;
+  width: 54px;
+  height: 54px;
+}
+.curl-hint.top {
+  top: calc(var(--nav-h) + 0.4rem);
+}
+.curl-hint.bottom {
+  bottom: 3.6rem; /* just above the page-turner */
+}
+.curl-fold {
+  position: absolute;
+  inset: 0;
+  transform-origin: bottom right;
+  filter: drop-shadow(-3px -3px 5px rgba(0, 0, 0, 0.5));
+  animation: curl-beckon 4.6s ease-in-out infinite;
+}
+.curl-hint.bottom .curl-fold {
+  background: linear-gradient(to top left, #ece0c2 0 48%, rgba(236, 224, 194, 0) 52%);
+}
+.curl-hint.top .curl-fold {
+  background: linear-gradient(to bottom left, #ece0c2 0 48%, rgba(236, 224, 194, 0) 52%);
+  transform-origin: top right;
+}
+/* The corner lifts, holds, settles — a quiet "there's more". */
+@keyframes curl-beckon {
+  0%, 58%, 100% {
+    transform: scale(0.42);
+    opacity: 0.7;
+  }
+  78% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .curl-fold {
+    animation: none;
+    transform: scale(0.42);
+    opacity: 0.7;
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
