@@ -37,14 +37,21 @@ const litCount = ref(0);
 let st: ScrollTrigger | undefined;
 
 onMounted(() => {
-  const svg = document.querySelector<SVGSVGElement>('.arc-svg');
-  const path = svg?.querySelector<SVGPathElement>('#arc-path');
-  if (!svg || !path) return;
-
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     litCount.value = acts.length;
     return;
   }
+
+  // The pen-drawn curve is a desktop pleasure — small screens get the
+  // vertical spine (pure CSS) instead, so skip the SVG work entirely.
+  if (!window.matchMedia('(min-width: 641px)').matches) {
+    litCount.value = acts.length;
+    return;
+  }
+
+  const svg = document.querySelector<SVGSVGElement>('.arc-svg');
+  const path = svg?.querySelector<SVGPathElement>('#arc-path');
+  if (!svg || !path) return;
 
   const len = path.getTotalLength();
   gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
@@ -133,6 +140,21 @@ onUnmounted(() => {
             <h3>{{ act.title }}</h3>
             <p>{{ act.copy }}</p>
           </article>
+        </div>
+        <div class="arc-spine">
+          <div
+            v-for="(act, i) in acts"
+            :key="act.num"
+            v-reveal="i * 0.06"
+            class="arc-stop"
+          >
+            <span class="arc-dot" aria-hidden="true"></span>
+            <div class="arc-stop-body">
+              <span class="act-num">{{ act.num }} &mdash; {{ act.sub }}</span>
+              <h3>{{ act.title }}</h3>
+              <p>{{ act.copy }}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

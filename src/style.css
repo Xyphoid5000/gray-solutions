@@ -294,43 +294,6 @@ a {
   font-style: normal;
   color: var(--ember);
 }
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.nav-links a {
-  text-decoration: none;
-  font-size: 0.86rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  transition: color 0.25s;
-  position: relative;
-}
-.nav-links a::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  bottom: -6px;
-  width: 100%;
-  height: 1px;
-  background: var(--ember);
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 0.35s var(--ease-out);
-}
-.nav-links a:hover {
-  color: var(--ink);
-}
-.nav-links a:hover::after {
-  transform: scaleX(1);
-  transform-origin: left;
-}
 .nav-cta {
   padding: 0.7rem 1.4rem;
   font-size: 0.82rem;
@@ -642,18 +605,7 @@ a {
   padding: 0.32rem 0.85rem;
 }
 
-/* ---------- proof / work (horizontal) ---------- */
-.proof-pin {
-  overflow: hidden;
-}
-.proof-track {
-  display: flex;
-  align-items: stretch;
-  gap: clamp(1.5rem, 3vw, 3rem);
-  width: max-content;
-  padding-inline: max(1.5rem, calc((100vw - var(--wrap)) / 2));
-  will-change: transform;
-}
+/* ---------- proof / work (swipeable strip) ---------- */
 .proof-panel {
   width: min(78vw, 640px);
   flex-shrink: 0;
@@ -946,9 +898,6 @@ a {
 
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
-  .nav-links {
-    display: none;
-  }
   .premise-grid {
     grid-template-columns: 1fr;
   }
@@ -1145,75 +1094,275 @@ a {
   color: var(--ember);
   transform: rotate(90deg);
 }
-
-/* ---------- intermission (cinematic ember storm) ---------- */
-.intermission {
-  position: relative;
-  background: #070503;
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .chapters-overlay {
+    clip-path: none;
+  }
 }
-.intermission-stage {
+
+/* ---------- the book ---------- */
+.book-viewport {
   position: relative;
-  height: 100svh;
-  overflow: hidden;
+  perspective: 1800px;
+  overflow: clip;
+}
+.book-page {
+  position: relative;
+  min-height: 100svh;
+  background: var(--bg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  padding-bottom: 4.5rem; /* clearance for the page-turner */
+}
+.chapter.book-page {
+  padding-top: clamp(6rem, 12vw, 10rem);
+}
+
+/* ---------- cover ---------- */
+.cover {
+  min-height: 100svh;
   display: grid;
   place-items: center;
+  text-align: center;
+  overflow: clip;
+  padding: calc(var(--nav-h) + 3rem) 0 7rem;
 }
-.intermission-bg {
+.cover-glow {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 90% at 50% 110%, rgba(180, 95, 34, 0.22), transparent 60%),
-    radial-gradient(90% 70% at 50% -10%, rgba(232, 163, 61, 0.08), transparent 60%),
-    #070503;
-}
-.intermission-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.intermission-vignette {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(115% 115% at 50% 50%, transparent 55%, rgba(4, 3, 2, 0.75) 100%);
+    radial-gradient(60% 45% at 50% 42%, rgba(232, 163, 61, 0.13), transparent 65%),
+    radial-gradient(80% 60% at 50% 110%, rgba(180, 95, 34, 0.1), transparent 60%);
   pointer-events: none;
 }
-.intermission-text {
+.cover-inner {
   position: relative;
-  text-align: center;
-  padding: 0 1.5rem;
-  will-change: transform, opacity;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-.intermission-kicker {
-  font-size: 0.75rem;
+.cover-kicker {
+  font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--ember);
-  margin: 0 0 1.4rem;
-  opacity: 0;
+  margin: 0 0 1.8rem;
 }
-.intermission-title {
+.cover-title {
   font-family: var(--serif);
-  font-weight: 500;
-  font-size: clamp(2.6rem, 8vw, 6.2rem);
-  line-height: 1.04;
-  margin: 0;
+  font-weight: 480;
+  font-size: clamp(3.6rem, 13vw, 8.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.6rem;
   text-wrap: balance;
-  text-shadow: 0 4px 60px rgba(0, 0, 0, 0.6);
 }
-.intermission-title em {
+.cover-title em {
   font-style: italic;
   color: var(--ember);
   font-weight: 400;
 }
+.cover-sub {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.35rem, 3.4vw, 2.1rem);
+  color: var(--muted);
+  margin: 0 0 2.6rem;
+}
+.cover-cta .btn {
+  font-size: 1.02rem;
+  padding: 1.05rem 2.2rem;
+}
+.cover-hint {
+  margin: 2.2rem 0 0;
+  color: var(--faint);
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
 
-/* ---------- reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .intermission-kicker {
-    opacity: 1;
+/* ---------- page turner (persistent chrome) ---------- */
+.page-turner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem max(1.25rem, calc((100vw - var(--wrap)) / 2));
+  background: rgba(11, 9, 6, 0.8);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--line-soft);
+}
+.page-turner button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.2rem;
+  transition: color 0.25s, opacity 0.25s;
+}
+.page-turner button:hover:not(:disabled) {
+  color: var(--ember);
+}
+.page-turner button:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.turner-label {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--faint);
+  font-size: 0.98rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- proof: swipeable strip ---------- */
+.proof-strip {
+  display: flex;
+  gap: 1.2rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 0.4rem max(1.5rem, calc((100vw - var(--wrap)) / 2)) 1.4rem;
+  margin: 0 calc(-1 * max(1.5rem, calc((100vw - var(--wrap)) / 2)));
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.proof-strip::-webkit-scrollbar {
+  display: none;
+}
+.proof-strip .proof-panel {
+  width: min(84vw, 560px);
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  min-height: unset;
+}
+.proof-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  color: var(--faint);
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-top: 0.6rem;
+}
+
+/* ---------- arc: mobile spine ---------- */
+.arc-spine {
+  display: none;
+}
+@media (max-width: 640px) {
+  .arc-svg-wrap,
+  .arc-grid {
+    display: none;
   }
-  .chapters-overlay {
-    clip-path: none;
+  .arc-spine {
+    display: block;
+    position: relative;
+    padding-left: 2rem;
+    margin-top: 1rem;
+  }
+  .arc-spine::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(var(--ember), rgba(232, 163, 61, 0.15));
+  }
+  .arc-stop {
+    position: relative;
+    padding-bottom: 2.2rem;
+  }
+  .arc-stop:last-child {
+    padding-bottom: 0;
+  }
+  .arc-dot {
+    position: absolute;
+    left: -2rem;
+    top: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--ember);
+    box-shadow: 0 0 14px rgba(232, 163, 61, 0.55);
+  }
+  .arc-stop .act-num {
+    font-size: 0.72rem;
+  }
+  .arc-stop h3 {
+    font-size: 1.35rem;
+    margin: 0.3rem 0 0.5rem;
+  }
+  .arc-stop p {
+    font-size: 0.98rem;
+  }
+}
+
+/* ---------- chapters overlay: cta ---------- */
+.chapters-cta {
+  display: inline-flex;
+  margin-top: 2.2rem;
+}
+
+/* ---------- mobile comfort ---------- */
+@media (max-width: 640px) {
+  .wrap {
+    width: min(var(--wrap), 100% - 2.25rem);
+  }
+  .nav-cta {
+    display: none;
+  }
+  .chapter.book-page {
+    padding-top: 5rem;
+  }
+  .ch-num {
+    font-size: clamp(3.4rem, 19vw, 4.6rem);
+    top: -0.5em;
+    right: 0.1em;
+  }
+  .ch-title {
+    font-size: clamp(2.1rem, 9vw, 3rem);
+  }
+  .hero-title {
+    font-size: clamp(2.7rem, 12.5vw, 3.6rem);
+  }
+  .hero-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.26em;
+  }
+  .premise-statement {
+    font-size: clamp(1.5rem, 6.4vw, 2rem);
+  }
+  .proof-hint {
+    letter-spacing: 0.22em;
+  }
+  .turner-label {
+    font-size: 0.88rem;
+  }
+  .page-turner {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }

@@ -1,23 +1,19 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ChapterIndex from './ChapterIndex.vue';
-import { scrollToElement, scrollToTop } from '../lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
 
+const router = useRouter();
 const scrolled = ref(false);
 const hidden = ref(false);
 const index = ref<{ show: () => void; isOpen: () => boolean } | null>(null);
 let lastY = 0;
 let progressTween: gsap.core.Tween | null = null;
 let onScroll: (() => void) | null = null;
-
-function go(target: string) {
-  const el = document.getElementById(target);
-  if (el) scrollToElement(el);
-}
 
 function openIndex() {
   hidden.value = false;
@@ -68,9 +64,9 @@ onUnmounted(() => {
     <div class="nav-inner">
       <a
         class="brand"
-        href="#prologue"
-        @click.prevent="scrollToTop()"
-        aria-label="Gray Solutions — back to the top"
+        href="#/"
+        @click.prevent="router.push('/')"
+        aria-label="Gray Solutions — back to the cover"
       >
         <span class="brand-mark" aria-hidden="true">G.</span>
         <span>Gray Solutions<em>.</em></span>
@@ -82,13 +78,12 @@ onUnmounted(() => {
           </span>
           Chapters
         </button>
-        <a
-          href="#epilogue"
+        <button
           class="btn btn-solid nav-cta"
-          @click.prevent="go('epilogue')"
+          @click="router.push('/epilogue')"
         >
           Start a project
-        </a>
+        </button>
       </div>
     </div>
     <div class="nav-progress" aria-hidden="true"></div>

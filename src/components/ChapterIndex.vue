@@ -1,28 +1,25 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
-import { scrollToElement, startScroll, stopScroll } from '../lib/scroll';
+import { chapters } from '../router';
+import { startScroll, stopScroll } from '../lib/scroll';
 
-const chapters = [
-  { num: '\u2014', title: 'Prologue', sub: 'Every website is a story.', target: 'prologue' },
-  { num: '01', title: 'The Premise', sub: 'Nobody remembers a brochure.', target: 'premise' },
-  { num: '02', title: 'The Craft', sub: 'What I actually do.', target: 'craft' },
-  { num: '03', title: 'The Proof', sub: "Don't take my word for it.", target: 'proof' },
-  { num: '\u221E', title: 'Intermission', sub: 'Where the music swells.', target: 'intermission' },
-  { num: '04', title: 'The Arc', sub: 'Every project follows the arc.', target: 'arc' },
-  { num: '05', title: 'The Author', sub: "Hi, I'm Chris.", target: 'author' },
-  { num: '\u00B6', title: 'Epilogue', sub: "Let's write yours.", target: 'epilogue' },
-];
-
+const router = useRouter();
 const open = ref(false);
 let overlay: HTMLElement | null = null;
 let items: NodeListOf<HTMLElement> | null = null;
+let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape' && open.value) close();
 }
 
 function show() {
+  if (closeTimer) {
+    clearTimeout(closeTimer);
+    closeTimer = null;
+  }
   open.value = true;
   stopScroll();
   document.body.style.overflow = 'hidden';
@@ -35,7 +32,7 @@ function show() {
   gsap.fromTo(
     items,
     { y: 44, opacity: 0 },
-    { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out', stagger: 0.06, delay: 0.25 },
+    { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out', stagger: 0.05, delay: 0.25 },
   );
   gsap.fromTo(
     '.chapters-close',
@@ -58,20 +55,11 @@ function close() {
   });
 }
 
-function go(target: string) {
-  const el = document.getElementById(target);
-  gsap.to(overlay, {
-    opacity: 0,
-    duration: 0.3,
-    ease: 'power2.in',
-    onComplete: () => {
-      gsap.set(overlay, { visibility: 'hidden', opacity: 1, clipPath: 'inset(0 0 100% 0)' });
-      open.value = false;
-      document.body.style.overflow = '';
-      startScroll();
-      if (el) scrollToElement(el);
-    },
-  });
+function go(path: string) {
+  // Let the curtain close and scrolling resume before the page turns,
+  // so the new page lands at its top.
+  close();
+  closeTimer = setTimeout(() => router.push(path), 600);
 }
 
 defineExpose({ show, close, isOpen: () => open.value });
@@ -84,6 +72,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey);
+  if (closeTimer) clearTimeout(closeTimer);
   document.body.style.overflow = '';
 });
 </script>
@@ -100,23 +89,26 @@ onUnmounted(() => {
         <span aria-hidden="true">&times;</span>
       </button>
       <div class="chapters-inner">
-        <p class="chapters-kicker">Index of chapters</p>
+        <p class="chapters-kicker">Table of contents</p>
         <nav aria-label="Chapters">
           <a
             v-for="ch in chapters"
-            :key="ch.target"
+            :key="ch.path"
             class="chapter-item"
-            :href="'#' + ch.target"
-            @click.prevent="go(ch.target)"
+            :href="'#' + ch.path"
+            @click.prevent="go(ch.path)"
           >
             <span class="chapter-num" aria-hidden="true">{{ ch.num }}</span>
             <span class="chapter-text">
-              <span class="chapter-title">{{ ch.title }}</span>
-              <span class="chapter-sub">{{ ch.sub }}</span>
+              <span class="chapter-title">{{ ch.label }}</span>
+              <span class="chapter-sub">{{ ch.logline }}</span>
             </span>
             <span class="chapter-go" aria-hidden="true">&rarr;</span>
           </a>
         </nav>
+        <a href="#/epilogue" class="btn btn-solid chapters-cta" @click.prevent="go('/epilogue')">
+          Start a project <span class="arrow" aria-hidden="true">&rarr;</span>
+        </a>
         <p class="chapters-foot">Pick a chapter. The story will take you there.</p>
       </div>
     </div>

@@ -1,20 +1,17 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { scrollToElement } from '../lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const router = useRouter();
 
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let ctx: gsap.Context | null = null;
-
-function go(target: string) {
-  const el = document.getElementById(target);
-  if (el) scrollToElement(el);
-}
 
 onMounted(() => {
   const root = document.querySelector<HTMLElement>('.prologue');
@@ -86,10 +83,10 @@ onUnmounted(() => ctx?.revert());
         &mdash; and a reason to call.
       </p>
       <div class="hero-ctas">
-        <a href="#premise" class="btn btn-solid" @click.prevent="go('premise')">
+        <a href="#/premise" class="btn btn-solid" @click.prevent="router.push('/premise')">
           Read the story <span class="arrow" aria-hidden="true">&rarr;</span>
         </a>
-        <a href="#proof" class="btn btn-ghost" @click.prevent="go('proof')">
+        <a href="#/proof" class="btn btn-ghost" @click.prevent="router.push('/proof')">
           See the proof
         </a>
       </div>

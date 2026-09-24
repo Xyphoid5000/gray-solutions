@@ -34,6 +34,15 @@ export function scrollToElement(el: HTMLElement): void {
   }
 }
 
+/** Jump to the very top without animation (page turns). */
+export function scrollToTopImmediate(): void {
+  if (lenis) {
+    lenis.scrollTo(0, { immediate: true });
+  } else {
+    window.scrollTo(0, 0);
+  }
+}
+
 /** Pause smooth scrolling (e.g. while a full-screen menu is open). */
 export function stopScroll(): void {
   lenis?.stop();
