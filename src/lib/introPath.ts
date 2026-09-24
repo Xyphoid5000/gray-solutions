@@ -9,6 +9,8 @@
  * camera and the end of the bridge should be at the same z increment
  * as the logo so that it gives the illusion that we started inside
  * of the logo."
+ * "The camera starts on top of the bridge. It pulls back and zooms
+ * out to reveal the logo"
  * "The reveal should end with the logo large and in charge. Right
  * before that though it should detail the bridge as the crossbar."
  * "The camera shouldn't raise up like it does." / "the camera should
@@ -16,11 +18,13 @@
  * end side of the bridge".
  *
  * The 3D bridge IS the logo's crossbar — a short solid bar, never a
- * road. The camera starts right against it: we started inside the
- * logo. The camera moves DOWN (never up) and the logo fades in around
- * the bar — the bridge detailing AS the crossbar, slashed end face
- * visible, one continuous object. Then the dolly settles on the full
- * mark LARGE in frame: the logo, large and in charge. Then handoff.
+ * road. The camera starts ON TOP of the bridge (on the deck — per his
+ * drawing the camera dot sits on the deck, events 1-3 ride it through
+ * infinite space). It pulls back and ZOOMS OUT (a real FOV widen, not
+ * just a dolly) while the logo fades in around the bar — the bridge
+ * detailing AS the crossbar, slashed end face visible, one continuous
+ * object — then the zoom lands on the full mark LARGE in frame: the
+ * logo, large and in charge. Then handoff.
  *
  * World layout:
  *   - Mark (logo-mark-no-crossbar.png, 464x423): vertical plane at
@@ -32,15 +36,16 @@
  *     transparent crossbar slot, so the bridge reads AS the crossbar.
  *
  * Beats:
- *   - 0 -> 0.18: INSIDE. Camera just above the deck, nearly touching
- *     it — grey fills the frame. Grey-void resolve
- *     (fog 0.0011 -> 0.00045). A slow settle, nothing more.
- *   - 0.18 -> 0.52: DETAIL. The camera dollies back and DOWN (y 30 ->
- *     10; it never rises) while the mark fades in 0.30 -> 0.52. The
- *     slashed end face of the bar shows; the G arc and S appear around
- *     it — the bridge detailing as the crossbar.
- *   - 0.52 -> 0.78: REVEAL. Settle onto the full mark, LARGE in frame.
- *     Hold 0.78 -> 0.86.
+ *   - 0 -> 0.18: ON TOP. Camera on the bridge deck, the grey surface
+ *     filling the frame. Fog heavy, then resolving. A slow settle.
+ *   - 0.18 -> 0.52: PULL BACK + ZOOM OUT. Dolly back and DOWN (never
+ *     up) while the FOV widens 55 -> 70; the mark fades in 0.30 ->
+ *     0.52. The slashed end face shows big — the bridge detailing as
+ *     the crossbar — and the logo is revealed, medium-wide.
+ *   - 0.52 -> 0.78: REVEAL. The camera holds its ground while the zoom
+ *     lands: FOV narrows 70 -> 38, the full mark LARGE in frame (on
+ *     narrow aspects the final FOV widens just enough to fit the mark
+ *     width — see intro.ts). Hold 0.78 -> 0.86.
  *   - 0.86 -> 1.0: DOM handoff (canvas fades, hero reveals) — see
  *     `introOutro.ts`.
  */
@@ -102,28 +107,47 @@ export const MARK_Y = (CB_FCY - 0.5) * MARK_H;
 export const MARK_Z = -1;
 
 /* ---------------- camera ---------------- */
-// INSIDE: p=0 has the camera just above the deck (top face ~y=32),
-// nearly touching it — we started inside the logo. DETAIL: dolly back
-// and DOWN (y 30 -> 10 — the camera never rises) while the mark fades
-// in around the bar. REVEAL: settle back to the full mark, large.
-// x stays 0 throughout; the move is a straight, level retreat.
+// ON TOP: p=0 has the camera on the bridge deck (top face ~y=32),
+// looking along it into the dark — we started on the bridge, inside
+// the logo. PULL BACK: dolly back and DOWN (y 46 -> 30 — the camera
+// never rises) while the FOV zooms OUT 55 -> 70; the mark fades in
+// around the bar. REVEAL: the camera holds while the FOV zooms back
+// IN 70 -> 38 — the logo, large and in charge. x stays 0 throughout;
+// the move is a straight, level retreat, and the path never
+// intersects the bar (min clearance ~3.7 over the deck).
 export const CAM_KEYS: Key3[] = [
-  { p: 0.0, v: [0, 34, 60] },
-  { p: 0.18, v: [0, 30, 85] },
-  { p: 0.52, v: [0, 10, 300] },
-  { p: 0.78, v: [0, 16, 430] },
-  { p: 0.86, v: [0, 16, 430] },
+  { p: 0.0, v: [0, 46, 70] },
+  { p: 0.18, v: [0, 44, 110] },
+  { p: 0.52, v: [0, 30, 430] },
+  { p: 0.78, v: [0, 26, 430] },
+  { p: 0.86, v: [0, 26, 430] },
 ];
 
-// Look target: down the deck into the fog (inside beat), then onto the
-// bar's slashed near end as the mark appears (detail beat), then the
-// mark center for the large logo shot (reveal/hold).
+// Look target: down the deck into the dark (on-top beat), then back
+// at the bar leading into the faded-in mark (pull-back beat — the
+// slashed near end faces the camera, detailing the bridge AS the
+// crossbar), then the mark center for the large logo shot
+// (reveal/hold).
 export const TGT_KEYS: Key3[] = [
-  { p: 0.0, v: [0, 26, 280] },
-  { p: 0.18, v: [0, 24, 300] },
-  { p: 0.52, v: [0, 2, 120] },
+  { p: 0.0, v: [0, 24, 320] },
+  { p: 0.18, v: [0, 26, 330] },
+  { p: 0.52, v: [0, 0, 80] },
   { p: 0.78, v: [MARK_X, MARK_Y, MARK_Z] },
   { p: 0.86, v: [MARK_X, MARK_Y, MARK_Z] },
+];
+
+/* ---------------- zoom (FOV) ---------------- */
+// A real zoom, not just a dolly. 55 on the deck (intimate) -> 70 as
+// the camera pulls back (the zoom-OUT that reveals the logo) -> 38
+// for the reveal (the zoom lands the logo large and in charge). The
+// final value is widened at runtime on narrow aspects so the mark
+// never crops — see intro.ts.
+export const FOV_KEYS: Key[] = [
+  { p: 0.0, v: 55 },
+  { p: 0.18, v: 55 },
+  { p: 0.52, v: 70 },
+  { p: 0.78, v: 38 },
+  { p: 0.86, v: 38 },
 ];
 
 /* ---------------- fog (FogExp2 density) ---------------- */

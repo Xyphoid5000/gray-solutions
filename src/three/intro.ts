@@ -4,6 +4,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import {
   CAM_KEYS,
   TGT_KEYS,
+  FOV_KEYS,
   FOG_KEYS,
   MARK_OPACITY_KEYS,
   MARK_W,
@@ -11,6 +12,7 @@ import {
   MARK_X,
   MARK_Y,
   MARK_Z,
+  sampleKeys,
   type Key,
   type Key3,
 } from '../lib/introPath';
@@ -32,14 +34,18 @@ const SHOW_STARS = true;
  * gives the illusion that we started inside of the logo." / "The reveal
  * should end with the logo large and in charge. Right before that
  * though it should detail the bridge as the crossbar." / "The camera
- * shouldn't raise up" — "the camera should move down and then the logo
- * should appear" — "you should see the end side of the bridge".
+ * starts on top of the bridge. It pulls back and zooms out to reveal
+ * the logo" / "The camera shouldn't raise up" — "the camera should
+ * move down and then the logo should appear" — "you should see the
+ * end side of the bridge".
  *
  * The 3D bridge IS the logo's crossbar — a short solid bar, never a
- * road. The camera starts right against it (inside the logo), moves
- * DOWN and back while the logo fades in around the bar — the bridge
+ * road. The camera starts ON TOP of it (on the deck — per his drawing
+ * the camera dot sits on the deck), pulls back and ZOOMS OUT (a real
+ * FOV widen) while the logo fades in around the bar — the bridge
  * detailing AS the crossbar, slashed end face visible, one continuous
- * object — and settles on the full mark LARGE in frame. Then handoff.
+ * object — then the zoom lands on the full mark LARGE in frame. Then
+ * handoff.
  *
  * THE BRIDGE (approved object, recreated natively): an elongated
  * parallelogram in plan view — constant width ~130, parallel slanted
@@ -47,18 +53,19 @@ const SHOW_STARS = true;
  * /___/), extruded ~52 thick with a small bevel for edge highlights.
  * Silver-grey chrome in the G's metal language. It spans z 0 (the logo
  * end — rearmost corner of the slash exactly at z=0, flush with the
- * mark at z=-1) to z ~4690 (+Z, swallowed by fog = infinite depth). No
- * furniture — the bare approved object.
+ * mark at z=-1) to z ~345 (+Z). Short on purpose — a crossbar, not a
+ * road. No furniture — the bare approved object.
  *
  * Beats (all scroll-scrubbed, fully reversible — keyframes live in
  * `lib/introPath.ts`; the timeline below is built from them):
- *   - 0 -> 0.18: INSIDE. Camera just above the deck, nearly touching
- *     it — grey fills the frame; the fog resolves.
- *   - 0.18 -> 0.52: DETAIL. Dolly back and DOWN (never up) while the
- *     mark fades in: the slashed end face of the bar shows, the G arc
- *     and S appear around it — the bridge detailing as the crossbar.
- *   - 0.52 -> 0.78: REVEAL. Settle onto the full mark, LARGE in frame.
- *     Hold through 0.86.
+ *   - 0 -> 0.18: ON TOP. Camera on the deck, grey fills the frame;
+ *     the fog resolves.
+ *   - 0.18 -> 0.52: PULL BACK + ZOOM OUT. Dolly back and DOWN (never
+ *     up) while the FOV widens 55 -> 70; the mark fades in. The
+ *     slashed end face shows big — the bridge detailing as the
+ *     crossbar.
+ *   - 0.52 -> 0.78: REVEAL. The camera holds while the FOV narrows
+ *     70 -> 38: the full mark, LARGE in frame. Hold through 0.86.
  *   - 0.86 -> 1.0: the DOM handoff (canvas fades, hero reveals)
  *     — see IntroSequence.vue.
  *
@@ -189,15 +196,15 @@ export function startIntroScene(
   scene.environment = envTex;
 
   const camera = new THREE.PerspectiveCamera(
-    58,
+    55,
     window.innerWidth / window.innerHeight,
     0.5,
     12000,
   );
-  // p=0: just above the deck, nearly touching it, looking down its
-  // short length into the dark. We started inside the logo: the deck
-  // fills the lower frame as a grey wedge.
-  camera.position.set(0, 34, 60);
+  // p=0: ON TOP of the bridge — on the deck (top face ~y=32), looking
+  // along it into the dark. We started on the bridge, inside the logo:
+  // the deck fills the frame as a grey wedge.
+  camera.position.set(0, 46, 70);
 
   // ---------- lights ----------
   // Dark-space studio: a strong key rakes across the deck so the top
@@ -429,6 +436,23 @@ export function startIntroScene(
   channel3(lookTarget, TGT_KEYS);
   channel1(fog, 'density', FOG_KEYS);
   channel1(markMat, 'opacity', MARK_OPACITY_KEYS);
+  // The zoom is a real FOV move, not just a dolly — sampled per-frame
+  // from the keyframe table so it stays a pure function of scroll
+  // progress (fully reversible) and tracks resizes. 55 on the deck ->
+  // 70 as the camera pulls back (the zoom-OUT that reveals the logo)
+  // -> ~38 for the reveal (the zoom lands the logo large and in
+  // charge). Portrait safety: on narrow aspects the final FOV widens
+  // just enough that the full mark width fits instead of cropping —
+  // the 2026-09-23 portrait lesson.
+  const buildFovKeys = (aspect: number): Key[] => {
+    const revealDist = 430 - MARK_Z;
+    const fitFov =
+      (2 * Math.atan(MARK_W / 0.85 / (2 * revealDist * aspect)) * 180) /
+      Math.PI;
+    const finalFov = Math.max(38, fitFov);
+    return FOV_KEYS.map((k) => (k.p >= 0.78 ? { ...k, v: finalFov } : k));
+  };
+  let fovKeys = buildFovKeys(camera.aspect);
   // Pad the timeline to a duration of exactly 1: setProgress(p) maps
   // scroll progress onto tl.progress(p), i.e. time = p * duration — so
   // the keyframe p values above only mean scroll-p when duration is 1.
@@ -499,6 +523,14 @@ export function startIntroScene(
 
     camera.lookAt(lookTarget);
 
+    // The zoom: push the sampled FOV into the camera whenever the
+    // story changes it.
+    const fovNow = sampleKeys(fovKeys, tl.progress());
+    if (camera.fov !== fovNow) {
+      camera.fov = fovNow;
+      camera.updateProjectionMatrix();
+    }
+
     if (visible && !document.hidden) {
       renderer.render(scene, camera);
     }
@@ -509,6 +541,7 @@ export function startIntroScene(
   const onResize = () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    fovKeys = buildFovKeys(camera.aspect);
     renderer.setSize(window.innerWidth, window.innerHeight, false);
   };
   window.addEventListener('resize', onResize);
