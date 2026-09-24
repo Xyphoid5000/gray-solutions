@@ -1,20 +1,23 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { RouterView, useRouter } from 'vue-router';
+import { RouterView, useRouter, useRoute } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
 import SwipeHint from './components/SwipeHint.vue';
 import CurlHint from './components/CurlHint.vue';
-import { navDirection, neighbor } from './router';
+import TabRail from './components/TabRail.vue';
+import ChapterModal from './components/ChapterModal.vue';
+import { neighbor, type ChapterMeta } from './router';
 import { hasSwiped } from './lib/ui';
-import { setLenis, scrollToTopImmediate } from './lib/scroll';
+import { setLenis, scrollToTopImmediate, stopScroll, startScroll } from './lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const router = useRouter();
+const route = useRoute();
 const reducedMotion =
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -29,83 +32,65 @@ function prevPage() {
   if (n) router.push(n.path);
 }
 
-/* ---------- page-turn choreography ---------- */
+/* ---------- chapter modal (opened from the side tabs) ---------- */
+const modalChapter = ref<ChapterMeta | null>(null);
+
+function goToChapter(path: string) {
+  modalChapter.value = null;
+  // Let the modal close before the page dissolves in.
+  setTimeout(() => router.push(path), 320);
+}
+
+watch(modalChapter, (ch) => {
+  if (ch) {
+    stopScroll();
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+    startScroll();
+  }
+});
+
+/* ---------- chapter dissolve (no flips, just ink) ---------- */
 function beforeEnter(el: Element) {
   const page = el as HTMLElement;
   scrollToTopImmediate();
-  if (navDirection.value === 'back') {
-    // The previous page waits above, turned away — then swings back.
-    gsap.set(page, {
-      zIndex: 3,
-      transformOrigin: 'left center',
-      transformPerspective: 1800,
-      rotationY: -180,
-      filter: 'brightness(0.55)',
-    });
-  } else {
-    // The next page waits beneath while the current one turns away.
-    gsap.set(page, { zIndex: 1, rotationY: 0, filter: 'brightness(1)' });
-  }
+  gsap.set(page, { opacity: 0, y: 26 });
 }
 
 function enter(el: Element, done: () => void) {
   const page = el as HTMLElement;
-  if (navDirection.value === 'back') {
-    gsap.to(page, {
-      rotationY: 0,
-      filter: 'brightness(1)',
-      duration: 1.05,
-      ease: 'power2.inOut',
-      onComplete: () => {
-        gsap.set(page, { clearProps: 'all' });
-        done();
-      },
-    });
-  } else {
-    gsap.fromTo(
-      page,
-      { opacity: 0.3 },
-      {
-        opacity: 1,
-        duration: 0.9,
-        ease: 'power2.out',
-        delay: 0.5,
-        onComplete: () => {
-          gsap.set(page, { clearProps: 'opacity,zIndex' });
-          done();
-        },
-      },
-    );
+  if (reducedMotion) {
+    gsap.set(page, { opacity: 1, y: 0, clearProps: 'all' });
+    done();
+    return;
   }
+  gsap.to(page, {
+    opacity: 1,
+    y: 0,
+    duration: 0.75,
+    ease: 'power3.out',
+    delay: 0.12,
+    onComplete: () => {
+      gsap.set(page, { clearProps: 'opacity,transform' });
+      done();
+    },
+  });
 }
 
 function leave(el: Element, done: () => void) {
   const page = el as HTMLElement;
   gsap.set(page, { position: 'absolute', inset: '0', width: '100%' });
-  if (navDirection.value === 'forward') {
-    // The classic turn: the page lifts off the spine and swings away.
-    gsap.set(page, {
-      zIndex: 2,
-      transformOrigin: 'left center',
-      transformPerspective: 1800,
-    });
-    gsap.to(page, {
-      rotationY: -178,
-      filter: 'brightness(0.45)',
-      duration: 1.05,
-      ease: 'power2.inOut',
-      onComplete: done,
-    });
-  } else {
-    // Turning back: the current page sinks and dims beneath the swing.
-    gsap.set(page, { zIndex: 2 });
-    gsap.to(page, {
-      filter: 'brightness(0.6)',
-      duration: 1.05,
-      ease: 'power2.inOut',
-      onComplete: done,
-    });
+  if (reducedMotion) {
+    done();
+    return;
   }
+  gsap.to(page, {
+    opacity: 0,
+    duration: 0.4,
+    ease: 'power2.in',
+    onComplete: done,
+  });
 }
 
 function afterEnter() {
@@ -117,6 +102,12 @@ const viewport = ref<HTMLElement | null>(null);
 let touchX = 0;
 let touchY = 0;
 let stripEl: HTMLElement | null = null;
+let startedAtBottom = false;
+
+function atBottom(): boolean {
+  const doc = document.documentElement;
+  return window.scrollY + window.innerHeight >= doc.scrollHeight - 6;
+}
 
 function onTouchStart(e: TouchEvent) {
   const t = e.touches[0];
@@ -124,6 +115,7 @@ function onTouchStart(e: TouchEvent) {
   touchY = t.clientY;
   lastMoveY = t.clientY;
   pushAccum = 0;
+  startedAtBottom = atBottom();
   stripEl = (e.target as HTMLElement).closest?.('.proof-strip') as HTMLElement | null;
 }
 function onTouchEnd(e: TouchEvent) {
@@ -147,31 +139,39 @@ function onTouchEnd(e: TouchEvent) {
   }
 }
 
-/* ---------- scroll-to-turn (mobile): pushing past the bottom turns the page ---------- */
+/* ---------- scroll-to-turn (mobile): a deliberate push past the bottom ---------- */
 const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
 let lastMoveY = 0;
 let pushAccum = 0;
 let turnCooldownUntil = 0;
-
-function atBottom(): boolean {
-  const doc = document.documentElement;
-  return window.scrollY + window.innerHeight >= doc.scrollHeight - 6;
-}
+let suppressTouchUntil = 0;
 
 function onTouchMove(e: TouchEvent) {
   if (!coarsePointer) return;
+  const now = Date.now();
   const y = e.touches[0].clientY;
   const dy = y - lastMoveY; // negative = finger pushing up = scrolling down
   lastMoveY = y;
-  if (Date.now() < turnCooldownUntil) {
+  // Right after a scroll-turn, swallow the finger's leftover momentum
+  // so it doesn't drag the new page down with it.
+  if (now < suppressTouchUntil) {
+    e.preventDefault();
+    return;
+  }
+  // Only a push that *starts* at the bottom counts — arriving there
+  // mid-scroll with momentum must never turn the page by accident.
+  if (now < turnCooldownUntil || !startedAtBottom) {
     pushAccum = 0;
     return;
   }
+  // The last page has nowhere to turn.
+  if (router.currentRoute.value.path === '/epilogue') return;
   if (atBottom() && dy < -4) {
     pushAccum += -dy;
-    if (pushAccum > 70) {
+    if (pushAccum > 120) {
       pushAccum = 0;
-      turnCooldownUntil = Date.now() + 1600;
+      turnCooldownUntil = now + 1600;
+      suppressTouchUntil = now + 900;
       nextPage();
     }
   } else if (dy > 4) {
@@ -182,6 +182,11 @@ function onTouchMove(e: TouchEvent) {
 function onKey(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+  if (e.key === 'Escape') {
+    modalChapter.value = null;
+    return;
+  }
+  if (modalChapter.value) return; // arrows shouldn't turn pages under the modal
   if (e.key === 'ArrowRight') nextPage();
   else if (e.key === 'ArrowLeft') prevPage();
 }
@@ -197,7 +202,9 @@ onMounted(() => {
   }
 
   viewport.value?.addEventListener('touchstart', onTouchStart, { passive: true });
-  viewport.value?.addEventListener('touchmove', onTouchMove, { passive: true });
+  // touchmove is non-passive: right after a scroll-turn we swallow the
+  // finger's leftover momentum so it can't drag the new page down.
+  viewport.value?.addEventListener('touchmove', onTouchMove, { passive: false });
   viewport.value?.addEventListener('touchend', onTouchEnd, { passive: true });
   window.addEventListener('keydown', onKey);
 
@@ -235,6 +242,16 @@ onUnmounted(() => {
     </RouterView>
   </div>
   <PageTurner />
+  <TabRail @select="modalChapter = $event" />
+  <Transition name="modal">
+    <ChapterModal
+      v-if="modalChapter"
+      :chapter="modalChapter"
+      :current="modalChapter.path === route.path"
+      @close="modalChapter = null"
+      @go="goToChapter"
+    />
+  </Transition>
   <SwipeHint />
   <CurlHint />
 </template>

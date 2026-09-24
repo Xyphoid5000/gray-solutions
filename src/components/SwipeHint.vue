@@ -2,11 +2,16 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { hasSwiped } from '../lib/ui';
+import { neighbor } from '../router';
 
 const route = useRoute();
 
-// The cover has its own button — no hint needed there.
-const show = computed(() => !hasSwiped.value && route.path !== '/');
+// The cover has its own button, and the epilogue has nowhere left
+// to turn — no hint needed on either.
+const show = computed(
+  () =>
+    !hasSwiped.value && route.path !== '/' && !!neighbor(route.path, 1),
+);
 </script>
 
 <template>
