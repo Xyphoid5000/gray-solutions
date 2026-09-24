@@ -4,7 +4,6 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Hero from './Hero.vue';
 import type { IntroSceneHandle } from '../three/intro';
-import { outroState } from '../lib/introOutro';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -29,29 +28,6 @@ let tornDown = false;
  * flag; set to true to bring them back. Nothing was deleted.
  */
 const SHOW_PHRASES = false;
-
-/**
- * THE ENDING (2026-09-23, Chris's words): "just remove the cross bar
- * from that [logo asset] and replace it with the bridge. Then it should
- * come into view from behind the camera and the end of the bridge
- * should be at the same z increment as the logo so that it gives the
- * illusion that we started inside of the logo."
- *
- * The intro OPENS inside the 3D bridge — which IS the logo's crossbar —
- * traveling +Z away from the logo (behind the camera, unseen). At the
- * end the camera yaws 180° and the logo comes into view FROM BEHIND
- * THE CAMERA: his mark with the bridge plugging into its crossbar slot.
- * The 3D story (travel, the turn, the mark fade-in) lives in
- * `three/intro.ts`, driven by the same scroll progress below. This
- * component owns the DOM handoff: at the very end the canvas fades out
- * and the hero — which was behind the canvas the whole time — reveals
- * in place. It never slides up; we started inside it.
- */
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const smooth = (t: number) => {
-  const x = clamp01(t);
-  return x * x * (3 - 2 * x);
-};
 
 /**
  * The story, set in giant DOM type — the full hero philosophy copy, split
@@ -84,6 +60,12 @@ const phrases = [
     small: true,
   },
 ];
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const smooth = (t: number) => {
+  const x = clamp01(t);
+  return x * x * (3 - 2 * x);
+};
 
 function teardown() {
   if (tornDown) return;
@@ -142,32 +124,18 @@ onMounted(async () => {
       scene?.setProgress(p);
       bar.style.transform = `scaleX(${p.toFixed(4)})`;
 
-      // HANDOFF (0.965 -> 0.985): the 3D scene — holding the full
-      // logo, the bridge running into its mark — fades out; the hero
-      // reveals in place behind it. The outro state machine (src/lib/introOutro.ts)
-      // forces the exact finished state at/above its threshold, so a
-      // scroll that stalls just shy of 1.0 can never leave ghosts over
-      // the hero (2026-09-23). The .is-done class is the hard guarantee
-      // (!important CSS below); it is removed whenever p drops back
-      // under the threshold, so scrubbing up restores the 3D scene
-      // exactly. Fully scrub-reversible.
-      const outro = outroState(p);
+      // Crossfade the canvas out as the hero arrives (0.8 -> 0.92);
+      // pause rendering once it's fully gone.
+      const canvasFade = clamp01((p - 0.8) / 0.12);
+      canvas.style.opacity = (1 - canvasFade).toFixed(3);
+      scene?.setVisible(p < 0.95);
 
-      // Once finished the canvas is visibility:hidden (not just
-      // transparent) so no WebGL frame can bleed through the hero — and
-      // rendering pauses.
-      canvas.style.opacity = outro.canvasOpacity.toFixed(3);
-      canvas.style.visibility = outro.canvasHidden ? 'hidden' : 'visible';
-      scene?.setVisible(!outro.done && p < 0.995);
-
-      heroWrap.style.opacity = outro.heroOpacity.toFixed(3);
+      // The hero was there the whole time — revealed in place behind the
+      // fading canvas. It never slides up; we started inside it.
+      const heroO = clamp01((p - 0.78) / 0.14);
+      heroWrap.style.opacity = heroO.toFixed(3);
       // Keep the hero's links/buttons out of the tab order until visible.
-      heroWrap.inert = !outro.heroInteractive;
-
-      // Hard completion guarantee (see .is-done CSS): toggled purely
-      // from p, so scrolling back up removes it and restores the
-      // scrubbed 3D state.
-      section.classList.toggle('is-done', outro.done);
+      heroWrap.inert = p < 0.9;
 
       // Spotlight phrases: parked behind SHOW_PHRASES (see top of file).
       // SOLID at peak (opacity 1), dim (0.12) off-center. Each phrase owns
@@ -184,7 +152,7 @@ onMounted(async () => {
           else if (p <= b) o = 0.12 + 0.88 * smooth((p - a) / (b - a));
           else if (p <= c) o = 1 - 0.88 * smooth((p - b) / (c - b));
           else o = 0.12;
-          phraseEls[i].style.opacity = (o * outro.canvasOpacity).toFixed(3);
+          phraseEls[i].style.opacity = (o * (1 - canvasFade)).toFixed(3);
         }
       }
     };
@@ -200,18 +168,6 @@ onMounted(async () => {
         scrub: 1,
         onToggle: (self) => {
           barWrap.classList.toggle('is-active', self.isActive);
-        },
-        // If raw scroll passes the very end while the smoothed proxy is
-        // still catching up, force the finished visuals now (the sticky
-        // stage has scrolled away, so the snap is invisible). Scrolling
-        // back up releases the class; the next scrub update restores the
-        // exact 3D state.
-        onLeave: () => {
-          section.classList.add('is-done');
-          applyProgress(1);
-        },
-        onEnterBack: () => {
-          section.classList.remove('is-done');
         },
       },
       onUpdate: () => applyProgress(proxy.p),
@@ -314,21 +270,6 @@ onUnmounted(() => {
     #000 100%
   );
   opacity: 1;
-}
-
-/* OUTRO COMPLETION (2026-09-23): hard guarantee — once the handoff is
-   done, the WebGL canvas is truly gone and the hero is fully revealed,
-   even if scroll progress never lands exactly on 1. The class is
-   removed whenever p drops back under the threshold, so scrubbing up
-   restores the 3D scene exactly (inline styles are recomputed on every
-   scroll update). */
-.intro.is-done .intro-canvas {
-  opacity: 0 !important;
-  visibility: hidden !important;
-}
-
-.intro.is-done .intro-hero {
-  opacity: 1 !important;
 }
 
 /* Giant story type, overlaid on the stage. Each slot fills the stage;
