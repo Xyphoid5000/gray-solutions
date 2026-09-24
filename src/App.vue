@@ -8,6 +8,7 @@ import Prologue from './components/Prologue.vue';
 import Premise from './components/Premise.vue';
 import Craft from './components/Craft.vue';
 import Proof from './components/Proof.vue';
+import Intermission from './components/Intermission.vue';
 import StoryArc from './components/StoryArc.vue';
 import Author from './components/Author.vue';
 import Epilogue from './components/Epilogue.vue';
@@ -73,6 +74,7 @@ onUnmounted(() => {
     <Premise />
     <Craft />
     <Proof />
+    <Intermission />
     <StoryArc />
     <Author />
     <Epilogue />

@@ -33,3 +33,13 @@ export function scrollToElement(el: HTMLElement): void {
     el.scrollIntoView({ behavior: 'auto' });
   }
 }
+
+/** Pause smooth scrolling (e.g. while a full-screen menu is open). */
+export function stopScroll(): void {
+  lenis?.stop();
+}
+
+/** Resume smooth scrolling. */
+export function startScroll(): void {
+  lenis?.start();
+}
