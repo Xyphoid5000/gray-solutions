@@ -6,7 +6,9 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { RouterView, useRouter } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
+import SwipeHint from './components/SwipeHint.vue';
 import { navDirection, neighbor } from './router';
+import { hasSwiped } from './lib/ui';
 import { setLenis, scrollToTopImmediate } from './lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -113,18 +115,24 @@ function afterEnter() {
 const viewport = ref<HTMLElement | null>(null);
 let touchX = 0;
 let touchY = 0;
+let touchBlocked = false;
 
 function onTouchStart(e: TouchEvent) {
   const t = e.touches[0];
   touchX = t.clientX;
   touchY = t.clientY;
+  // Never hijack a gesture that starts inside a natively-scrollable
+  // region (the Proof project strip) — that strip owns its swipes.
+  touchBlocked = !!(e.target as HTMLElement).closest?.('.proof-strip');
 }
 function onTouchEnd(e: TouchEvent) {
+  if (touchBlocked) return;
   const t = e.changedTouches[0];
   const dx = t.clientX - touchX;
   const dy = t.clientY - touchY;
   // A deliberate horizontal swipe — never hijack a vertical scroll.
   if (Math.abs(dx) > 72 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    hasSwiped.value = true;
     if (dx < 0) nextPage();
     else prevPage();
   }
@@ -184,4 +192,5 @@ onUnmounted(() => {
     </RouterView>
   </div>
   <PageTurner />
+  <SwipeHint />
 </template>
