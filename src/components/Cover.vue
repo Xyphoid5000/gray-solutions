@@ -327,7 +327,7 @@ onUnmounted(() => {
               Open the book <span class="arrow" aria-hidden="true">&rarr;</span>
             </button>
           </div>
-          <p class="cover-hint">Eight pages &middot; best read front to back</p>
+          <p class="cover-hint">Seven pages &middot; best read front to back</p>
         </div>
       </div>
     </section>

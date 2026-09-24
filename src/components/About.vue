@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { siteConfig } from '../config';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const router = useRouter();
 
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -17,7 +15,7 @@ onMounted(() => {
   const root = document.querySelector<HTMLElement>('.prologue');
   if (!root || reducedMotion()) return;
   ctx = gsap.context(() => {
-    // A single-screen title page: everything arrives on a fixed
+    // A single-screen title page: the headline arrives on a fixed
     // timeline — no scroll triggers to miss.
     const tl = gsap.timeline({ delay: 0.15 });
     tl.from(
@@ -36,14 +34,9 @@ onMounted(() => {
         0.5,
       )
       .from(
-        '.hero-ctas',
-        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.62,
-      )
-      .from(
         '.hero-meta',
         { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.74,
+        0.62,
       );
   }, root);
 });
@@ -76,21 +69,37 @@ onUnmounted(() => ctx?.revert());
         databases that behave. Through Gray Solutions I build story-driven
         websites for businesses that deserve better than a template.
       </p>
-      <div class="hero-ctas">
-        <a
-          href="#/premise"
-          class="btn btn-solid"
-          @click.prevent="router.push('/premise')"
-        >
-          Read the story <span class="arrow" aria-hidden="true">&rarr;</span>
-        </a>
-        <a
-          href="#/proof"
-          class="btn btn-ghost"
-          @click.prevent="router.push('/proof')"
-          >Skip to the proof</a
-        >
-      </div>
+      <ul v-reveal="0.1" class="author-facts">
+        <li>
+          <span class="fact-k">Day job</span>
+          <span class="fact-v"
+            ><strong>Senior software engineer</strong> &mdash; C#, Vue 3,
+            TypeScript</span
+          >
+        </li>
+        <li>
+          <span class="fact-k">Side quest</span>
+          <span class="fact-v"
+            ><strong>Gray Solutions</strong> &mdash; story-driven client
+            websites</span
+          >
+        </li>
+        <li>
+          <span class="fact-k">After hours</span>
+          <span class="fact-v">Drums, keys, and worship-team Sundays</span>
+        </li>
+        <li>
+          <span class="fact-k">Based in</span>
+          <span class="fact-v">{{ siteConfig.location }}</span>
+        </li>
+        <li>
+          <span class="fact-k">Currently</span>
+          <span class="fact-v"
+            >Booking select projects &mdash;
+            <strong>one story at a time</strong></span
+          >
+        </li>
+      </ul>
       <p class="hero-meta">
         <span>Chris Gray</span
         ><span class="dot" aria-hidden="true">&middot;</span>

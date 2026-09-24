@@ -6,11 +6,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { RouterView, useRouter, useRoute } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
-import SwipeHint from './components/SwipeHint.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
 import { neighbor, type ChapterMeta } from './router';
-import { hasSwiped, returnToContact } from './lib/ui';
+import { returnToContact } from './lib/ui';
 import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -146,7 +145,6 @@ function onTouchEnd(e: TouchEvent) {
       if (dx < 0 && !atEnd) return;
       if (dx > 0 && !atStart) return;
     }
-    hasSwiped.value = true;
     if (dx < 0) nextPage();
     else prevPage();
   }
@@ -272,5 +270,4 @@ onUnmounted(() => {
       @go="goToChapter"
     />
   </Transition>
-  <SwipeHint />
 </template>
