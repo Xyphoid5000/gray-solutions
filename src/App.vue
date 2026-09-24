@@ -32,11 +32,26 @@ function prevPage() {
 
 /* ---------- chapter modal (opened from the side tabs) ---------- */
 const modalChapter = ref<ChapterMeta | null>(null);
+// A chapter picked from the modal. We wait for the modal to fully leave
+// before pushing the route, so the page turn never plays underneath it.
+let pendingChapterPath: string | null = null;
+
+function selectChapter(ch: ChapterMeta) {
+  pendingChapterPath = null; // a fresh pick cancels any pending turn
+  modalChapter.value = ch;
+}
 
 function goToChapter(path: string) {
+  pendingChapterPath = path;
   modalChapter.value = null;
-  // Let the modal close before the page turns.
-  setTimeout(() => router.push(path), 320);
+}
+
+function onModalAfterLeave() {
+  if (pendingChapterPath && !modalChapter.value) {
+    const path = pendingChapterPath;
+    pendingChapterPath = null;
+    router.push(path);
+  }
 }
 
 /**
@@ -270,8 +285,15 @@ function onTouchEnd(e: TouchEvent) {
       if (dx < 0 && !atEnd) return;
       if (dx > 0 && !atStart) return;
     }
-    if (dx < 0) nextPage();
-    else prevPage();
+    if (dx < 0) {
+      nextPage();
+    } else if (router.currentRoute.value.path === '/') {
+      // Nowhere left to turn back to — a rightward swipe on the cover
+      // closes the book and drifts down to the contact form.
+      goToContact();
+    } else {
+      prevPage();
+    }
   }
 }
 
@@ -398,10 +420,10 @@ onUnmounted(() => {
   <PageTurner v-if="isChapter(route.path)" />
   <TabRail
     v-if="isChapter(route.path) && route.path !== '/'"
-    @select="modalChapter = $event"
+    @select="selectChapter"
     @contact="goToContact"
   />
-  <Transition name="modal">
+  <Transition name="modal" @after-leave="onModalAfterLeave">
     <ChapterModal
       v-if="modalChapter"
       :chapter="modalChapter"

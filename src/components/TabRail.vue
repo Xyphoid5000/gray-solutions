@@ -43,10 +43,10 @@ const rightTabs = computed<RailTab[]>(() => {
 /** The contact envelope sits in its own row beneath the last page. */
 const contactRow = computed(() => chapters.length + 1);
 
-type Glyph = 'num' | 'pen' | 'mark';
+type Glyph = 'num' | 'avatar' | 'mark';
 function glyph(ch: ChapterMeta): Glyph {
   if (/^\d+$/.test(ch.num)) return 'num';
-  if (ch.path === '/finale') return 'pen';
+  if (ch.path === '/finale') return 'avatar';
   return 'mark';
 }
 
@@ -76,7 +76,7 @@ function tabLabel(ch: ChapterMeta): string {
           tabNum(t.ch)
         }}</span>
         <svg
-          v-else-if="glyph(t.ch) === 'pen'"
+          v-else-if="glyph(t.ch) === 'avatar'"
           class="tab-icon"
           viewBox="0 0 24 24"
           width="17"
@@ -88,11 +88,8 @@ function tabLabel(ch: ChapterMeta): string {
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <path
-            d="M12 2.5c2.8 3.8 4.8 6.8 4.8 10.2a4.8 4.8 0 0 1-9.6 0C7.2 9.3 9.2 6.3 12 2.5z"
-          />
-          <circle cx="12" cy="12.7" r="1.1" fill="currentColor" stroke="none" />
-          <path d="M12 13.8v5.7" />
+          <circle cx="12" cy="8.2" r="3.4" />
+          <path d="M5.8 19.2c1.1-3.2 3.4-4.9 6.2-4.9s5.1 1.7 6.2 4.9" />
         </svg>
         <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
       </button>
@@ -115,7 +112,7 @@ function tabLabel(ch: ChapterMeta): string {
           tabNum(t.ch)
         }}</span>
         <svg
-          v-else-if="glyph(t.ch) === 'pen'"
+          v-else-if="glyph(t.ch) === 'avatar'"
           class="tab-icon"
           viewBox="0 0 24 24"
           width="17"
@@ -127,11 +124,8 @@ function tabLabel(ch: ChapterMeta): string {
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <path
-            d="M12 2.5c2.8 3.8 4.8 6.8 4.8 10.2a4.8 4.8 0 0 1-9.6 0C7.2 9.3 9.2 6.3 12 2.5z"
-          />
-          <circle cx="12" cy="12.7" r="1.1" fill="currentColor" stroke="none" />
-          <path d="M12 13.8v5.7" />
+          <circle cx="12" cy="8.2" r="3.4" />
+          <path d="M5.8 19.2c1.1-3.2 3.4-4.9 6.2-4.9s5.1 1.7 6.2 4.9" />
         </svg>
         <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
       </button>

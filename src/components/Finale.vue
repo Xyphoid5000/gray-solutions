@@ -31,9 +31,13 @@ onMounted(() => {
   ctx = gsap.context(() => {
     gsap.fromTo(
       '.prologue .h-line-inner',
-      { yPercent: 115 },
+      // The CSS hides the line at translateY(115%) to avoid a flash;
+      // GSAP parses that into a pixel y, so zero it explicitly or the
+      // title would stay shifted down and clipped forever.
+      { yPercent: 115, y: 0 },
       {
         yPercent: 0,
+        y: 0,
         duration: 1.1,
         ease: 'power4.out',
         stagger: 0.1,
