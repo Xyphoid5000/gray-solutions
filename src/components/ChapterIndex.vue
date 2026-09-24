@@ -32,7 +32,15 @@ function show() {
   gsap.fromTo(
     items,
     { y: 44, opacity: 0 },
-    { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out', stagger: 0.05, delay: 0.25 },
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.7,
+      ease: 'power3.out',
+      stagger: 0.05,
+      delay: 0.25,
+      clearProps: 'transform', // don't let leftover transforms outrank the close button
+    },
   );
   gsap.fromTo(
     '.chapters-close',
