@@ -334,22 +334,6 @@ a {
   );
   pointer-events: none;
 }
-.prologue-word {
-  position: absolute;
-  bottom: 6%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: clamp(6rem, 22vw, 22rem);
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: transparent;
-  -webkit-text-stroke: 1px rgba(243, 237, 225, 0.07);
-  user-select: none;
-  pointer-events: none;
-  white-space: nowrap;
-}
 .hero-eyebrow {
   display: flex;
   align-items: center;
@@ -424,37 +408,6 @@ a {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--faint);
-}
-.scroll-cue {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 1.6rem 0 2.2rem;
-  color: var(--faint);
-  font-size: 0.75rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-}
-.scroll-cue .cue-line {
-  width: 1px;
-  height: 44px;
-  background: var(--line);
-  position: relative;
-  overflow: hidden;
-}
-.scroll-cue .cue-line::after {
-  content: '';
-  position: absolute;
-  top: -40%;
-  left: 0;
-  width: 100%;
-  height: 40%;
-  background: var(--ember);
-  animation: cue-drop 1.8s var(--ease-out) infinite;
-}
-@keyframes cue-drop {
-  0% { top: -40%; }
-  60%, 100% { top: 110%; }
 }
 
 /* ---------- marquee divider ---------- */
@@ -932,7 +885,6 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .grain,
   .marquee-track,
-  .scroll-cue .cue-line::after,
   .hero-eyebrow .dot {
     animation: none;
   }

@@ -122,6 +122,8 @@ function onTouchStart(e: TouchEvent) {
   const t = e.touches[0];
   touchX = t.clientX;
   touchY = t.clientY;
+  lastMoveY = t.clientY;
+  pushAccum = 0;
   stripEl = (e.target as HTMLElement).closest?.('.proof-strip') as HTMLElement | null;
 }
 function onTouchEnd(e: TouchEvent) {
@@ -145,6 +147,38 @@ function onTouchEnd(e: TouchEvent) {
   }
 }
 
+/* ---------- scroll-to-turn (mobile): pushing past the bottom turns the page ---------- */
+const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+let lastMoveY = 0;
+let pushAccum = 0;
+let turnCooldownUntil = 0;
+
+function atBottom(): boolean {
+  const doc = document.documentElement;
+  return window.scrollY + window.innerHeight >= doc.scrollHeight - 6;
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (!coarsePointer) return;
+  const y = e.touches[0].clientY;
+  const dy = y - lastMoveY; // negative = finger pushing up = scrolling down
+  lastMoveY = y;
+  if (Date.now() < turnCooldownUntil) {
+    pushAccum = 0;
+    return;
+  }
+  if (atBottom() && dy < -4) {
+    pushAccum += -dy;
+    if (pushAccum > 70) {
+      pushAccum = 0;
+      turnCooldownUntil = Date.now() + 1600;
+      nextPage();
+    }
+  } else if (dy > 4) {
+    pushAccum = 0;
+  }
+}
+
 function onKey(e: KeyboardEvent) {
   const tag = (e.target as HTMLElement)?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -163,6 +197,7 @@ onMounted(() => {
   }
 
   viewport.value?.addEventListener('touchstart', onTouchStart, { passive: true });
+  viewport.value?.addEventListener('touchmove', onTouchMove, { passive: true });
   viewport.value?.addEventListener('touchend', onTouchEnd, { passive: true });
   window.addEventListener('keydown', onKey);
 
@@ -174,6 +209,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   viewport.value?.removeEventListener('touchstart', onTouchStart);
+  viewport.value?.removeEventListener('touchmove', onTouchMove);
   viewport.value?.removeEventListener('touchend', onTouchEnd);
   window.removeEventListener('keydown', onKey);
   lenis?.destroy();
