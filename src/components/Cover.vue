@@ -137,15 +137,15 @@ function land(power: number) {
 
 function open() {
   if (reducedMotion()) {
-    router.push('/prologue');
+    router.push('/about');
     return;
   }
   introTl?.kill();
   const book = bookRef.value;
   // Dive into the front cover: square the book to camera, zoom the
   // scene until the cover fills the frame — then the router's normal
-  // page-turn carries us into the Prologue.
-  const tl = gsap.timeline({ onComplete: () => router.push('/prologue') });
+  // page-turn carries us into the book.
+  const tl = gsap.timeline({ onComplete: () => router.push('/about') });
   tl.to('.cover-ui, .cover-kicker', { opacity: 0, y: -24, duration: 0.45, ease: 'power2.in' }, 0)
     .to('.cover-glow', { opacity: 0.2, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.book-shadow', { opacity: 0, scale: 1.5, duration: 0.9, ease: 'power2.in' }, 0)

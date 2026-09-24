@@ -31,14 +31,19 @@ onMounted(() => {
         0.1,
       )
       .from(
+        '.hero-sub',
+        { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
+        0.5,
+      )
+      .from(
         '.hero-ctas',
         { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.55,
+        0.62,
       )
       .from(
         '.hero-meta',
         { opacity: 0, y: 24, duration: 0.9, ease: 'power3.out' },
-        0.7,
+        0.74,
       );
   }, root);
 });
@@ -47,23 +52,30 @@ onUnmounted(() => ctx?.revert());
 </script>
 
 <template>
-  <section class="prologue book-page" aria-label="Prologue">
+  <section class="prologue book-page" aria-label="About the author">
     <div class="prologue-glow" aria-hidden="true"></div>
     <div class="wrap">
-      <p class="hero-kicker">Gray Solutions &middot; a portfolio</p>
+      <p class="hero-kicker">About the author</p>
       <h1 class="hero-title">
         <span class="h-line"
-          ><span class="h-line-inner">Every website</span></span
-        >
-        <span class="h-line"
-          ><span class="h-line-inner">is a <em>story.</em></span></span
+          ><span class="h-line-inner">Hi, I&rsquo;m <em>Chris.</em></span></span
         >
         <span class="h-line"
           ><span class="h-line-inner hero-title-dim"
-            >Most are told <em>badly.</em></span
+            >I build websites</span
+          ></span
+        >
+        <span class="h-line"
+          ><span class="h-line-inner hero-title-dim"
+            >that tell <em>stories.</em></span
           ></span
         >
       </h1>
+      <p class="hero-sub">
+        Senior software engineer by day &mdash; C# backends, Vue frontends,
+        databases that behave. Through Gray Solutions I build story-driven
+        websites for businesses that deserve better than a template.
+      </p>
       <div class="hero-ctas">
         <a
           href="#/premise"

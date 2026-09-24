@@ -9,58 +9,118 @@ const emit = defineEmits<{
   contact: [];
 }>();
 
-/** The five chapters — the tabs are chapter dividers, so chapter 1 is tab 1. */
-const chapterList = computed(() =>
-  chapters.filter((c) => /^\d+$/.test(c.num)),
-);
+interface RailTab {
+  ch: ChapterMeta;
+  active: boolean;
+}
+
 const currentIndex = computed(() =>
   chapters.findIndex((c) => c.path === route.path),
 );
-/** Chapters before the current page — backward navigation. */
-const backChapters = computed(() =>
-  chapterList.value.filter(
-    (c) => chapters.indexOf(c) < currentIndex.value,
-  ),
+/** Pages behind the reader — backward navigation. */
+const leftTabs = computed<RailTab[]>(() =>
+  chapters.slice(0, currentIndex.value).map((ch) => ({ ch, active: false })),
 );
-/** Chapters after the current page — forward navigation. */
-const forwardChapters = computed(() =>
-  chapterList.value.filter(
-    (c) => chapters.indexOf(c) > currentIndex.value,
-  ),
-);
+/**
+ * The current page first and highlighted, then the pages ahead —
+ * forward navigation.
+ */
+const rightTabs = computed<RailTab[]>(() => {
+  const tabs: RailTab[] = [];
+  const current = chapters[currentIndex.value];
+  if (current) tabs.push({ ch: current, active: true });
+  for (const ch of chapters.slice(currentIndex.value + 1)) {
+    tabs.push({ ch, active: false });
+  }
+  return tabs;
+});
+
+const isChapter = (ch: ChapterMeta) => /^\d+$/.test(ch.num);
+const isAbout = (ch: ChapterMeta) => ch.path === '/about';
 
 function tabNum(ch: ChapterMeta): string {
   return String(parseInt(ch.num, 10));
+}
+
+function tabLabel(ch: ChapterMeta): string {
+  if (isChapter(ch)) return `Chapter ${tabNum(ch)}: ${ch.label}`;
+  return ch.label;
 }
 </script>
 
 <template>
   <nav
-    v-if="backChapters.length"
+    v-if="leftTabs.length"
     class="tab-rail tab-rail-left"
-    aria-label="Previous chapters"
+    aria-label="Previous pages"
   >
     <button
-      v-for="ch in backChapters"
-      :key="ch.path"
+      v-for="t in leftTabs"
+      :key="t.ch.path"
       class="tab"
-      :aria-label="`Chapter ${tabNum(ch)}: ${ch.label}`"
-      :title="ch.label"
-      @click="emit('select', ch)"
+      :aria-label="tabLabel(t.ch)"
+      :title="t.ch.label"
+      @click="emit('select', t.ch)"
     >
-      <span class="tab-num" aria-hidden="true">{{ tabNum(ch) }}</span>
+      <span
+        v-if="isChapter(t.ch)"
+        class="tab-num"
+        aria-hidden="true"
+        >{{ tabNum(t.ch) }}</span
+      >
+      <svg
+        v-else-if="isAbout(t.ch)"
+        class="tab-icon"
+        viewBox="0 0 24 24"
+        width="17"
+        height="17"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
+      </svg>
+      <span v-else class="tab-num" aria-hidden="true">&#10002;&#65038;</span>
     </button>
   </nav>
-  <nav class="tab-rail tab-rail-right" aria-label="Next chapters">
+  <nav class="tab-rail tab-rail-right" aria-label="Next pages">
     <button
-      v-for="ch in forwardChapters"
-      :key="ch.path"
+      v-for="t in rightTabs"
+      :key="t.ch.path"
       class="tab"
-      :aria-label="`Chapter ${tabNum(ch)}: ${ch.label}`"
-      :title="ch.label"
-      @click="emit('select', ch)"
+      :class="{ active: t.active }"
+      :aria-label="
+        t.active ? `${tabLabel(t.ch)} (current page)` : tabLabel(t.ch)
+      "
+      :aria-current="t.active ? 'page' : undefined"
+      :title="t.ch.label"
+      @click="emit('select', t.ch)"
     >
-      <span class="tab-num" aria-hidden="true">{{ tabNum(ch) }}</span>
+      <span
+        v-if="isChapter(t.ch)"
+        class="tab-num"
+        aria-hidden="true"
+        >{{ tabNum(t.ch) }}</span
+      >
+      <svg
+        v-else-if="isAbout(t.ch)"
+        class="tab-icon"
+        viewBox="0 0 24 24"
+        width="17"
+        height="17"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
+      </svg>
+      <span v-else class="tab-num" aria-hidden="true">&#10002;&#65038;</span>
     </button>
     <button
       class="tab tab-contact"
