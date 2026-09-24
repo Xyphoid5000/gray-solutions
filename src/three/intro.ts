@@ -11,6 +11,9 @@ import {
   MARK_X,
   MARK_Y,
   MARK_Z,
+  TURN_P0,
+  TURN_P1,
+  turnTarget,
   type Key,
   type Key3,
 } from '../lib/introPath';
@@ -25,41 +28,45 @@ const SHOW_STARS = true;
 /**
  * The Gray Solutions scroll-driven cinematic intro.
  *
- * THE CONCEPT (2026-09-23, Chris's words): "You should see the end side
- * of the bridge and the camera should move down and the. The logo
- * should appear."
+ * THE CONCEPT (2026-09-23, Chris's words): "just remove the cross bar
+ * from that [logo asset] and replace it with the bridge. Then it should
+ * come into view from behind the camera and the end of the bridge
+ * should be at the same z increment as the logo so that it gives the
+ * illusion that we started inside of the logo."
  *
- * The intro OPENS directly on the 3D bridge — no logo opening, no
- * zoom-in. The logo appears only at the END, standing IN THE WORLD:
- * his mark fades in at the bridge's far end with its crossbar
- * continuing the bridge — the slashed far end plugs into the crossbar.
- * Then the handoff to the hero.
+ * The 3D bridge IS the logo's crossbar. The camera starts INSIDE the
+ * bridge span — inside the crossbar — traveling +Z away from the logo,
+ * which sits behind the camera at z=-1, unseen. At the end the camera
+ * yaws 180° and the logo comes into view FROM BEHIND THE CAMERA: his
+ * mark (crossbar keyed transparent) with the bridge you've been riding
+ * plugging into the crossbar slot. You were inside the logo the whole
+ * time. Then the handoff to the hero.
  *
  * THE BRIDGE (approved object, recreated natively): an elongated
  * parallelogram in plan view — constant width ~130, parallel slanted
  * ends (like the G crossbar's slashed end; like his sketch: ___ over
  * /___/), extruded ~52 thick with a small bevel for edge highlights.
- * Silver-grey chrome in the G's metal language. It spans z +1800
- * (near, always behind the camera) to z −2600 (far); exponential fog
- * swallows the far end = infinite depth. No furniture — the bare
- * approved object.
+ * Silver-grey chrome in the G's metal language. It spans z 0 (the logo
+ * end — rearmost corner of the slash exactly at z=0, flush with the
+ * mark at z=-1) to z ~4690 (+Z, swallowed by fog = infinite depth). No
+ * furniture — the bare approved object.
  *
  * Beats (all scroll-scrubbed, fully reversible — keyframes live in
  * `lib/introPath.ts`; the timeline below is built from them):
  *   - 0 -> 0.1: the grey-void resolve. The scene opens in heavy fog;
  *     the bridge materializes out of it.
- *   - 0 -> 0.60: THE BRIDGE. Backward dolly (0,95,520)->(0,140,1150),
- *     x=0, looking down the deck. Star streaks fire with scroll speed;
- *     the far end stays swallowed by fog — infinite.
- *   - 0.60 -> 0.75: THE END REVEALED. Travel continues; fog lifts so
- *     the far end face is clearly visible.
- *   - 0.75 -> 0.88: DESCEND. The camera moves DOWN (140->70) and eases
- *     toward the bridge end; the view flattens onto the end face. No
- *     rise, no swoop, no plunge.
- *   - 0.80 -> 0.92: THE LOGO APPEARS. His mark fades in standing at
- *     the far end — the bridge runs into its crossbar.
- *   - 0.92 -> 0.97: HOLD the line-up. 0.97 -> 1.0: the DOM handoff
- *     (canvas fades, hero reveals) — see IntroSequence.vue.
+ *   - 0.1 -> 0.70: THE TRAVEL. +Z dolly inside the bridge span,
+ *     (0,95,500)->(0,140,1400), x=0, looking +Z down the deck. Star
+ *     streaks fire with scroll speed; the far end stays swallowed by
+ *     fog — infinite. The logo is behind the camera, unseen.
+ *   - 0.70 -> 0.85: THE TURN. The camera yaws 180° — one parametric
+ *     cubic-Bezier sweep of the look target (sine.inOut): a deliberate
+ *     turn-around, no whip, no hitch. THE LOGO COMES INTO VIEW FROM
+ *     BEHIND THE CAMERA, fading in as the turn completes. Level yaw:
+ *     no rise, no dive, no swoop.
+ *   - 0.85 -> 0.92: HOLD the full logo — the bridge running into its
+ *     mark. 0.92 -> 1.0: the DOM handoff (canvas fades, hero reveals)
+ *     — see IntroSequence.vue.
  *
  * Division of labor:
  *   - Three.js owns the WORLD: the bridge, the world mark, stars,
@@ -121,18 +128,20 @@ function randomIn(min: number, max: number): number {
 
 /* ------------------------------------------------------------------ */
 /* THE BRIDGE: a solid trapezoid slab in plan view — an elongated       */
-/* parallelogram with parallel slanted ends (the G crossbar's slashed  */
+/* parallelogram with parallel slanted ends (the G crossbar's slashed   */
 /* end; Chris's ___ over /___/ sketch). Constant width ~130, thickness  */
 /* ~52, beveled edges so the solid reads. Silver-grey chrome in the     */
-/* G's metal language. z +1800 (near, always behind the camera) →      */
-/* −2600 (far, swallowed by fog = infinite depth). No furniture —       */
-/* the bare approved object.                                           */
+/* G's metal language. z 0 (the LOGO end — rearmost corner of the slash */
+/* exactly at z=0, flush with the mark at z=-1) → z ~4690 (+Z,          */
+/* swallowed by fog = infinite depth). The camera travels INSIDE the   */
+/* span the whole time — it starts inside the logo's crossbar. No       */
+/* furniture — the bare approved object.                               */
 /* ------------------------------------------------------------------ */
 
 const BRIDGE_W = 130;
 const BRIDGE_T = 52;
-const BRIDGE_Z_NEAR = 1800; // camera's furthest z is 1650: the near end stays behind it
-const BRIDGE_Z_FAR = -2600; // the far end melts into fog
+const BRIDGE_Z_LOGO = 90; // rearmost corner of the logo-end slash lands at z=0
+const BRIDGE_Z_FAR = 4600; // the far end melts into fog during the +Z travel
 const BRIDGE_SLANT = 90; // end-cut offset across the width: the two slashes stay parallel
 const BRIDGE_BEVEL = 6;
 
@@ -141,8 +150,8 @@ function makeBridgeGeometry(): THREE.ExtrudeGeometry {
   // world −Z, and the extrusion +Z to world +Y = thickness).
   const hw = BRIDGE_W / 2;
   const s = new THREE.Shape();
-  s.moveTo(-hw, -(BRIDGE_Z_NEAR + BRIDGE_SLANT));
-  s.lineTo(hw, -(BRIDGE_Z_NEAR - BRIDGE_SLANT));
+  s.moveTo(-hw, -(BRIDGE_Z_LOGO + BRIDGE_SLANT));
+  s.lineTo(hw, -(BRIDGE_Z_LOGO - BRIDGE_SLANT));
   s.lineTo(hw, -(BRIDGE_Z_FAR - BRIDGE_SLANT));
   s.lineTo(-hw, -(BRIDGE_Z_FAR + BRIDGE_SLANT));
   s.closePath();
@@ -176,9 +185,9 @@ export function startIntroScene(
 
   const scene = new THREE.Scene();
   // Exponential fog is the "infinite depth" mechanism: the far end of
-  // the deck (z ≈ −2600, ~3000–4300 units out) melts into the void while
-  // the near/mid deck stays clear and solid. It opens heavy (a grey
-  // void) and resolves over the first beat of scroll.
+  // the deck (z ≈ 4600, ~3200–4100 units out during the +Z travel) melts
+  // into the void while the near/mid deck stays clear and solid. It
+  // opens heavy (a grey void) and resolves over the first beat of scroll.
   const fog = new THREE.FogExp2(0x05070b, 0.0011);
   scene.fog = fog;
 
@@ -225,8 +234,9 @@ export function startIntroScene(
     fog: false,
   });
   const haze = new THREE.Mesh(new THREE.PlaneGeometry(3200, 1600), hazeMat);
-  // Far behind the world mark (z=-2740) so it never washes over the logo.
-  haze.position.set(0, 150, -2950);
+  // Behind the world mark (z=-1) so it backlights the logo after the
+  // turn without ever washing over it.
+  haze.position.set(0, 150, -500);
   scene.add(haze);
 
   // ---------- material ----------
@@ -244,15 +254,16 @@ export function startIntroScene(
   const bridge = new THREE.Mesh(makeBridgeGeometry(), bridgeMat);
   scene.add(bridge);
 
-  // ---------- THE WORLD MARK ----------
-  // His actual mark, standing IN THE WORLD at the bridge's far end —
-  // vertical, facing the camera (+Z). Its crossbar is centered exactly
-  // on the bridge axis (x=0, y=0; see lib/introPath.ts), so the slashed
-  // far end plugs into the middle of the crossbar: the bridge RUNS INTO
-  // the logo. Monumental (840 wide vs the 130-wide deck) so the
-  // crossbar reads clearly at the hold (~7° wide). fog:false +
-  // toneMapped:false keep his asset pixel-true. It fades in on the
-  // timeline (0.80 -> 0.92); scrubbing back fades it out again.
+  // ---------- THE WORLD MARK (no crossbar) ----------
+  // His actual mark with the crossbar keyed to transparent, standing IN
+  // THE WORLD at z=-1 — vertical, facing the camera (+Z). The 3D bridge
+  // IS the crossbar: the bridge's slashed end (rearmost corner z=0)
+  // plugs into the transparent crossbar slot, whose center sits exactly
+  // on the bridge axis (x=0, y=0; see lib/introPath.ts). The opaque mark
+  // occludes the deck everywhere except through the slot — the bridge
+  // reads AS the crossbar. fog:false + toneMapped:false keep his asset
+  // pixel-true. It fades in as the turn completes (0.70 -> 0.82);
+  // scrubbing back fades it out again.
   const markMat = new THREE.MeshBasicMaterial({
     transparent: true,
     opacity: 0,
@@ -269,7 +280,7 @@ export function startIntroScene(
   markMesh.renderOrder = 2;
   scene.add(markMesh);
   new THREE.TextureLoader().load(
-    '/logo-mark.png',
+    '/logo-mark-no-crossbar.png',
     (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -287,7 +298,7 @@ export function startIntroScene(
   const starGeo = new THREE.BufferGeometry();
   const starPos: number[] = [];
   for (let i = 0; i < 1200; i++) {
-    starPos.push(randomIn(-1100, 1100), randomIn(-150, 750), randomIn(-2700, 1600));
+    starPos.push(randomIn(-1100, 1100), randomIn(-150, 750), randomIn(-300, 5000));
   }
   starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
   const starMat = new THREE.PointsMaterial({
@@ -311,7 +322,7 @@ export function startIntroScene(
   for (let i = 0; i < SHIMMER_N; i++) {
     shimmerPos[i * 3] = randomIn(-800, 800);
     shimmerPos[i * 3 + 1] = randomIn(-80, 420);
-    shimmerPos[i * 3 + 2] = randomIn(-2400, 400);
+    shimmerPos[i * 3 + 2] = randomIn(-200, 4800);
     shimmerPhase[i] = Math.random() * Math.PI * 2;
   }
   shimmerGeo.setAttribute('position', new THREE.BufferAttribute(shimmerPos, 3));
@@ -363,7 +374,7 @@ export function startIntroScene(
     streakBase.push({
       x: randomIn(-1100, 1100),
       y: randomIn(-150, 750),
-      z: randomIn(-2700, 1600),
+      z: randomIn(-300, 5000),
     });
   }
   const streakGeo = new THREE.BufferGeometry();
@@ -424,6 +435,26 @@ export function startIntroScene(
 
   channel3(cp, CAM_KEYS);
   channel3(lookTarget, TGT_KEYS);
+  // THE TURN (0.70 -> 0.85): one parametric cubic-Bezier sweep of the
+  // look target — C-infinity smooth, so the 180° yaw has no keyframe
+  // hitches. The tween's sine.inOut makes it a deliberate turn-around
+  // (gentle start/stop), and scrubbing backward walks the curve back
+  // exactly. The Bezier starts exactly where the travel target ends,
+  // so there is no jump at 0.70.
+  const turn = { t: 0 };
+  tl.to(
+    turn,
+    {
+      t: 1,
+      duration: TURN_P1 - TURN_P0,
+      ease: 'sine.inOut',
+      onUpdate: () => {
+        const [x, y, z] = turnTarget(turn.t);
+        lookTarget.set(x, y, z);
+      },
+    },
+    TURN_P0,
+  );
   channel1(fog, 'density', FOG_KEYS);
   channel1(markMat, 'opacity', MARK_OPACITY_KEYS);
   // Pad the timeline to a duration of exactly 1: setProgress(p) maps

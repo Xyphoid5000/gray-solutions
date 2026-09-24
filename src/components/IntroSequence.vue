@@ -31,13 +31,17 @@ let tornDown = false;
 const SHOW_PHRASES = false;
 
 /**
- * THE ENDING (2026-09-23, Chris's words): "You should see the end side
- * of the bridge and the camera should move down and the. The logo
- * should appear."
+ * THE ENDING (2026-09-23, Chris's words): "just remove the cross bar
+ * from that [logo asset] and replace it with the bridge. Then it should
+ * come into view from behind the camera and the end of the bridge
+ * should be at the same z increment as the logo so that it gives the
+ * illusion that we started inside of the logo."
  *
- * The intro OPENS directly on the 3D bridge. The 3D story (camera
- * travel, fog reveal, descend, the world mark fading in at the far
- * end with its crossbar continuing the bridge) lives in
+ * The intro OPENS inside the 3D bridge — which IS the logo's crossbar —
+ * traveling +Z away from the logo (behind the camera, unseen). At the
+ * end the camera yaws 180° and the logo comes into view FROM BEHIND
+ * THE CAMERA: his mark with the bridge plugging into its crossbar slot.
+ * The 3D story (travel, the turn, the mark fade-in) lives in
  * `three/intro.ts`, driven by the same scroll progress below. This
  * component owns the DOM handoff: at the very end the canvas fades out
  * and the hero — which was behind the canvas the whole time — reveals
@@ -138,9 +142,9 @@ onMounted(async () => {
       scene?.setProgress(p);
       bar.style.transform = `scaleX(${p.toFixed(4)})`;
 
-      // HANDOFF (0.965 -> 0.985): the 3D scene — holding the
-      // bridge-into-crossbar line-up — fades out; the hero reveals in
-      // place behind it. The outro state machine (src/lib/introOutro.ts)
+      // HANDOFF (0.965 -> 0.985): the 3D scene — holding the full
+      // logo, the bridge running into its mark — fades out; the hero
+      // reveals in place behind it. The outro state machine (src/lib/introOutro.ts)
       // forces the exact finished state at/above its threshold, so a
       // scroll that stalls just shy of 1.0 can never leave ghosts over
       // the hero (2026-09-23). The .is-done class is the hard guarantee

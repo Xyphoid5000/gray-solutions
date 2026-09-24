@@ -2,10 +2,11 @@
  * Outro/handoff state machine for the intro sequence (pure function
  * of p).
  *
- * 2026-09-23 — the 3D ending (Chris: "You should see the end side of
- * the bridge and the camera should move down and the. The logo should
- * appear."): the 3D scene holds the bridge-into-crossbar line-up
- * through p=0.97, then hands off — the canvas fades out and the hero
+ * 2026-09-23 — the "inside the logo" ending (Chris: "just remove the
+ * cross bar from that [logo asset] and replace it with the bridge...
+ * it gives the illusion that we started inside of the logo"): the 3D
+ * scene holds the full logo — the bridge running into its mark — 
+ * through p=0.92, then hands off: the canvas fades out and the hero
  * reveals in place behind it.
  *
  * Robustness (lesson from the 2026-09-23 ghost-overlay bug, kept):
@@ -40,9 +41,9 @@ export interface OutroState {
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 /**
- * HANDOFF (0.965 -> 0.985): the 3D scene fades out; the hero — which
- * was behind the canvas the whole time — reveals in place. It never
- * slides up; we started inside it.
+ * HANDOFF (0.965 -> 0.985): the 3D scene — holding the full logo, the
+ * bridge running into its mark — fades out; the hero reveals in place
+ * behind it. It never slides up; we started inside it.
  */
 export function outroState(p: number): OutroState {
   if (p >= OUTRO_DONE_P) {
