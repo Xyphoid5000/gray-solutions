@@ -58,7 +58,7 @@ onMounted(() => {
           v-for="(s, i) in services"
           :key="s.title"
           v-reveal="(i % 2) * 0.1"
-          class="craft-card"
+          class="craft-card snap-card"
         >
           <span class="craft-num">{{ s.num }}</span>
           <h3>{{ s.title }}</h3>

@@ -43,10 +43,11 @@ const rightTabs = computed<RailTab[]>(() => {
 /** The contact envelope sits in its own row beneath the last page. */
 const contactRow = computed(() => chapters.length + 1);
 
-type Glyph = 'num' | 'avatar' | 'mark';
+type Glyph = 'num' | 'avatar' | 'pen' | 'mark';
 function glyph(ch: ChapterMeta): Glyph {
   if (/^\d+$/.test(ch.num)) return 'num';
   if (ch.path === '/about') return 'avatar';
+  if (ch.path === '/finale') return 'pen';
   return 'mark';
 }
 
@@ -90,6 +91,25 @@ function tabLabel(ch: ChapterMeta): string {
           <circle cx="12" cy="8" r="4" />
           <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
         </svg>
+        <svg
+          v-else-if="glyph(t.ch) === 'pen'"
+          class="tab-icon"
+          viewBox="0 0 24 24"
+          width="17"
+          height="17"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 2.5c2.8 3.8 4.8 6.8 4.8 10.2a4.8 4.8 0 0 1-9.6 0C7.2 9.3 9.2 6.3 12 2.5z"
+          />
+          <circle cx="12" cy="12.7" r="1.1" fill="currentColor" stroke="none" />
+          <path d="M12 13.8v5.7" />
+        </svg>
         <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
       </button>
     </nav>
@@ -124,6 +144,25 @@ function tabLabel(ch: ChapterMeta): string {
         >
           <circle cx="12" cy="8" r="4" />
           <path d="M4.5 20.5c.8-3.8 3.9-6 7.5-6s6.7 2.2 7.5 6" />
+        </svg>
+        <svg
+          v-else-if="glyph(t.ch) === 'pen'"
+          class="tab-icon"
+          viewBox="0 0 24 24"
+          width="17"
+          height="17"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M12 2.5c2.8 3.8 4.8 6.8 4.8 10.2a4.8 4.8 0 0 1-9.6 0C7.2 9.3 9.2 6.3 12 2.5z"
+          />
+          <circle cx="12" cy="12.7" r="1.1" fill="currentColor" stroke="none" />
+          <path d="M12 13.8v5.7" />
         </svg>
         <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
       </button>

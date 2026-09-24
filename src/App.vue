@@ -63,6 +63,62 @@ watch(modalChapter, (ch) => {
   }
 });
 
+/* ---------- snap cards into full view ---------- */
+// When the reader stops scrolling with a card half-cut, settle it
+// neatly under the nav — proximity only, never yanks mid-scroll.
+let snapTimer: number | null = null;
+let snapping = false;
+let cardSnapArmed = false;
+
+function armCardSnap() {
+  cardSnapArmed = true;
+}
+
+function onLenisScroll() {
+  if (snapping || !cardSnapArmed) return;
+  if (snapTimer) window.clearTimeout(snapTimer);
+  snapTimer = window.setTimeout(trySnapCard, 220);
+}
+
+function trySnapCard() {
+  snapTimer = null;
+  if (snapping || !cardSnapArmed || modalChapter.value) return;
+  // Only the settled (non-turning) page owns snap candidates.
+  const pages = Array.from(
+    document.querySelectorAll<HTMLElement>('.book-page'),
+  );
+  const active =
+    pages.find((p) => p.style.position !== 'absolute') ?? pages[0];
+  const cards = active
+    ? Array.from(active.querySelectorAll<HTMLElement>('.snap-card'))
+    : [];
+  if (!cards.length) return;
+  const vh = window.innerHeight;
+  const navH =
+    parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--nav-h'),
+    ) || 72;
+  const targetTop = navH + 14;
+  let best: { el: HTMLElement; dy: number } | null = null;
+  for (const el of cards) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < targetTop || r.top > vh * 0.6) continue;
+    const dy = r.top - targetTop;
+    if (Math.abs(dy) < 8 || Math.abs(dy) > 160) continue;
+    if (!best || Math.abs(dy) < Math.abs(best.dy)) best = { el, dy };
+  }
+  if (!best) return;
+  snapping = true;
+  lenis?.scrollTo(best.el, {
+    offset: -targetTop,
+    duration: 0.7,
+    easing: (t: number) => 1 - Math.pow(1 - t, 3),
+    onComplete: () => {
+      snapping = false;
+    },
+  });
+}
+
 /* ---------- page turns (a real book, not a slideshow) ---------- */
 // Which way the reader is moving through the book: +1 forward, -1 back.
 let turnDir = 1;
@@ -74,14 +130,16 @@ router.beforeEach((to, from) => {
 
 function beforeEnter(el: Element) {
   const page = el as HTMLElement;
+  cardSnapArmed = false; // the new page earns its snaps from fresh scrolling
   scrollToTopImmediate();
   if (reducedMotion) {
     gsap.set(page, { opacity: 1 });
     return;
   }
   if (turnDir >= 0) {
-    // Turning forward: the new page waits beneath the turning page.
-    gsap.set(page, { opacity: 0, zIndex: 1 });
+    // Turning forward: the next page is already lying beneath,
+    // fully inked — the turn reveals it like paper. No fades, no black.
+    gsap.set(page, { opacity: 1, zIndex: 1 });
   } else {
     // Turning back: the new page swings in from the spine,
     // edge-on and dimmed like paper catching the light.
@@ -98,32 +156,22 @@ function beforeEnter(el: Element) {
 
 function enter(el: Element, done: () => void) {
   const page = el as HTMLElement;
-  if (reducedMotion) {
+  if (reducedMotion || turnDir >= 0) {
+    // Forward: the page is already there beneath the turn — nothing to animate.
     gsap.set(page, { clearProps: 'all' });
     done();
     return;
   }
-  const finish = () => {
-    gsap.set(page, { clearProps: 'all' });
-    done();
-  };
-  if (turnDir >= 0) {
-    gsap.to(page, {
-      opacity: 1,
-      duration: 0.7,
-      ease: 'power1.out',
-      delay: 0.1,
-      onComplete: finish,
-    });
-  } else {
-    gsap.to(page, {
-      rotationY: 0,
-      filter: 'brightness(1)',
-      duration: 0.75,
-      ease: 'power3.out',
-      onComplete: finish,
-    });
-  }
+  gsap.to(page, {
+    rotationY: 0,
+    filter: 'brightness(1)',
+    duration: 0.75,
+    ease: 'power3.out',
+    onComplete: () => {
+      gsap.set(page, { clearProps: 'all' });
+      done();
+    },
+  });
 }
 
 function leave(el: Element, done: () => void) {
@@ -151,19 +199,16 @@ function leave(el: Element, done: () => void) {
       onComplete: done,
     });
   } else {
-    // Turning back: the old page simply yields beneath the incoming one.
+    // Turning back: the old page holds still, fully inked, beneath the
+    // incoming one — it must stay until the swing finishes, so the
+    // transition only ends when the new page has landed.
     gsap.set(page, {
       position: 'absolute',
       inset: '0',
       width: '100%',
       zIndex: 1,
     });
-    gsap.to(page, {
-      opacity: 0,
-      duration: 0.5,
-      ease: 'power2.in',
-      onComplete: done,
-    });
+    gsap.delayedCall(0.78, done);
   }
 }
 
@@ -226,6 +271,7 @@ let suppressTouchUntil = 0;
 
 function onTouchMove(e: TouchEvent) {
   if (!coarsePointer) return;
+  armCardSnap();
   const now = Date.now();
   const y = e.touches[0].clientY;
   const dy = y - lastMoveY; // negative = finger pushing up = scrolling down
@@ -246,7 +292,7 @@ function onTouchMove(e: TouchEvent) {
   // scrollable page now (the form lives under the book), so pushing
   // at its bottom must never whisk the reader away mid-form.
   const path = router.currentRoute.value.path;
-  if (path === '/about' || path === '/') return;
+  if (path === '/finale' || path === '/') return;
   if (atBottom() && dy < -4) {
     pushAccum += -dy;
     if (pushAccum > 120) {
@@ -277,12 +323,16 @@ onMounted(() => {
     lenis = new Lenis({ duration: 1.25, smoothWheel: true });
     setLenis(lenis);
     lenis.on('scroll', ScrollTrigger.update);
+    lenis.on('scroll', onLenisScroll);
     const raf = (time: number) => lenis?.raf(time * 1000);
     gsap.ticker.add(raf);
     gsap.ticker.lagSmoothing(0);
   }
 
   viewport.value?.addEventListener('touchstart', onTouchStart, { passive: true });
+  // Card snap only engages after the reader drives the scroll themselves —
+  // never on page load or programmatic jumps.
+  viewport.value?.addEventListener('wheel', armCardSnap, { passive: true });
   // touchmove is non-passive: right after a scroll-turn we swallow the
   // finger's leftover momentum so it can't drag the new page down.
   viewport.value?.addEventListener('touchmove', onTouchMove, { passive: false });
@@ -297,6 +347,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   viewport.value?.removeEventListener('touchstart', onTouchStart);
+  viewport.value?.removeEventListener('wheel', armCardSnap);
   viewport.value?.removeEventListener('touchmove', onTouchMove);
   viewport.value?.removeEventListener('touchend', onTouchEnd);
   window.removeEventListener('keydown', onKey);

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { ref, type Component } from 'vue';
 import Cover from './components/Cover.vue';
 import About from './components/About.vue';
+import Finale from './components/Finale.vue';
 import Premise from './components/Premise.vue';
 import Craft from './components/Craft.vue';
 import Proof from './components/Proof.vue';
@@ -22,6 +23,7 @@ export interface ChapterMeta {
 const components: Record<string, Component> = {
   '/': Cover,
   '/about': About,
+  '/finale': Finale,
   '/premise': Premise,
   '/craft': Craft,
   '/proof': Proof,
@@ -34,7 +36,8 @@ export const chapters: ChapterMeta[] = [
   { path: '/craft', num: '02', label: 'Chapter 02 — The Craft', short: '02 · Craft', logline: 'What I actually do.' },
   { path: '/proof', num: '03', label: 'Chapter 03 — The Proof', short: '03 · Proof', logline: "Don't take my word for it." },
   { path: '/arc', num: '04', label: 'Chapter 04 — The Arc', short: '04 · Arc', logline: 'Every project follows the arc.' },
-  { path: '/about', num: '\u00A7', label: 'About the author', short: 'About', logline: 'The guy behind the book.' },
+  { path: '/about', num: '\u00A7', label: 'About me', short: 'About', logline: 'The guy behind the book.' },
+  { path: '/finale', num: '\u2712', label: 'The end', short: 'The End', logline: 'Let\u2019s write yours.' },
 ];
 
 /** Which way the page turns: forward (next page) or back (previous page). */

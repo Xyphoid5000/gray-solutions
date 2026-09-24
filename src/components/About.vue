@@ -1,20 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { siteConfig } from '../config';
-import { returnToContact } from '../lib/ui';
 
 gsap.registerPlugin(ScrollTrigger);
-
-const router = useRouter();
-
-function startProject() {
-  // Close the book, zoom back out, drift down to the contact form.
-  returnToContact.value = true;
-  router.push('/');
-}
 
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,8 +15,6 @@ onMounted(() => {
   const root = document.querySelector<HTMLElement>('.prologue');
   if (!root || reducedMotion()) return;
   ctx = gsap.context(() => {
-    // A single-screen title page: the headline arrives on a fixed
-    // timeline — no scroll triggers to miss.
     const tl = gsap.timeline({ delay: 0.15 });
     tl.from(
       '.hero-kicker',
@@ -55,22 +43,14 @@ onUnmounted(() => ctx?.revert());
 </script>
 
 <template>
-  <section class="prologue book-page" aria-label="About the author">
+  <section class="prologue book-page" aria-label="About me">
     <div class="prologue-glow" aria-hidden="true"></div>
     <div class="wrap">
-      <p class="hero-kicker">About the author</p>
+      <p class="hero-kicker">About me</p>
       <h1 class="hero-title">
         <span class="h-line"
-          ><span class="h-line-inner">Hi, I&rsquo;m <em>Chris.</em></span></span
-        >
-        <span class="h-line"
-          ><span class="h-line-inner hero-title-dim"
-            >I build websites</span
-          ></span
-        >
-        <span class="h-line"
-          ><span class="h-line-inner hero-title-dim"
-            >that tell <em>stories.</em></span
+          ><span class="h-line-inner"
+            >The guy behind the <em>book.</em></span
           ></span
         >
       </h1>
@@ -117,38 +97,6 @@ onUnmounted(() => ctx?.revert());
         ><span class="dot" aria-hidden="true">&middot;</span>
         <span>Est. MMXXVI</span>
       </p>
-
-      <div v-reveal class="fin" aria-label="Epilogue">
-        <p class="fin-ornament" aria-hidden="true">&#10087;</p>
-        <p class="ch-kicker">The end</p>
-        <h2 class="epilogue-title">Let&rsquo;s write <em>yours.</em></h2>
-        <p class="epilogue-sub">
-          Tell me what your business does and who it&rsquo;s for. I&rsquo;ll
-          tell you the story your website should be telling &mdash; and then
-          I&rsquo;ll build it.
-        </p>
-        <div class="epilogue-ctas">
-          <button class="btn btn-solid" @click="startProject()">
-            Start your story
-            <span class="arrow" aria-hidden="true">&rarr;</span>
-          </button>
-          <a
-            :href="siteConfig.github"
-            target="_blank"
-            rel="noopener"
-            class="btn btn-ghost"
-          >
-            GitHub
-          </a>
-        </div>
-        <nav class="epilogue-links" aria-label="Elsewhere">
-          <a :href="`mailto:${siteConfig.email}`">{{ siteConfig.email }}</a>
-          <a :href="siteConfig.github" target="_blank" rel="noopener">GitHub</a>
-          <a :href="siteConfig.linkedIn" target="_blank" rel="noopener"
-            >LinkedIn</a
-          >
-        </nav>
-      </div>
     </div>
   </section>
 </template>

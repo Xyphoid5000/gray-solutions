@@ -389,6 +389,28 @@ a {
   color: var(--ink);
   font-weight: 600;
 }
+/* Inline "more about me" link on the finale page. */
+.link-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  margin-left: 0.6em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ember);
+  font: inherit;
+  font-size: 0.92em;
+  font-style: italic;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.link-more .arrow {
+  transition: transform 0.25s ease;
+}
+.link-more:hover .arrow {
+  transform: translateX(4px);
+}
 .hero-ctas {
   display: flex;
   flex-wrap: wrap;
@@ -927,7 +949,7 @@ a {
   background: var(--bg);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  padding-bottom: 4.5rem; /* clearance for the page-turner */
+  padding-bottom: clamp(7rem, 16vh, 10rem); /* air above the page-turner */
 }
 .chapter.book-page {
   padding-top: clamp(6rem, 12vw, 10rem);
