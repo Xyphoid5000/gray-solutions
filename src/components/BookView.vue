@@ -3,7 +3,6 @@ import { computed, ref, nextTick } from 'vue';
 import { gsap } from 'gsap';
 import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
-import ChapterModal from './ChapterModal.vue';
 
 gsap.registerPlugin(Flip);
 
@@ -103,18 +102,7 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'ArrowLeft') prev();
 }
 
-/** The chapter modal: tabs open a preview, "Turn to this page" goes. */
-const modalIndex = ref<number | null>(null);
-function openModal(i: number) {
-  modalIndex.value = i;
-}
-function closeModal() {
-  modalIndex.value = null;
-}
-function goFromModal(i: number) {
-  modalIndex.value = null;
-  goTo(i);
-}
+/** Direct navigation — tabs and scattered pages go straight there. */
 
 /** The pile is a messy stack. Clicking it scatters its pages over the open page. */
 const pileOpen = ref(false);
@@ -194,7 +182,7 @@ async function togglePile() {
 }
 function pickFromScatter(i: number) {
   pileOpen.value = false;
-  openModal(i);
+  goTo(i);
 }
 
 function pileCardStyle(i: number): Record<string, string> {
@@ -296,19 +284,10 @@ function onTouchEnd(e: TouchEvent) {
           :style="{ '--tab-row': i }"
           :aria-label="`Go to ${ch.label}`"
           :aria-current="i === currentIndex ? 'page' : undefined"
-          @click="openModal(i)"
+          @click="goTo(i)"
         >
           {{ ch.num }}
         </button>
       </div>
-
-    <!-- The chapter modal: preview, then turn to the page. -->
-    <ChapterModal
-      v-if="modalIndex !== null"
-      :chapter="chapters[modalIndex]"
-      :current="modalIndex === currentIndex"
-      @close="closeModal"
-      @go="goFromModal"
-    />
   </div>
 </template>
