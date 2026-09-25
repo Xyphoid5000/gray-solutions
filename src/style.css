@@ -178,6 +178,11 @@ a {
   position: relative;
   padding: clamp(6rem, 12vw, 10rem) 0;
 }
+/* Chapter 4 — breathing room below the last act, so reading it never
+   sits at the very bottom edge. */
+#arc {
+  padding-bottom: 32vh;
+}
 
 /* ---------- chapter heading ---------- */
 .ch-head {
