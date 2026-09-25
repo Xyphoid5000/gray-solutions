@@ -1232,7 +1232,8 @@ body.has-book .chapter.book-page {
   width: 140px;
   height: 190px;
   z-index: 800;
-  pointer-events: none;
+  /* The pile cards are buttons — clickable to go back. */
+  pointer-events: auto;
 }
 .read-pile .pile-page {
   position: absolute;
@@ -1245,6 +1246,11 @@ body.has-book .chapter.book-page {
   overflow: hidden;
   display: grid;
   place-items: center;
+  cursor: pointer;
+  /* It's a button now — strip the native chrome. */
+  appearance: none;
+  padding: 0;
+  font: inherit;
   /* The toss (rotation/offset) is set inline per page. */
 }
 .pile-num {

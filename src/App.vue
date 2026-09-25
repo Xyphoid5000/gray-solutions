@@ -272,10 +272,17 @@ function addToPile(chapterIndex: number) {
   // The pile card is a minimal paper slab — not a clone of the full
   // chapter. A real pile shows page edges, not readable text.
   // The tab sticks to its page: a static marker with the chapter number.
-  const card = document.createElement('div');
+  // The card is a button: clicking it goes back to that chapter.
+  const card = document.createElement('button');
+  card.type = 'button';
   card.setAttribute('data-pile-index', String(chapterIndex));
   card.classList.add('pile-page');
-  card.setAttribute('aria-hidden', 'true');
+  const ch = chapters[chapterIndex];
+  if (ch) card.setAttribute('aria-label', `Go back to ${ch.label}`);
+  card.addEventListener('click', () => {
+    const target = chapters[chapterIndex];
+    if (target) router.push(target.path);
+  });
   const num = document.createElement('span');
   num.classList.add('pile-num');
   num.textContent = String(chapterIndex);
