@@ -970,6 +970,28 @@ a {
 .finale {
   justify-content: flex-start;
 }
+/* One continuous page — tight vertical rhythm. */
+.finale .kicker {
+  margin-bottom: 0.9rem;
+}
+.finale .h-display {
+  margin: 0 0 1rem;
+}
+.finale p.ui-late {
+  margin: 0 0 1.2rem;
+}
+.finale .fin {
+  margin-top: 1.4rem;
+}
+.finale .fin h3 {
+  margin-bottom: 0.7rem;
+}
+.finale .fin > p {
+  margin: 0 0 1.2rem;
+}
+.finale .fin-actions {
+  margin-top: 1.2rem;
+}
 .finale .typed-text {
   white-space: pre-wrap;
 }
@@ -2525,6 +2547,11 @@ html[data-theme='dark'] body.has-book .chapter {
   padding-left: var(--desk-pl);
   padding-right: var(--desk-pr);
 }
+/* The pencil rests while the finale is open — the writing is done. */
+.manuscript-desk.is-finale .desk-pencil {
+  opacity: 0;
+  visibility: hidden;
+}
 /* Each page: a transparent wrap. No stacking context here so tabs
    can rise above the papers of pages above them. */
 .page-wrap {
@@ -2605,6 +2632,10 @@ html[data-theme='dark'] .page-paper {
   .page-paper {
     padding: 1.15rem 1rem;
     font-size: 0.9375rem;
+  }
+  /* The finale's header clears the finished-pages pile. */
+  .page-paper .finale .wrap {
+    padding-left: 1.75rem;
   }
   .page-paper .ch-title {
     font-size: clamp(1.6rem, 7.4vw, 2rem);

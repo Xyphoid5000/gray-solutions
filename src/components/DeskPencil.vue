@@ -29,7 +29,13 @@
   width: 150px;
   pointer-events: none;
   opacity: 0.9;
-  transform: rotate(-14deg);
+  transform:
+    translate(var(--pencil-dx, 0px), var(--pencil-dy, 0px))
+    rotate(calc(-14deg + var(--pencil-rot, 0deg)));
+  transition:
+    transform 0.6s ease,
+    opacity 0.4s ease,
+    visibility 0.4s;
   /* Desktop: on the desk, right of the page, below the candle. */
   right: 56px;
   top: 58%;
@@ -65,7 +71,9 @@
     right: 36px;
     top: auto;
     bottom: 110px;
-    transform: rotate(-18deg);
+    transform:
+      translate(var(--pencil-dx, 0px), var(--pencil-dy, 0px))
+      rotate(calc(-18deg + var(--pencil-rot, 0deg)));
   }
 }
 </style>

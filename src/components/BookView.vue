@@ -23,6 +23,25 @@ const currentIndex = ref(0);
 /** Indices of chapters sitting in the left pile, in order. */
 const pile = ref<number[]>([]);
 
+const isFinale = computed(() => currentIndex.value === chapters.length - 1);
+/** Nudge the pencil somewhere slightly different on each chapter, like
+    someone set it down without thinking. */
+const pencilVars = computed<Record<string, string>>(() => {
+  const spots = [
+    { x: 0, y: 0, r: 0 },
+    { x: -22, y: 30, r: -9 },
+    { x: 14, y: -24, r: 7 },
+    { x: -12, y: 18, r: -6 },
+    { x: 16, y: -10, r: 5 },
+  ];
+  const s = spots[currentIndex.value] ?? spots[0];
+  return {
+    '--pencil-dx': `${s.x}px`,
+    '--pencil-dy': `${s.y}px`,
+    '--pencil-rot': `${s.r}deg`,
+  };
+});
+
 const pileSet = computed(() => new Set(pile.value));
 
 function pageEl(i: number): HTMLElement | null {
@@ -332,6 +351,8 @@ onUnmounted(() => {
 <template>
   <div
     class="manuscript-desk"
+    :class="{ 'is-finale': isFinale }"
+    :style="pencilVars"
     @keydown="onKey"
     @touchstart.passive="onTouchStart"
     @touchend.passive="onTouchEnd"
