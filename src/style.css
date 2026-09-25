@@ -1356,16 +1356,18 @@ html[data-theme='dark'] .pile-num {
 /* The cover card wears its manuscript stamp where chapters wear numerals. */
 .pile-stamp {
   font-family: var(--serif);
-  font-size: 0.62rem;
+  font-size: 0.5rem;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   white-space: nowrap;
   color: rgba(120, 70, 40, 0.85);
   border: 2px double rgba(120, 70, 40, 0.55);
-  padding: 0.32em 0.4em 0.32em 0.52em;
+  padding: 0.32em 0.4em 0.32em 0.5em;
   transform: rotate(-6deg);
   user-select: none;
+  max-width: 88%;
+  box-sizing: border-box;
 }
 html[data-theme='dark'] .pile-stamp {
   color: rgba(120, 70, 40, 0.9);
