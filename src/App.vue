@@ -46,11 +46,16 @@ function onFinaleContact() {
   closeBookToSection('contact');
 }
 function onBindDone() {
-  // The book is bound — mark it directly so the front page shows the
-  // book, not the manuscript. The cover's own drop intro plays the
-  // landing; then we glide to the contact form.
+  // The book is bound — the home page already shows it after the
+  // blackout; glide to the contact form once the reveal lands.
+  if (!manuscriptBound.value) markManuscriptBound();
+  closeBookToSection('contact', 1400);
+}
+/** The binding's fade-to-black: swap in the finished book behind it so
+    the fade back in lands on the home page with the bound book. */
+function onBindBlackout() {
   markManuscriptBound();
-  closeBookToSection('contact', 2600);
+  closeBook();
 }
 /** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
 function onNavContact() {
@@ -272,7 +277,7 @@ onUnmounted(() => {
     </template>
   </BookView>
   <LostPage :visible="blacklight" @close="onLostPageClose" />
-  <BindCinematic ref="bindCinematic" @done="onBindDone" />
+  <BindCinematic ref="bindCinematic" @done="onBindDone" @blackout="onBindBlackout" />
   <!-- Light rituals: true darkness between the cord pull and the flame. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
   <MatchHand

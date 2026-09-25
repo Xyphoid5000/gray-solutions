@@ -4,6 +4,8 @@ import { gsap } from 'gsap';
 
 const emit = defineEmits<{
   done: [];
+  /** Fired at full black so the home page can swap in the finished book. */
+  blackout: [];
 }>();
 
 const overlay = ref<HTMLElement | null>(null);
@@ -11,6 +13,9 @@ const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const handL = ref<HTMLElement | null>(null);
 const handR = ref<HTMLElement | null>(null);
+const shelf = ref<HTMLElement | null>(null);
+const slotEl = ref<HTMLElement | null>(null);
+const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
 const titled = ref(false);
@@ -24,12 +29,16 @@ function finish() {
   titleTyped.value = TITLE;
   titled.value = true;
   if (ov) gsap.set(ov, { display: 'none', opacity: 0 });
-  if (stack.value) stack.value.innerHTML = '';
-  gsap.set(coverEl.value, { clearProps: 'all', display: 'none', opacity: 0 });
-  gsap.set([handL.value, handR.value], {
-    clearProps: 'transform,opacity',
-    opacity: 0,
-  });
+  if (stack.value) {
+    stack.value.innerHTML = '';
+    gsap.set(stack.value, { clearProps: 'all' });
+  }
+  if (coverEl.value)
+    gsap.set(coverEl.value, { clearProps: 'all', display: 'none', opacity: 0 });
+  if (shelf.value) gsap.set(shelf.value, { clearProps: 'all', opacity: 0 });
+  if (veil.value) gsap.set(veil.value, { opacity: 0 });
+  if (handL.value) gsap.set(handL.value, { clearProps: 'all', opacity: 0 });
+  if (handR.value) gsap.set(handR.value, { clearProps: 'all', opacity: 0 });
   playing.value = false;
   tl = null;
   emit('done');
@@ -41,10 +50,15 @@ function skip() {
 }
 
 /**
- * The binding, beat by beat: the finished pages are gathered from the
- * pile, fanned out and reordered into a neat stack, pressed by the
- * hands, wrapped in the cover, titled, and dropped back into the
- * book's spot on the home page.
+ * The binding, beat by beat:
+ * 1. the final pages land in the pile (5-4-3-2-1 over the cover);
+ * 2. hands swing in from the right, drag the pile to center, fan the
+ *    pages and shuffle them into 1-2-3-4-5;
+ * 3. the MANUSCRIPT cover is plucked out and flung away;
+ * 4. the dark cover drops from above and the pages tuck inside;
+ * 5. the title is written on;
+ * 6. the finished book takes its slot on a shelf of classics;
+ * 7. fade to black, fade back in on the home page with the finished book.
  */
 function start() {
   const ov = overlay.value;
@@ -52,7 +66,10 @@ function start() {
   const cv = coverEl.value;
   const hl = handL.value;
   const hr = handR.value;
-  if (!ov || !st || !cv || !hl || !hr) return;
+  const sh = shelf.value;
+  const sl = slotEl.value;
+  const vl = veil.value;
+  if (!ov || !st || !cv || !hl || !hr || !sh || !sl || !vl) return;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
     .matches;
   if (reduced) {
@@ -60,179 +77,255 @@ function start() {
     return;
   }
 
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const cx = vw / 2;
+  const cy = vh / 2;
+
+  // The pile's screen spot — the stack starts life there.
+  const pileRect = document
+    .querySelector('.read-pile')
+    ?.getBoundingClientRect();
+  const pileCx = pileRect ? pileRect.left + pileRect.width / 2 : vw * 0.16;
+  const pileCy = pileRect ? pileRect.top + pileRect.height / 2 : vh * 0.78;
+
+  // Reset.
   gsap.set(ov, { display: 'block', opacity: 0 });
-  gsap.set(cv, { display: 'none', opacity: 0, y: 0, scale: 0.94 });
-  gsap.set([hl, hr], { opacity: 0 });
-  gsap.set(st, { scaleY: 1 });
+  gsap.set(cv, { display: 'none', opacity: 0, x: 0, y: 0, scale: 1, rotation: 0 });
+  gsap.set(st, {
+    display: 'block',
+    opacity: 1,
+    x: pileCx - cx,
+    y: pileCy - cy,
+    scaleY: 1,
+  });
+  gsap.set(sh, { opacity: 0, y: 0 });
+  gsap.set(vl, { opacity: 0 });
+  // Both hands work from the right side; the left hand is mirrored so
+  // both reach toward the pile.
+  gsap.set([hl, hr], {
+    left: 0,
+    top: 0,
+    right: 'auto',
+    xPercent: -50,
+    yPercent: -50,
+    x: vw + 240,
+    y: pileCy,
+    scaleX: 1,
+    opacity: 0,
+  });
+  gsap.set(hl, { scaleX: -1 });
   titleTyped.value = '';
   titled.value = false;
   st.innerHTML = '';
   playing.value = true;
 
-  // Gather: clone the pile pages (the real pile stays intact), shuffled
-  // into reading order — chapter 1 back on top — before the cover binds.
-  // Bottom to top: the manuscript cover, blank pages standing in for the
-  // page being finished now, then chapters with chapter 1 on top.
+  // The stack, bottom to top: cover, then chapters 1-5. Clones from the
+  // real pile where present; numbered blanks stand in for the rest.
   const pilePages = [
     ...document.querySelectorAll('.read-pile .pile-page'),
   ] as HTMLElement[];
-  const isCoverCard = (el: HTMLElement) => el.dataset.pileIndex === undefined;
-  const blanks: HTMLElement[] = [];
-  for (let i = 0; i < 3; i++) {
-    const blank = document.createElement('div');
-    blank.className = 'bind-page';
-    blanks.push(blank);
-  }
-  const ordered: HTMLElement[] = [
-    ...pilePages.filter(isCoverCard),
-    ...blanks,
-    ...pilePages
-      .filter((el) => !isCoverCard(el))
-      .sort((a, b) => Number(b.dataset.pileIndex) - Number(a.dataset.pileIndex)),
-  ];
-  ordered.forEach((p) => {
-    let el: HTMLElement;
-    if (p.classList.contains('bind-page')) {
-      el = p;
+  const pageFor = (i: number) =>
+    pilePages.find((el) => el.dataset.pileIndex === String(i));
+  const coverSrc = pilePages.find(
+    (el) => el.dataset.pileIndex === undefined,
+  );
+  const chCards: HTMLElement[] = [];
+  for (let i = 0; i < 5; i++) {
+    const src = pageFor(i);
+    let card: HTMLElement;
+    if (src) {
+      card = src.cloneNode(true) as HTMLElement;
+      card.removeAttribute('data-pile-index');
+      card.setAttribute('aria-hidden', 'true');
     } else {
-      el = p.cloneNode(true) as HTMLElement;
-      el.removeAttribute('data-pile-index');
-      el.setAttribute('aria-hidden', 'true');
-      // The MANUSCRIPT cover leaves the stack before the reorder.
-      if (isCoverCard(p)) el.classList.add('is-ms-cover');
+      card = document.createElement('div');
+      card.className = 'bind-page bind-blank';
+      const num = document.createElement('span');
+      num.className = 'bind-num';
+      num.textContent = String(i + 1);
+      card.appendChild(num);
     }
-    st.appendChild(el);
-    gsap.set(el, { position: 'absolute', inset: '0' });
-  });
+    chCards.push(card);
+  }
+  let coverCard: HTMLElement | null = null;
+  if (coverSrc) {
+    coverCard = coverSrc.cloneNode(true) as HTMLElement;
+    coverCard.removeAttribute('data-pile-index');
+    coverCard.setAttribute('aria-hidden', 'true');
+  }
+  if (coverCard) st.appendChild(coverCard);
+  chCards.forEach((c) => st.appendChild(c));
+  const allCards = [...st.children] as HTMLElement[];
+  allCards.forEach((c) =>
+    gsap.set(c, {
+      position: 'absolute',
+      inset: '0',
+      x: 0,
+      y: 0,
+      rotation: 0,
+      scale: 1,
+      opacity: 1,
+    }),
+  );
 
-  const pages = [...st.children] as HTMLElement[];
-  const n = pages.length;
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  // Where each page rests once stacked at the center.
-  const restX = pages.map((p) => {
-    const r = p.getBoundingClientRect();
-    return cx - (r.left + r.width / 2);
-  });
-  const restY = pages.map((p) => {
-    const r = p.getBoundingClientRect();
-    return cy - (r.top + r.height / 2);
-  });
+  // Where the finished book lands on the shelf (measured while the
+  // shelf is invisible but laid out; the cover itself is 260x340 and
+  // lands centered, so its geometry is computed, not measured).
+  const sr = sl.getBoundingClientRect();
+  const slotDx = sr.left + sr.width / 2 - cx;
+  const slotDy = sr.top + sr.height / 2 - cy;
+  const slotScale = Math.min(0.8, (sr.height - 8) / 340);
 
   tl = gsap.timeline({ onComplete: finish });
-  const timeline = tl as gsap.core.Timeline;
+  const T = tl as gsap.core.Timeline;
 
-  // Beat 1 — the overlay rises; pages fly in from the pile.
-  timeline.to(ov, { opacity: 1, duration: 0.5 }, 0);
-  pages.forEach((p, i) => {
-    timeline.fromTo(
-      p,
-      { x: 0, y: 0, rotation: (gsap.getProperty(p, 'rotation') as number) || 0 },
-      {
-        x: restX[i],
-        y: restY[i],
-        rotation: 0,
-        duration: 1.1,
-        ease: 'power2.inOut',
-      },
-      0.4 + i * 0.1,
+  // Beat 1 — the overlay rises; the final page drops into the pile,
+  // leaving it 5-4-3-2-1 over the cover.
+  T.to(ov, { opacity: 1, duration: 0.5 }, 0);
+  const ch5 = chCards[4];
+  T.fromTo(
+    ch5,
+    { y: -vh * 0.5, opacity: 0, rotation: -8 },
+    { y: 0, opacity: 1, rotation: 0, duration: 0.7, ease: 'power2.in' },
+    0.45,
+  );
+  allCards.forEach((c, k) => {
+    if (c === ch5) return;
+    T.fromTo(
+      c,
+      { rotation: k % 2 ? 5 : -5 },
+      { rotation: 0, duration: 0.6, ease: 'power2.out' },
+      0.35 + k * 0.05,
     );
   });
-  const gatheredAt = 0.4 + (n - 1) * 0.1 + 1.1;
+  const b1 = 1.35;
 
-  // Beat 2 — the MANUSCRIPT cover is pulled out of the stack, crumpled
-  // into a ball, and tossed away before the pages reorder.
-  const coverClone = st.querySelector('.is-ms-cover') as HTMLElement | null;
-  const reorderPages = pages.filter((el) => el !== coverClone);
-  const rn = reorderPages.length;
-  let fanAt = gatheredAt + 0.2;
-  if (coverClone) {
-    const crumpleAt = gatheredAt + 0.25;
-    timeline.to(
-      coverClone,
-      {
-        x: `+=${window.innerWidth * 0.3}`,
-        y: '+=40',
-        rotation: 16,
-        duration: 0.55,
-        ease: 'power2.in',
-      },
-      crumpleAt,
-    );
-    timeline.to(
-      coverClone,
-      {
-        scale: 0.08,
-        rotation: '+=60',
-        borderRadius: '50%',
-        x: `+=${window.innerWidth * 0.15}`,
-        y: '-=70',
-        opacity: 0,
-        duration: 0.65,
-        ease: 'power2.in',
-      },
-      crumpleAt + 0.55,
-    );
-    timeline.set(coverClone, { display: 'none' }, crumpleAt + 1.25);
-    fanAt = crumpleAt + 1.4;
-  }
-
-  // Beat 3 — reorder: the pages fan out, hold, then settle in order.
-  // The fan stays inside the viewport on phones.
-  const fanStep = Math.min(
-    46,
-    (window.innerWidth * 0.92 - 220) / 2 / ((rn - 1) / 2),
+  // Beat 2 — hands swing in from the right, grab the pile, drag it to
+  // center, fan the pages and shuffle them into 1-2-3-4-5.
+  T.to([hl, hr], { opacity: 1, duration: 0.3 }, b1);
+  T.to(hr, { x: pileCx + 150, duration: 0.7, ease: 'power3.out' }, b1);
+  T.to(
+    hl,
+    { x: pileCx + 240, y: pileCy - 60, duration: 0.7, ease: 'power3.out' },
+    b1 + 0.08,
   );
-  reorderPages.forEach((p, k) => {
-    const i = pages.indexOf(p);
-    const spread = (k - (rn - 1) / 2) * fanStep;
-    timeline.to(
-      p,
-      {
-        x: restX[i] + spread,
-        rotation: spread * 0.06,
-        duration: 0.5,
-        ease: 'power2.out',
-      },
+  const dragAt = b1 + 0.85;
+  T.to(st, { x: 0, y: 0, duration: 0.9, ease: 'power2.inOut' }, dragAt);
+  T.to(hr, { x: cx + 150, y: cy, duration: 0.9, ease: 'power2.inOut' }, dragAt);
+  T.to(
+    hl,
+    { x: cx + 240, y: cy - 60, duration: 0.9, ease: 'power2.inOut' },
+    dragAt,
+  );
+  const fanAt = dragAt + 1.0;
+  const fanStep = Math.min(46, ((vw * 0.92 - 220) / 2) / 2);
+  chCards.forEach((c, k) => {
+    const spread = (k - 2) * fanStep;
+    T.to(
+      c,
+      { x: spread, rotation: spread * 0.06, duration: 0.5, ease: 'power2.out' },
       fanAt + k * 0.04,
     );
   });
-  const fannedAt = fanAt + (rn - 1) * 0.04 + 0.5;
-  const settleAt = fannedAt + 0.8;
-  reorderPages.forEach((p, k) => {
-    const i = pages.indexOf(p);
-    timeline.to(
-      p,
-      { x: restX[i], y: restY[i], rotation: 0, duration: 0.45, ease: 'power2.inOut' },
-      settleAt + k * 0.05,
+  const shuffleAt = fanAt + 0.75;
+  T.call(
+    () => {
+      if (coverCard) st.appendChild(coverCard);
+      [...chCards].reverse().forEach((c) => st.appendChild(c));
+    },
+    [],
+    shuffleAt,
+  );
+  chCards.forEach((c, k) => {
+    T.to(
+      c,
+      { y: -90, duration: 0.22, ease: 'power2.out' },
+      shuffleAt + k * 0.07,
+    );
+    T.to(
+      c,
+      { y: 0, x: 0, rotation: 0, duration: 0.42, ease: 'power2.inOut' },
+      shuffleAt + k * 0.07 + 0.22,
     );
   });
-  const settledAt = settleAt + (rn - 1) * 0.05 + 0.45;
-
-  // Beat 4 — hands slide in and press the stack.
-  const pressAt = settledAt + 0.25;
-  timeline.set([hl, hr], { opacity: 1 }, pressAt);
-  timeline.to(hl, { x: 0, duration: 0.7, ease: 'power3.out' }, pressAt);
-  timeline.to(hr, { x: 0, duration: 0.7, ease: 'power3.out' }, pressAt);
-  timeline.to(
-    st,
-    { scaleY: 0.92, duration: 0.35, ease: 'power2.inOut', yoyo: true, repeat: 1 },
-    pressAt + 0.75,
+  T.to(
+    hr,
+    { y: cy + 16, duration: 0.25, yoyo: true, repeat: 3, ease: 'sine.inOut' },
+    shuffleAt,
   );
-  timeline.to(hl, { x: '-120vw', duration: 0.6, ease: 'power3.in' }, pressAt + 1.55);
-  timeline.to(hr, { x: '120vw', duration: 0.6, ease: 'power3.in' }, pressAt + 1.55);
-  timeline.set([hl, hr], { opacity: 0 }, pressAt + 2.2);
+  T.to(
+    hl,
+    { y: cy - 44, duration: 0.25, yoyo: true, repeat: 3, ease: 'sine.inOut' },
+    shuffleAt + 0.1,
+  );
+  const handsOutAt = shuffleAt + 5 * 0.07 + 0.64 + 0.15;
+  T.to(
+    [hl, hr],
+    { x: vw + 240, opacity: 0, duration: 0.55, ease: 'power2.in' },
+    handsOutAt,
+  );
+  const b2 = handsOutAt + 0.6;
 
-  // Beat 5 — the cover binds around the stack.
-  const coverAt = pressAt + 2.3;
-  timeline.set(cv, { display: 'flex', opacity: 0, scale: 0.94 }, coverAt);
-  timeline.to(cv, { opacity: 1, scale: 1, duration: 0.9, ease: 'power2.out' }, coverAt);
+  // Beat 3 — one hand plucks the MANUSCRIPT cover and flings it away.
+  T.set(hr, { x: vw + 240, y: cy, opacity: 1 }, b2);
+  T.to(hr, { x: cx + 200, duration: 0.55, ease: 'power3.out' }, b2 + 0.05);
+  const pluckAt = b2 + 0.7;
+  if (coverCard) {
+    T.to(
+      coverCard,
+      { x: 175, rotation: 12, duration: 0.4, ease: 'power2.out' },
+      pluckAt,
+    );
+  }
+  const flingAt = pluckAt + 0.5;
+  T.to(hr, { x: vw + 320, duration: 0.55, ease: 'power2.in' }, flingAt);
+  if (coverCard) {
+    T.to(
+      coverCard,
+      {
+        x: vw * 0.75,
+        rotation: 32,
+        opacity: 0,
+        duration: 0.55,
+        ease: 'power2.in',
+      },
+      flingAt,
+    );
+    T.set(coverCard, { display: 'none' }, flingAt + 0.6);
+  }
+  T.set(hr, { opacity: 0 }, flingAt + 0.6);
+  const b3 = flingAt + 0.65;
 
-  // Beat 6 — the title is written on.
-  const titleAt = coverAt + 1.0;
+  // Beat 4 — the dark cover drops from above; the pages tuck inside.
+  const dropAt = b3 + 0.15;
+  T.set(
+    cv,
+    { display: 'flex', opacity: 1, x: 0, y: -(vh + 260), scale: 1, rotation: 0 },
+    dropAt,
+  );
+  T.to(cv, { y: 0, duration: 1.05, ease: 'power2.out' }, dropAt);
+  const tuckAt = dropAt + 1.05;
+  chCards.forEach((c, k) => {
+    T.to(
+      c,
+      { y: -34, scale: 0.84, opacity: 0, duration: 0.45, ease: 'power2.in' },
+      tuckAt + k * 0.03,
+    );
+  });
+  T.set(st, { display: 'none' }, tuckAt + 0.6);
+  T.to(
+    cv,
+    { scaleY: 0.94, duration: 0.18, yoyo: true, repeat: 1, ease: 'power2.inOut' },
+    tuckAt + 0.55,
+  );
+  const b4 = tuckAt + 1.0;
+
+  // Beat 5 — the title is written on.
+  const titleAt = b4 + 0.15;
   for (let i = 0; i < TITLE.length; i++) {
     const ch = TITLE[i];
-    timeline.call(
+    T.call(
       () => {
         titleTyped.value += ch;
       },
@@ -241,19 +334,43 @@ function start() {
     );
   }
   const titledAt = titleAt + TITLE.length * 0.09;
-  timeline.call(
+  T.call(
     () => {
       titled.value = true;
     },
     [],
     titledAt,
   );
-  const heldAt = titledAt + 1.5;
+  const b5 = titledAt + 0.9;
 
-  // Beat 7 — the finished book drops back into its spot on the home
-  // page as the overlay fades.
-  timeline.to(cv, { y: 70, duration: 0.55, ease: 'bounce.out' }, heldAt);
-  timeline.to(ov, { opacity: 0, duration: 0.6 }, heldAt + 0.4);
+  // Beat 6 — the bookshelf rises; the finished book takes its slot
+  // among the classics.
+  T.fromTo(
+    sh,
+    { y: 46, opacity: 0 },
+    { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' },
+    b5,
+  );
+  const slotAt = b5 + 0.8;
+  T.to(
+    cv,
+    {
+      x: `+=${slotDx}`,
+      y: `+=${slotDy}`,
+      scale: slotScale,
+      rotation: -4,
+      duration: 1.15,
+      ease: 'power2.inOut',
+    },
+    slotAt,
+  );
+  const b6 = slotAt + 1.15 + 0.7;
+
+  // Beat 7 — fade to black; behind it the home page swaps in the
+  // finished book; fade back in on it.
+  T.to(vl, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, b6);
+  T.call(() => emit('blackout'), [], b6 + 0.85);
+  T.to(ov, { opacity: 0, duration: 1.0, ease: 'power1.inOut' }, b6 + 1.35);
 }
 
 defineExpose({ start });
@@ -266,18 +383,10 @@ defineExpose({ start });
     role="dialog"
     aria-label="Binding the manuscript"
   >
-    <button
-      v-if="playing"
-      type="button"
-      class="bind-skip"
-      @click="skip"
-    >
-      Skip
-    </button>
     <!-- The neat stack forms here. -->
     <div ref="stack" class="bind-stack" aria-hidden="true"></div>
 
-    <!-- Hands: flat silhouettes, pressing the stack. -->
+    <!-- Hands: flat silhouettes, working from the right side. -->
     <div ref="handL" class="bind-hand bind-hand-l" aria-hidden="true">
       <svg viewBox="0 0 140 90" fill="currentColor" aria-hidden="true">
         <path
@@ -311,6 +420,33 @@ defineExpose({ start });
         <p class="bind-by">Chris Gray</p>
       </div>
     </div>
+
+    <!-- The bookshelf: classics on a plank; the book takes its slot. -->
+    <div ref="shelf" class="bind-shelf" aria-hidden="true">
+      <div class="shelf-row">
+        <div class="shelf-book" style="height: 240px; background: #4a1f1f">Moby-Dick</div>
+        <div class="shelf-book" style="height: 220px; background: #1f3a5a">Pride and Prejudice</div>
+        <div class="shelf-book" style="height: 250px; background: #2e4a2e">Frankenstein</div>
+        <div class="shelf-book" style="height: 230px; background: #5a3a1f">Jane Eyre</div>
+        <div ref="slotEl" class="shelf-slot"></div>
+        <div class="shelf-book" style="height: 245px; background: #3a1f3a">Dracula</div>
+        <div class="shelf-book" style="height: 215px; background: #1f4a4a">Wuthering Heights</div>
+        <div class="shelf-book" style="height: 235px; background: #4a4a1f">The Odyssey</div>
+      </div>
+      <div class="shelf-plank"></div>
+    </div>
+
+    <!-- Fade-to-black veil for the final beat. -->
+    <div ref="veil" class="bind-veil" aria-hidden="true"></div>
+
+    <button
+      v-if="playing"
+      type="button"
+      class="bind-skip"
+      @click="skip"
+    >
+      Skip
+    </button>
   </div>
 </template>
 
@@ -363,6 +499,18 @@ defineExpose({ start });
   background: var(--page);
   border: 1px solid var(--line-soft);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+/* Numbered stand-ins for pages not in the pile. */
+.bind-blank {
+  display: grid;
+  place-items: center;
+}
+.bind-num {
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: rgba(242, 236, 223, 0.25);
+  user-select: none;
 }
 .bind-hand {
   position: absolute;
@@ -433,5 +581,66 @@ defineExpose({ start });
   font-size: 0.8rem;
   color: rgba(235, 225, 210, 0.55);
   margin: 0;
+}
+/* The bookshelf: classic spines on a wooden plank. */
+.bind-shelf {
+  position: absolute;
+  left: 50%;
+  bottom: 5vh;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 94vw;
+  opacity: 0;
+  z-index: 3;
+}
+.shelf-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 8px;
+}
+.shelf-book {
+  width: 52px;
+  flex-shrink: 0;
+  writing-mode: vertical-rl;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: rgba(232, 205, 150, 0.92);
+  border-radius: 3px 3px 0 0;
+  padding: 14px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.35);
+}
+.shelf-slot {
+  width: 170px;
+  height: 248px;
+  flex-shrink: 0;
+}
+.shelf-plank {
+  height: 16px;
+  background: linear-gradient(180deg, #4a2c17 0%, #2e1a0d 60%, #1d1008 100%);
+  border-radius: 3px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+@media (max-width: 640px) {
+  /* The CSS `scale` property composes with GSAP's transform untouched. */
+  .bind-shelf {
+    scale: 0.62;
+  }
+}
+/* Fade-to-black veil for the final beat. */
+.bind-veil {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
 }
 </style>
