@@ -2238,3 +2238,40 @@ html[data-blacklight='on'] body::after {
     );
   mix-blend-mode: screen;
 }
+
+/* Manuscript stack: a flat loose pile of paper, slightly messy. */
+.manuscript-stack {
+  position: relative;
+  width: min(64vw, 290px);
+  aspect-ratio: 5 / 7;
+  margin-bottom: 12px;
+}
+.ms-page {
+  position: absolute;
+  inset: 0;
+  background: var(--page);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+.ms-p3 {
+  transform: rotate(3deg) translate(8px, 6px);
+}
+.ms-p2 {
+  transform: rotate(-2deg) translate(-6px, 3px);
+}
+.ms-p1 {
+  display: flex;
+  transform: rotate(1deg);
+}
+.ms-p1 .b-manuscript-frame {
+  flex: 1;
+  margin: 13px;
+  border: 2px dashed rgba(120, 90, 60, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.2rem 0.8rem;
+  gap: 0.6rem;
+}

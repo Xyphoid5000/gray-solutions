@@ -521,19 +521,31 @@ onUnmounted(() => {
           @pointerleave="endStageDrag"
         >
           <div ref="shadowRef" class="book-shadow" aria-hidden="true"></div>
-          <div ref="bookRef" class="book3d" :class="{ manuscript: !isBound }" aria-hidden="true">
+          <!-- Bound book: 3D. Manuscript: a flat loose stack (no 3D glitches). -->
+          <div
+            v-if="isBound"
+            ref="bookRef"
+            class="book3d"
+            aria-hidden="true"
+          >
             <div class="b-face b-back"></div>
-            <div class="b-face b-spine"><span>{{ isBound ? 'Gray Solutions' : 'Manuscript' }}</span></div>
+            <div class="b-face b-spine"><span>Gray Solutions</span></div>
             <div class="b-face b-top"></div>
             <div class="b-face b-pages"></div>
             <div class="b-face b-front">
-              <div v-if="isBound" class="b-cover-frame">
+              <div class="b-cover-frame">
                 <span class="b-mark">G.</span>
                 <p class="b-title">Gray<br />Solutions<em>.</em></p>
                 <p class="b-tag"><em>Websites that tell stories.</em></p>
                 <p class="b-by">Chris Gray</p>
               </div>
-              <div v-else class="b-manuscript-frame">
+            </div>
+          </div>
+          <div v-else ref="bookRef" class="manuscript-stack" aria-hidden="true">
+            <div class="ms-page ms-p3"></div>
+            <div class="ms-page ms-p2"></div>
+            <div class="ms-page ms-p1">
+              <div class="b-manuscript-frame">
                 <p class="b-stamp">Manuscript</p>
                 <p class="b-msub">Six pages &middot; first draft</p>
               </div>
