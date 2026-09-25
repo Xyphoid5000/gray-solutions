@@ -138,9 +138,8 @@ function onKey(e: KeyboardEvent) {
           'is-piled': pileSet.has(i),
           'is-buried': i > currentIndex,
         }"
-        :inert="i !== currentIndex"
       >
-        <div class="page-paper">
+        <div class="page-paper" :inert="i !== currentIndex">
           <component
             :is="ch.component"
             @go="goTo"
