@@ -2457,6 +2457,25 @@ html[data-theme='dark'] .page-paper {
   background: #d9cbb0;
   color: #1c1712;
 }
+/* Keep content inside the paper on narrow screens. */
+.page-paper {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.page-paper img,
+.page-paper video,
+.page-paper iframe,
+.page-paper table {
+  max-width: 100%;
+  height: auto;
+}
+.page-paper pre,
+.page-paper code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+  overflow-x: auto;
+}
 /* Buried pages: paper hidden, but the tab still shows. */
 .page-wrap.is-buried .page-paper {
   visibility: hidden;
