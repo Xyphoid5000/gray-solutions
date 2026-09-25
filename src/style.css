@@ -920,9 +920,9 @@ a {
 }
 /* The book's closing beat, folded into the About page. */
 .fin {
-  margin-top: 5rem;
-  padding-top: 3rem;
-  border-top: 1px solid var(--line-soft);
+  margin-top: 2.2rem;
+  padding-top: 0;
+  border-top: none;
 }
 .fin h3 {
   font-family: var(--serif);
@@ -960,6 +960,18 @@ a {
 }
 .fin-links a:hover {
   color: var(--ember);
+}
+/* The Finale types itself live: one continuous page, no separations. */
+.finale .typed-text {
+  white-space: pre-wrap;
+}
+/* Buttons and links wait for the writer to finish. */
+.finale .ui-late {
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.finale.typing-done .ui-late {
+  opacity: 1;
 }
 
 /* Kicker line with a glyph numeral (about pages). */

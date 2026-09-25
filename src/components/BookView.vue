@@ -231,6 +231,11 @@ function onTouchEnd(e: TouchEvent) {
   touchOnStrip = false;
   if (onStrip) return;
   if (Math.abs(dx) < 48) return;
+  // Last page: swipe right to bind the book, like "Start your story".
+  if (dx > 0 && currentIndex.value === chapters.length - 1) {
+    onChapterContact(currentIndex.value);
+    return;
+  }
   if (dx < 0) next();
   else prev();
 }

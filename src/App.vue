@@ -11,7 +11,7 @@ import DeskCandle from './components/DeskCandle.vue';
 import DeskPencil from './components/DeskPencil.vue';
 import LostPage from './components/LostPage.vue';
 import { setLenis } from './lib/scroll';
-import { manuscriptBound } from './lib/manuscript';
+import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,17 +23,19 @@ function openBook() {
 function closeBook() {
   showBook.value = false;
 }
-function closeBookToSection(section: 'about' | 'contact') {
+function closeBookToSection(section: 'about' | 'contact', after = 100) {
   showBook.value = false;
   // After the cover renders, scroll to the section.
   requestAnimationFrame(() => {
     setTimeout(() => {
       document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+    }, after);
   });
 }
-/** The binding cinematic: "Start your story" on the Finale binds the
-    manuscript before the contact form. */
+/** Any road to Contact runs through the binding — once per visit.
+    "Start your story" on the Finale binds the manuscript before the
+    contact form; so does the header's CONTACT ME while the book is
+    open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
 function onFinaleContact() {
   if (!manuscriptBound.value && bindCinematic.value) {
@@ -43,13 +45,19 @@ function onFinaleContact() {
   closeBookToSection('contact');
 }
 function onBindDone() {
-  // The book is bound — tell the cover, then go to the contact form.
-  window.dispatchEvent(new CustomEvent('gs:manuscript-bound'));
-  closeBookToSection('contact');
+  // The book is bound — mark it directly so the front page shows the
+  // book, not the manuscript. The cover's own drop intro plays the
+  // landing; then we glide to the contact form.
+  markManuscriptBound();
+  closeBookToSection('contact', 2600);
 }
 /** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
 function onNavContact() {
   if (showBook.value) {
+    if (!manuscriptBound.value && bindCinematic.value) {
+      bindCinematic.value.start();
+      return;
+    }
     closeBookToSection('contact');
   } else {
     document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });

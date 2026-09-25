@@ -5,18 +5,14 @@ import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
 import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
-import { manuscriptBound, markManuscriptBound } from '../lib/manuscript';
+import { manuscriptBound } from '../lib/manuscript';
 
 const emit = defineEmits(['open-book']);
 
 /** The manuscript becomes a book once the reader finishes and binds it.
-    Resets on refresh — every visit starts with the manuscript. */
+    Resets on refresh — every visit starts with the manuscript.
+    App marks the shared module ref directly when binding completes. */
 const isBound = manuscriptBound;
-function markBound() {
-  markManuscriptBound();
-}
-// The binding cinematic sets this; listen for it.
-window.addEventListener('gs:manuscript-bound', markBound);
 
 const stageRef = ref<HTMLElement | null>(null);
 const bookRef = ref<HTMLElement | null>(null);
