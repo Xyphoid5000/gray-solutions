@@ -1,21 +1,21 @@
 /* ============================================================
    GRAY SOLUTIONS — "Websites that tell stories"
-   Design system: dark editorial, cinematic, warm paper on
-   near-black, a single ember accent. Fraunces for voice,
+   Design system: dark editorial, cinematic, warm parchment on
+   deep forest black, a single brass accent. Fraunces for voice,
    Inter for clarity.
    ============================================================ */
 
 :root {
-  --bg: #0c0a07;
-  --bg-2: #131009;
-  --panel: #161209;
-  --ink: #f3ede1;
-  --muted: #a89f8d;
-  --faint: #6f675a;
-  --ember: #e8a33d;
-  --ember-deep: #b45f22;
-  --line: rgba(243, 237, 225, 0.12);
-  --line-soft: rgba(243, 237, 225, 0.07);
+  --bg: #0a0e0b;
+  --bg-2: #0e1410;
+  --panel: #131a13;
+  --ink: #f1ecdf;
+  --muted: #a5a191;
+  --faint: #6d6f60;
+  --ember: #d9a94b;
+  --ember-deep: #9c7a2e;
+  --line: rgba(241, 236, 223, 0.12);
+  --line-soft: rgba(241, 236, 223, 0.07);
   --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
   --sans: 'Inter', system-ui, -apple-system, sans-serif;
   --wrap: 1180px;
@@ -54,7 +54,7 @@ body {
 
 ::selection {
   background: var(--ember);
-  color: #0c0a07;
+  color: #0a0e0b;
 }
 
 ::-webkit-scrollbar {
@@ -135,7 +135,7 @@ a {
   font-size: clamp(5rem, 14vw, 11rem);
   line-height: 1;
   color: transparent;
-  -webkit-text-stroke: 1px rgba(243, 237, 225, 0.16);
+  -webkit-text-stroke: 1px rgba(241, 236, 223, 0.16);
   user-select: none;
   pointer-events: none;
 }
@@ -215,7 +215,7 @@ a {
 }
 .btn-solid:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(232, 163, 61, 0.35);
+  box-shadow: 0 12px 40px rgba(217, 169, 75, 0.35);
   background: #f2b355;
 }
 .btn-ghost {
@@ -293,7 +293,7 @@ a {
   text-transform: uppercase;
   color: var(--ember);
   background: transparent;
-  border: 1px solid rgba(232, 163, 61, 0.45);
+  border: 1px solid rgba(217, 169, 75, 0.45);
   border-radius: 999px;
   padding: 0.55rem 1.2rem;
   cursor: pointer;
@@ -325,7 +325,7 @@ a {
   height: min(1100px, 120vw);
   background: radial-gradient(
     closest-side,
-    rgba(232, 163, 61, 0.13),
+    rgba(217, 169, 75, 0.13),
     rgba(180, 95, 34, 0.05),
     transparent 70%
   );
@@ -347,7 +347,7 @@ a {
   height: 8px;
   border-radius: 50%;
   background: var(--ember);
-  box-shadow: 0 0 18px rgba(232, 163, 61, 0.9);
+  box-shadow: 0 0 18px rgba(217, 169, 75, 0.9);
   animation: pulse 2.4s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -513,7 +513,7 @@ a {
   border: 1px solid var(--line-soft);
   border-radius: 18px;
   padding: 2.4rem 2.2rem;
-  background: linear-gradient(160deg, rgba(243, 237, 225, 0.025), transparent 55%);
+  background: linear-gradient(160deg, rgba(241, 236, 223, 0.025), transparent 55%);
   transition: border-color 0.4s, transform 0.4s var(--ease-out),
     background 0.4s;
   overflow: hidden;
@@ -524,7 +524,7 @@ a {
   inset: 0;
   background: radial-gradient(
     420px circle at var(--mx, 50%) var(--my, 0%),
-    rgba(232, 163, 61, 0.09),
+    rgba(217, 169, 75, 0.09),
     transparent 65%
   );
   opacity: 0;
@@ -532,7 +532,7 @@ a {
   pointer-events: none;
 }
 .craft-card:hover {
-  border-color: rgba(232, 163, 61, 0.4);
+  border-color: rgba(217, 169, 75, 0.4);
   transform: translateY(-4px);
 }
 .craft-card:hover::before {
@@ -599,13 +599,13 @@ a {
   right: -20%;
   width: 60%;
   aspect-ratio: 1;
-  background: radial-gradient(closest-side, rgba(232, 163, 61, 0.1), transparent 70%);
+  background: radial-gradient(closest-side, rgba(217, 169, 75, 0.1), transparent 70%);
   pointer-events: none;
 }
 .proof-panel.cta-panel {
-  background: linear-gradient(165deg, rgba(232, 163, 61, 0.1), transparent 60%),
+  background: linear-gradient(165deg, rgba(217, 169, 75, 0.1), transparent 60%),
     var(--bg);
-  border-color: rgba(232, 163, 61, 0.35);
+  border-color: rgba(217, 169, 75, 0.35);
   align-items: flex-start;
   justify-content: center;
   text-align: left;
@@ -681,7 +681,7 @@ a {
 .arc-svg-wrap {
   border: 1px solid var(--line-soft);
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(243, 237, 225, 0.02), transparent);
+  background: linear-gradient(180deg, rgba(241, 236, 223, 0.02), transparent);
   padding: clamp(1rem, 3vw, 2rem);
   margin-bottom: 3rem;
   overflow: hidden;
@@ -908,7 +908,7 @@ a {
   background:
     radial-gradient(circle at 35% 30%, #2a241a 0%, #14110b 70%);
   border: 1px solid var(--line);
-  box-shadow: 0 0 0 6px rgba(232, 163, 61, 0.08);
+  box-shadow: 0 0 0 6px rgba(217, 169, 75, 0.08);
   overflow: hidden;
 }
 .about-monogram {
@@ -1168,7 +1168,19 @@ a {
     bottom: 10px;
     width: 2px;
     border-radius: 2px;
-    background: linear-gradient(var(--ember), rgba(232, 163, 61, 0.15));
+    background: rgba(217, 169, 75, 0.15);
+  }
+  .arc-spine-progress {
+    position: absolute;
+    left: 7px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(var(--ember), rgba(217, 169, 75, 0.4));
+    box-shadow: 0 0 12px rgba(217, 169, 75, 0.6);
+    transform-origin: top center;
+    transform: scaleY(0);
   }
   .arc-stop {
     position: relative;
@@ -1185,8 +1197,13 @@ a {
     height: 16px;
     border-radius: 50%;
     background: var(--bg);
-    border: 2px solid var(--ember);
-    box-shadow: 0 0 14px rgba(232, 163, 61, 0.55);
+    border: 2px solid rgba(217, 169, 75, 0.3);
+    transition: border-color 0.4s, box-shadow 0.4s, background 0.4s;
+  }
+  .arc-stop.lit .arc-dot {
+    border-color: var(--ember);
+    background: var(--ember);
+    box-shadow: 0 0 14px rgba(217, 169, 75, 0.8);
   }
   .arc-stop .act-num {
     font-size: 0.72rem;
@@ -1248,7 +1265,7 @@ a {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(60% 45% at 50% 42%, rgba(232, 163, 61, 0.13), transparent 65%),
+    radial-gradient(60% 45% at 50% 42%, rgba(217, 169, 75, 0.13), transparent 65%),
     radial-gradient(80% 60% at 50% 110%, rgba(180, 95, 34, 0.1), transparent 60%);
   pointer-events: none;
 }
@@ -1316,14 +1333,14 @@ a {
   inset: 0;
   transform: translateZ(calc(var(--t) / 2));
   background: linear-gradient(155deg, #201910 0%, #14110b 52%, #0d0b08 100%);
-  border: 1px solid rgba(232, 163, 61, 0.3);
+  border: 1px solid rgba(217, 169, 75, 0.3);
   box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.5);
   display: flex;
 }
 .b-cover-frame {
   flex: 1;
   margin: 13px;
-  border: 1px solid rgba(232, 163, 61, 0.4);
+  border: 1px solid rgba(217, 169, 75, 0.4);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1371,7 +1388,7 @@ a {
   inset: 0;
   transform: rotateY(180deg) translateZ(calc(var(--t) / 2));
   background: #0e0c09;
-  border: 1px solid rgba(232, 163, 61, 0.18);
+  border: 1px solid rgba(217, 169, 75, 0.18);
 }
 .b-spine {
   top: 0;
@@ -1380,7 +1397,7 @@ a {
   width: var(--t);
   transform: rotateY(-90deg) translateZ(calc(var(--t) / 2));
   background: linear-gradient(to bottom, #1a140d, #100d08);
-  border-left: 1px solid rgba(232, 163, 61, 0.25);
+  border-left: 1px solid rgba(217, 169, 75, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1442,7 +1459,7 @@ a {
 }
 @keyframes cta-breathe {
   0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
-  50% { box-shadow: 0 10px 42px rgba(232, 163, 61, 0.35); }
+  50% { box-shadow: 0 10px 42px rgba(217, 169, 75, 0.35); }
 }
 .cover-hint {
   margin: 1.4rem 0 0;
@@ -1678,7 +1695,7 @@ a {
   border-top: 1px solid var(--line-soft);
   background: radial-gradient(
     70% 40% at 50% 0%,
-    rgba(232, 163, 61, 0.06),
+    rgba(217, 169, 75, 0.06),
     transparent 70%
   );
 }
@@ -1771,7 +1788,7 @@ a {
   outline: none;
   border-color: var(--ember);
   background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.15);
+  box-shadow: 0 0 0 3px rgba(217, 169, 75, 0.15);
 }
 .radio-row {
   display: flex;
@@ -1811,7 +1828,7 @@ a {
   color: #14100a;
 }
 .radio-pill input:focus-visible + span {
-  box-shadow: 0 0 0 3px rgba(232, 163, 61, 0.3);
+  box-shadow: 0 0 0 3px rgba(217, 169, 75, 0.3);
 }
 .contact-submit {
   display: flex;
@@ -1828,7 +1845,7 @@ a {
 /* ---------- the envelope tab ---------- */
 .tab-contact {
   color: var(--ember);
-  border-color: rgba(232, 163, 61, 0.5);
+  border-color: rgba(217, 169, 75, 0.5);
 }
 .tab-contact:hover {
   background: var(--ember);
