@@ -2192,3 +2192,20 @@ body.has-book .chapter.book-page {
     padding: 4rem 0 6rem;
   }
 }
+
+/* Blacklight: UV tint over everything. */
+html[data-blacklight='on'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      90% 70% at 50% 40%,
+      rgba(120, 70, 255, 0.14) 0%,
+      rgba(80, 40, 180, 0.22) 55%,
+      rgba(20, 8, 50, 0.42) 100%
+    );
+  mix-blend-mode: screen;
+}

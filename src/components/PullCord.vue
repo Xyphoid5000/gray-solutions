@@ -23,12 +23,9 @@ const setTheme = (light: boolean) => {
   // Fade the palette over half a second instead of snapping it.
   root.classList.add('theme-fade');
   root.dataset.theme = light ? 'light' : 'dark';
+  // If the lights come back on, the blacklight is over.
+  if (light) window.dispatchEvent(new CustomEvent('gs:lights-on'));
   setTimeout(() => root.classList.remove('theme-fade'), 650);
-  try {
-    localStorage.setItem('gs-theme', light ? 'light' : 'dark');
-  } catch {
-    /* private mode — theme just won't persist */
-  }
 };
 
 const startSway = () => {
@@ -128,10 +125,11 @@ const onClick = (e: MouseEvent) => {
 };
 
 onMounted(() => {
+  // The page always opens in light mode — the candle is unlit until
+  // the reader pulls the cord.
+  document.documentElement.dataset.theme = 'light';
   try {
-    if (localStorage.getItem('gs-theme') === 'light') {
-      document.documentElement.dataset.theme = 'light';
-    }
+    localStorage.removeItem('gs-theme');
   } catch {
     /* ignore */
   }

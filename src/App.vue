@@ -10,6 +10,8 @@ import PageTurner from './components/PageTurner.vue';
 import TabRail from './components/TabRail.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import ChapterModal from './components/ChapterModal.vue';
+import DeskCandle from './components/DeskCandle.vue';
+import LostPage from './components/LostPage.vue';
 import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
 import { returnToSection } from './lib/ui';
 import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
@@ -19,6 +21,24 @@ gsap.registerPlugin(ScrollTrigger, Flip);
 const router = useRouter();
 const route = useRoute();
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
+
+/** Blacklight: the candle is blown out, the lost page surfaces. */
+const blacklight = ref(false);
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+const candleLit = ref(false);
+
+function updateCandle() {
+  candleLit.value = isDark() && !blacklight.value;
+  document.documentElement.dataset.blacklight = blacklight.value
+    ? 'on'
+    : 'off';
+}
+
+function blowOutCandle() {
+  if (!candleLit.value) return;
+  blacklight.value = true;
+  updateCandle();
+}
 const reducedMotion =
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -187,6 +207,11 @@ router.beforeEach((to, from) => {
   turnDir = ti >= fi ? 1 : -1;
   toIdx = ti;
   fromIdx = fi;
+  // Navigating in blacklight: the candle re-lights, the page is lost again.
+  if (blacklight.value) {
+    blacklight.value = false;
+    updateCandle();
+  }
   // Manuscript pile: finished pages get tossed left.
   if (!reducedMotion && fi >= 0 && ti >= 0) {
     if (ti > fi) {
@@ -509,7 +534,22 @@ function onKey(e: KeyboardEvent) {
   else if (e.key === 'ArrowLeft') prevPage();
 }
 
+let themeObs: MutationObserver | null = null;
+function onLightsOn() {
+  blacklight.value = false;
+  updateCandle();
+}
+
 onMounted(() => {
+  // Candle follows the light switch.
+  updateCandle();
+  themeObs = new MutationObserver(updateCandle);
+  themeObs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+  window.addEventListener('gs:lights-on', onLightsOn);
+
   if (!reducedMotion) {
     lenis = new Lenis({ duration: 1.25, smoothWheel: true });
     setLenis(lenis);
@@ -537,6 +577,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  themeObs?.disconnect();
+  window.removeEventListener('gs:lights-on', onLightsOn);
   viewport.value?.removeEventListener('touchstart', onTouchStart);
   viewport.value?.removeEventListener('wheel', armCardSnap);
   viewport.value?.removeEventListener('touchmove', onTouchMove);
@@ -581,6 +623,8 @@ onUnmounted(() => {
     @contact="goToContact"
   />
   <BindCinematic ref="bindCinematic" @done="onBindDone" />
+  <DeskCandle :lit="candleLit" :blacklight="blacklight" @blowOut="blowOutCandle" />
+  <LostPage :visible="blacklight" />
   <Transition name="modal" @after-leave="onModalAfterLeave">
     <ChapterModal
       v-if="modalChapter"
