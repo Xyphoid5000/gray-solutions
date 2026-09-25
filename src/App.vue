@@ -276,6 +276,10 @@ function addToPile(chapterIndex: number) {
   const state = Flip.getState(page);
   const clone = page.cloneNode(true) as HTMLElement;
   clone.setAttribute('data-pile-index', String(chapterIndex));
+  // Strip the chapter layout classes — the pile card is its own thing,
+  // a plain paper slab. (Keeps body.has-book .chapter rules from
+  // overriding the pile's paper background.)
+  clone.classList.remove('chapter', 'book-page');
   clone.classList.add('pile-page');
   clone.setAttribute('aria-hidden', 'true');
   const toss = pileToss(chapterIndex);
