@@ -1137,6 +1137,17 @@ a {
   perspective: 1800px;
   overflow: clip;
 }
+/* Reserve the read pile's lane on the left so the open page never
+   slides under it. The pile is fixed; this padding keeps the chapter
+   in its own lane. */
+body.has-book .book-viewport {
+  padding-left: 170px;
+}
+@media (max-width: 640px) {
+  body.has-book .book-viewport {
+    padding-left: 84px;
+  }
+}
 .book-page {
   position: relative;
   min-height: 100svh;
@@ -1190,8 +1201,9 @@ body.has-book {
 body.has-book .chapter.book-page {
   background: var(--page);
   /* The manuscript is a paper slab on the desk — narrower than the
-     viewport so the mahogany shows on both sides. */
-  width: min(620px, 100vw - 120px);
+     viewport so the mahogany shows on both sides. Width is relative
+     to the viewport minus the pile's reserved lane. */
+  width: min(620px, 100% - 40px);
   margin-inline: auto;
   border-left: 1px solid var(--line-soft);
   border-right: 1px solid var(--line-soft);
@@ -1201,10 +1213,10 @@ body.has-book .chapter.book-page {
   position: relative;
 }
 @media (max-width: 640px) {
-  /* Mobile: the paper is narrower so the desk shows on both sides.
+  /* Mobile: the paper fills its lane (viewport minus the pile).
      Tabs float over the right desk margin. */
   body.has-book .chapter.book-page {
-    width: calc(100vw - 88px);
+    width: calc(100% - 16px);
     margin-inline: auto;
   }
   .tab-rail-right .tab {
@@ -2237,7 +2249,7 @@ html[data-blacklight='on'] body::after {
 /* Manuscript stack: a flat loose pile of paper, slightly messy. */
 .manuscript-stack {
   position: relative;
-  width: min(52vw, 220px);
+  width: min(64vw, 290px);
   aspect-ratio: 5 / 7;
   margin-bottom: 12px;
 }
