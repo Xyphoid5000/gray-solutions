@@ -171,27 +171,27 @@ onUnmounted(() => {
             role="img"
             aria-label="A story arc rising from exposition to climax and resolving"
           >
-            <line x1="40" y1="280" x2="960" y2="280" stroke="rgba(241,236,223,0.08)" stroke-width="1" />
+            <line x1="40" y1="280" x2="960" y2="280" stroke="rgba(242,236,223,0.08)" stroke-width="1" />
             <path
               id="arc-path"
               d="M 60 280 C 220 280, 260 250, 360 170 C 460 90, 540 60, 620 90 C 700 120, 760 220, 940 250"
               fill="none"
-              stroke="#d9a94b"
+              stroke="#d08a4e"
               stroke-width="3"
               stroke-linecap="round"
             />
-            <g class="arc-nodes" fill="#d9a94b">
+            <g class="arc-nodes" fill="#d08a4e">
               <circle class="arc-node" cx="60" cy="280" r="7" />
               <circle class="arc-node" cx="360" cy="170" r="7" />
               <circle class="arc-node" cx="620" cy="90" r="9" />
               <circle class="arc-node" cx="940" cy="250" r="7" />
             </g>
             <g class="arc-pen" opacity="0">
-              <circle class="arc-pen-glow" cx="0" cy="0" r="16" fill="#d9a94b" opacity="0.25" />
+              <circle class="arc-pen-glow" cx="0" cy="0" r="16" fill="#d08a4e" opacity="0.25" />
               <circle class="arc-pen-tip" cx="0" cy="0" r="5" fill="#f1ecdf" />
-              <circle class="arc-pen-core" cx="0" cy="0" r="2.5" fill="#d9a94b" />
+              <circle class="arc-pen-core" cx="0" cy="0" r="2.5" fill="#d08a4e" />
             </g>
-            <g font-family="Inter, sans-serif" font-size="15" letter-spacing="3" fill="#6d6f60">
+            <g font-family="Inter, sans-serif" font-size="15" letter-spacing="3" fill="#6f6a5e">
               <text x="60" y="308" text-anchor="middle">EXPOSITION</text>
               <text x="360" y="140" text-anchor="middle">RISING ACTION</text>
               <text x="620" y="58" text-anchor="middle">CLIMAX</text>
