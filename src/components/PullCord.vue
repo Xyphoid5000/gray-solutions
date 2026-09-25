@@ -38,8 +38,8 @@ const stopSway = () => {
   sway = null;
 };
 
-/** Violent swing for the blacklight entrance: thrash side to side,
-    then settle back into the gentle sway. */
+/** Startled swing for the blacklight entrance: a quick swing side to
+    side, then settle back into the gentle sway. */
 const shakeViolently = () => {
   if (!root.value) return;
   stopSway();
@@ -48,10 +48,10 @@ const shakeViolently = () => {
     root.value,
     { rotation: 0 },
     {
-      rotation: 22,
-      duration: 0.08,
+      rotation: 8,
+      duration: 0.15,
       yoyo: true,
-      repeat: 9,
+      repeat: 5,
       ease: 'sine.inOut',
       onComplete: () => {
         gsap.set(root.value, { rotation: 0 });

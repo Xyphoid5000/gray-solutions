@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, nextTick, watch } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import { gsap } from 'gsap';
 import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
+import { manuscriptBound } from '../lib/manuscript';
+import ChapterModal from './ChapterModal.vue';
 
 gsap.registerPlugin(Flip);
 
@@ -10,7 +12,6 @@ const emit = defineEmits<{
   (e: 'back-to-cover'): void;
   (e: 'back-to-cover-section', section: 'about' | 'contact'): void;
   (e: 'finale-contact'): void;
-  (e: 'exit-down'): void;
 }>();
 
 /** The Finale binds the manuscript before the contact form. */
@@ -122,6 +123,20 @@ function next() {
 }
 function prev() {
   goTo(currentIndex.value - 1);
+}
+
+/** Tabs: a tab to an unread chapter opens the chapter card first;
+    heading back to a finished page jumps straight there — the pile
+    already says where you're going. */
+const modalIndex = ref<number | null>(null);
+function onTabClick(i: number) {
+  if (i === currentIndex.value) return;
+  if (i > currentIndex.value) modalIndex.value = i;
+  else goTo(i);
+}
+function goFromModal(i: number) {
+  modalIndex.value = null;
+  goTo(i);
 }
 
 function onKey(e: KeyboardEvent) {
@@ -249,12 +264,6 @@ function onTouchEnd(e: TouchEvent) {
   const onStrip = touchOnStrip;
   touchX = null;
   touchOnStrip = false;
-  // A scroll-off-the-bottom exit already fired during this touch — don't
-  // also turn a page from the release drift.
-  if (downExited) {
-    downExited = false;
-    return;
-  }
   if (onStrip) return;
   if (Math.abs(dx) < 48) return;
   // Last page: swipe left (toward the next page) to bind the book.
@@ -266,86 +275,6 @@ function onTouchEnd(e: TouchEvent) {
   else prev();
 }
 
-/** Scrolling down past the bottom edge exits the book: any chapter
-    closes back to the main page, the finale runs the binding instead.
-    Only fires on a deliberate push after the page stops moving — normal
-    reading scrolls never trigger it, and the proof strip is exempt. */
-let exitArmed = true;
-let downExited = false;
-let wheelAccum = 0;
-let lastScrollY = 0;
-let downAnchorY: number | null = null;
-
-function atBottomEdge(): boolean {
-  return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 12;
-}
-
-function fireExitDown() {
-  if (!exitArmed || pileOpen.value) return;
-  exitArmed = false;
-  downExited = true;
-  if (currentIndex.value === chapters.length - 1) {
-    onChapterContact(currentIndex.value);
-  } else {
-    emit('exit-down');
-  }
-}
-
-function onWheelDown(e: WheelEvent) {
-  const el = e.target as HTMLElement | null;
-  const atBottom = atBottomEdge();
-  const moved = window.scrollY !== lastScrollY;
-  lastScrollY = window.scrollY;
-  if (!exitArmed || pileOpen.value || el?.closest?.('.proof-strip')) {
-    wheelAccum = 0;
-    return;
-  }
-  if (!atBottom || e.deltaY <= 0 || moved) {
-    wheelAccum = 0;
-    return;
-  }
-  wheelAccum += e.deltaY;
-  if (wheelAccum > 140) {
-    wheelAccum = 0;
-    fireExitDown();
-  }
-}
-
-function onTouchMoveDown(e: TouchEvent) {
-  const el = e.target as HTMLElement | null;
-  if (!exitArmed || pileOpen.value || el?.closest?.('.proof-strip')) {
-    downAnchorY = null;
-    return;
-  }
-  if (!atBottomEdge()) {
-    downAnchorY = null;
-    return;
-  }
-  const y = e.touches[0].clientY;
-  if (downAnchorY === null) {
-    downAnchorY = y;
-    return;
-  }
-  if (downAnchorY - y > 70) {
-    downAnchorY = null;
-    fireExitDown();
-  }
-}
-
-watch(currentIndex, () => {
-  exitArmed = true;
-});
-
-onMounted(() => {
-  lastScrollY = window.scrollY;
-  window.addEventListener('wheel', onWheelDown, { passive: true });
-  window.addEventListener('touchmove', onTouchMoveDown, { passive: true });
-});
-
-onUnmounted(() => {
-  window.removeEventListener('wheel', onWheelDown);
-  window.removeEventListener('touchmove', onTouchMoveDown);
-});
 </script>
 
 <template>
@@ -358,20 +287,26 @@ onUnmounted(() => {
     @touchend.passive="onTouchEnd"
     tabindex="0"
   >
-    <!-- Desk props: candle, pencil, pull-cord live here (App provides them). -->
-    <slot name="desk-props" />
+    <!-- Desk props (candle, pencil) live on a zero-height sticky stage:
+         planted on the visible desk while pages scroll, never on the
+         page itself or the screen. App provides them. -->
+    <div class="desk-stage">
+      <slot name="desk-props" />
+    </div>
 
     <!-- Left lane: the read pile, a messy stack. Click to scatter / restack. -->
     <div class="read-pile" aria-label="Finished pages" @click="togglePile">
-      <!-- The manuscript cover: finished the moment the book opens. -->
+      <!-- The cover: stamped MANUSCRIPT until bound, then the finished book. -->
       <button
         type="button"
         class="pile-page pile-cover"
+        :class="{ 'is-bound': manuscriptBound }"
         :style="pileCardStyle(-1)"
         aria-label="Open finished pages"
         tabindex="-1"
       >
-        <span class="pile-stamp" aria-hidden="true">Manuscript</span>
+        <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
+        <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
       </button>
       <button
         v-for="i in pile"
@@ -394,12 +329,14 @@ onUnmounted(() => {
         <button
           type="button"
           class="pile-scatter-card"
+          :class="{ 'is-bound': manuscriptBound }"
           :style="{ '--sc-rot': scatterRot(pile.length) + 'deg', '--sc-delay': (pile.length * 0.7) + 's' }"
-          aria-label="Back to the manuscript cover"
+          :aria-label="manuscriptBound ? 'Back to the book cover' : 'Back to the manuscript cover'"
           @click="pickCoverFromScatter"
         >
-          <span class="pile-stamp" aria-hidden="true">Manuscript</span>
-          <span class="pile-grid-label" aria-hidden="true">Manuscript cover</span>
+          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
+          <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+          <span class="pile-grid-label" aria-hidden="true">{{ manuscriptBound ? 'Book cover' : 'Manuscript cover' }}</span>
         </button>
         <button
           v-for="(i, pos) in pile"
@@ -446,10 +383,19 @@ onUnmounted(() => {
           :style="{ '--tab-row': i }"
           :aria-label="`Go to ${ch.label}`"
           :aria-current="i === currentIndex ? 'page' : undefined"
-          @click="goTo(i)"
+          @click="onTabClick(i)"
         >
           {{ ch.num }}
         </button>
       </div>
+
+    <!-- Chapter card: tabs to unread chapters preview here first. -->
+    <ChapterModal
+      v-if="modalIndex !== null"
+      :chapter="chapters[modalIndex]"
+      :current="modalIndex === currentIndex"
+      @close="modalIndex = null"
+      @go="goFromModal"
+    />
   </div>
 </template>
