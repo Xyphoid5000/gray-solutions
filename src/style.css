@@ -2611,12 +2611,14 @@ html[data-theme='dark'] body.has-book .chapter {
    viewport while the desk is on screen. The candle and pencil live on
    it, so they stay planted on the wood while the pages scroll — glued
    to the desk, never to a page or the screen. They leave with the desk
-   when the book closes. No z-index here: the props keep their own
-   place in the desk's stacking order. */
+   when the book closes. The stage sits above the paper and tabs (so
+   the props rest visibly on the desk) but below the pile, the scatter
+   overlay, and the popups. */
 .desk-stage {
   position: sticky;
   top: 0;
   height: 0;
+  z-index: 30;
 }
 /* The pencil rests while the finale is open — the writing is done. */
 .manuscript-desk.is-finale .desk-pencil {
