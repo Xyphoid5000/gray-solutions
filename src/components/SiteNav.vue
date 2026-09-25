@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
+import PullCord from './PullCord.vue';
 
 const router = useRouter();
 const emit = defineEmits<{
@@ -23,5 +24,6 @@ const emit = defineEmits<{
         Contact me
       </button>
     </div>
+    <PullCord />
   </header>
 </template>

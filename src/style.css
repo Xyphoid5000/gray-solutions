@@ -1338,7 +1338,7 @@ a {
   letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--ember);
-  margin: 0 0 0.6rem;
+  margin: 0 0 1.2rem;
   text-align: center;
 }
 
@@ -1543,9 +1543,11 @@ a {
 /* A ceiling-pull cord hanging from the top of the viewport. It overlays
    the page, sways gently at idle, and toggles the theme when yanked. */
 .pull-cord {
-  position: fixed;
-  top: var(--nav-h);
-  left: max(1.5rem, calc((100vw - var(--wrap)) / 2));
+  /* Lives inside the header, hanging from the bottom-center of the G. mark
+     (34px, vertically centered): top = header middle + half the mark. */
+  position: absolute;
+  top: calc(50% + 17px);
+  left: max(calc(1.5rem - 1px), calc((100vw - var(--wrap)) / 2 - 1px));
   z-index: 1100;
   display: flex;
   flex-direction: column;

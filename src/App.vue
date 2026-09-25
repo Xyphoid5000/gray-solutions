@@ -5,7 +5,6 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { RouterView, useRouter, useRoute } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
-import PullCord from './components/PullCord.vue';
 import PageTurner from './components/PageTurner.vue';
 import TabRail from './components/TabRail.vue';
 import ChapterModal from './components/ChapterModal.vue';
@@ -402,7 +401,6 @@ onUnmounted(() => {
 <template>
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="goToContact" />
-  <PullCord />
   <div ref="viewport" class="book-viewport">
     <RouterView v-slot="{ Component, route }">
       <Transition
