@@ -72,7 +72,7 @@ function tabLabel(ch: ChapterMeta): string {
   <div class="tab-rails" aria-hidden="false">
     <nav class="tab-rail tab-rail-right" aria-label="Pages">
       <button
-        v-for="(t, idx) in allTabs"
+        v-for="t in allTabs"
         :key="t.ch.path"
         class="tab"
         :data-tab-ch="t.chIndex"
