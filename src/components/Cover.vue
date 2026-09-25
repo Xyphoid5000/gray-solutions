@@ -9,6 +9,22 @@ import { scrollSlowTo } from '../lib/scroll';
 
 const router = useRouter();
 
+/** The manuscript becomes a book once the reader finishes and binds it. */
+const isBound = ref(
+  typeof localStorage !== 'undefined' &&
+    localStorage.getItem('gs-manuscript-bound') === '1',
+);
+function markBound() {
+  isBound.value = true;
+  try {
+    localStorage.setItem('gs-manuscript-bound', '1');
+  } catch {
+    /* ignore */
+  }
+}
+// The binding cinematic sets this; listen for it.
+window.addEventListener('gs:manuscript-bound', markBound);
+
 const stageRef = ref<HTMLElement | null>(null);
 const bookRef = ref<HTMLElement | null>(null);
 const shadowRef = ref<HTMLElement | null>(null);
@@ -511,17 +527,21 @@ onUnmounted(() => {
           @pointerleave="endStageDrag"
         >
           <div ref="shadowRef" class="book-shadow" aria-hidden="true"></div>
-          <div ref="bookRef" class="book3d" aria-hidden="true">
+          <div ref="bookRef" class="book3d" :class="{ manuscript: !isBound }" aria-hidden="true">
             <div class="b-face b-back"></div>
-            <div class="b-face b-spine"><span>Gray Solutions</span></div>
+            <div class="b-face b-spine"><span>{{ isBound ? 'Gray Solutions' : 'Manuscript' }}</span></div>
             <div class="b-face b-top"></div>
             <div class="b-face b-pages"></div>
             <div class="b-face b-front">
-              <div class="b-cover-frame">
+              <div v-if="isBound" class="b-cover-frame">
                 <span class="b-mark">G.</span>
                 <p class="b-title">Gray<br />Solutions<em>.</em></p>
                 <p class="b-tag"><em>Websites that tell stories.</em></p>
                 <p class="b-by">Chris Gray</p>
+              </div>
+              <div v-else class="b-manuscript-frame">
+                <p class="b-stamp">Manuscript</p>
+                <p class="b-msub">Six pages &middot; first draft</p>
               </div>
             </div>
           </div>
@@ -530,7 +550,7 @@ onUnmounted(() => {
         <div class="cover-ui">
           <div class="cover-cta">
             <button class="btn btn-solid" @click="open()">
-              Open the book <span class="arrow" aria-hidden="true">&rarr;</span>
+              {{ isBound ? 'Open the book' : 'Read the manuscript' }} <span class="arrow" aria-hidden="true">&rarr;</span>
             </button>
           </div>
           <p class="cover-hint">Six pages &middot; best read front to back</p>

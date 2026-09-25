@@ -8,6 +8,7 @@ import { RouterView, useRouter, useRoute } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
 import TabRail from './components/TabRail.vue';
+import BindCinematic from './components/BindCinematic.vue';
 import ChapterModal from './components/ChapterModal.vue';
 import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
 import { returnToSection } from './lib/ui';
@@ -17,6 +18,7 @@ gsap.registerPlugin(ScrollTrigger, Flip);
 
 const router = useRouter();
 const route = useRoute();
+const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
 const reducedMotion =
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -60,6 +62,11 @@ function onModalAfterLeave() {
  * back out to the cover, then drift slowly down to the form.
  */
 function goToContact() {
+  // From the Finale: bind the manuscript before the contact form.
+  if (route.path === '/finale' && bindCinematic.value) {
+    bindCinematic.value.start();
+    return;
+  }
   if (route.path === '/') {
     const form = document.getElementById('contact');
     if (form) scrollSlowTo(form);
@@ -67,6 +74,18 @@ function goToContact() {
   }
   returnToSection.value = 'contact';
   router.push('/');
+}
+
+function onBindDone() {
+  // The book is bound — tell the cover, then go to the contact form.
+  window.dispatchEvent(new CustomEvent('gs:manuscript-bound'));
+  if (route.path === '/') {
+    const form = document.getElementById('contact');
+    if (form) scrollSlowTo(form);
+  } else {
+    returnToSection.value = 'contact';
+    router.push('/');
+  }
 }
 
 /**
@@ -561,6 +580,7 @@ onUnmounted(() => {
     @select="selectChapter"
     @contact="goToContact"
   />
+  <BindCinematic ref="bindCinematic" @done="onBindDone" />
   <Transition name="modal" @after-leave="onModalAfterLeave">
     <ChapterModal
       v-if="modalChapter"

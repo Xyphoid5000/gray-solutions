@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { gsap } from 'gsap';
 
 const emit = defineEmits<{
@@ -25,42 +25,56 @@ const LINKS = [
   },
 ];
 
+/** The manuscript is being finished right now — type it live. */
+const typed = ref('');
+const typingDone = ref(false);
+const FULL_TEXT = "Hi, I'm Chris and I write stories.";
+let typeTimer: number | null = null;
 let ctx: gsap.Context | null = null;
 
 onMounted(() => {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) {
+    typed.value = FULL_TEXT;
+    typingDone.value = true;
+    return;
+  }
+  // Typewriter: a character every ~45ms, with natural pauses.
+  let i = 0;
+  const type = () => {
+    if (i < FULL_TEXT.length) {
+      typed.value += FULL_TEXT[i];
+      i++;
+      // Slightly longer pause on punctuation / spaces.
+      const ch = FULL_TEXT[i - 1];
+      const delay = ch === ',' || ch === '.' ? 220 : ch === ' ' ? 70 : 42;
+      typeTimer = window.setTimeout(type, delay + Math.random() * 30);
+    } else {
+      typingDone.value = true;
+    }
+  };
+  // Let the page settle before the first keystroke.
+  typeTimer = window.setTimeout(type, 600);
+
   ctx = gsap.context(() => {
+    // The rest of the page fades in after the typing finishes.
     gsap.fromTo(
-      '.prologue .h-line-inner',
-      // The CSS hides the line at translateY(115%) to avoid a flash;
-      // GSAP parses that into a pixel y, so zero it explicitly or the
-      // title would stay shifted down and clipped forever.
-      { yPercent: 115, y: 0 },
+      '.finale .fin, .finale .link-more',
+      { opacity: 0, y: 26 },
       {
-        yPercent: 0,
+        opacity: 1,
         y: 0,
-        duration: 1.1,
-        ease: 'power4.out',
-        stagger: 0.1,
-        delay: 0.15,
+        duration: 0.9,
+        ease: 'power3.out',
+        delay: 2.8,
+        stagger: 0.15,
       },
     );
-    gsap.utils.toArray<HTMLElement>('.finale [v-reveal], .finale .fin').forEach((el) => {
-      gsap.fromTo(
-        el,
-        { opacity: 0, y: 26 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.9,
-          ease: 'power3.out',
-          scrollTrigger: { trigger: el, start: 'top 88%' },
-        },
-      );
-    });
   }, document.querySelector('.prologue') as HTMLElement);
 });
 
 onUnmounted(() => {
+  if (typeTimer) window.clearTimeout(typeTimer);
   ctx?.revert();
   ctx = null;
 });
@@ -72,12 +86,13 @@ onUnmounted(() => {
       <p class="kicker">
         <span class="k-num">&#10022;</span> About the author
       </p>
-      <h2 class="h-display">
-        <span class="h-line"
-          ><span class="h-line-inner"
-            >Hi, I&rsquo;m Chris and I write stories.</span
-          ></span
-        >
+      <h2 class="h-display typewriter">
+        <span class="typed-text">{{ typed }}</span
+        ><span
+          class="type-cursor"
+          :class="{ done: typingDone }"
+          aria-hidden="true"
+        ></span>
       </h2>
       <p>
         <button class="link-more" @click="emit('about')">
