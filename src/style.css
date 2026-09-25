@@ -1400,11 +1400,11 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 /* ---------- proof: swipeable strip ---------- */
 .proof-strip {
   display: flex;
-  gap: 1.2rem;
+  gap: 1rem;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding: 0.4rem max(1.5rem, calc((100vw - var(--wrap)) / 2)) 1.4rem;
-  margin: 0 calc(-1 * max(1.5rem, calc((100vw - var(--wrap)) / 2)));
+  padding: 0.4rem 0.2rem 1.4rem;
+  margin: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
@@ -1412,7 +1412,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   display: none;
 }
 .proof-strip .proof-panel {
-  width: min(84vw, 560px);
+  width: min(78vw, 420px);
   flex-shrink: 0;
   scroll-snap-align: center;
   min-height: unset;
@@ -2425,7 +2425,7 @@ html[data-theme='dark'] body.has-book .chapter {
   inset: 0;
   pointer-events: none;
   /* The wrap is the sized container — paper fills it, tab sits at its edge. */
-  width: min(520px, 100% - 96px);
+  width: min(600px, 100% - 96px);
   margin-inline: auto;
   left: 0;
   right: 0;
