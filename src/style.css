@@ -1189,9 +1189,10 @@ body.has-book {
 }
 body.has-book .chapter.book-page {
   background: var(--page);
-  /* Manuscript pages run off the left edge — the read pile lives there. */
-  margin-left: -24px;
-  margin-right: 34px;
+  /* The manuscript is a paper slab on the desk — narrower than the
+     viewport so the mahogany shows on both sides. */
+  width: min(620px, 100vw - 120px);
+  margin-inline: auto;
   border-left: 1px solid var(--line-soft);
   border-right: 1px solid var(--line-soft);
   box-shadow:
@@ -1200,24 +1201,24 @@ body.has-book .chapter.book-page {
   position: relative;
 }
 @media (max-width: 640px) {
-  /* Mobile tabs are 26px wide — the page edges meet them exactly.
-     No negative left margin on mobile; it clips the text. */
+  /* Mobile: the paper is narrower so the desk shows on both sides.
+     Tabs float over the right desk margin. */
   body.has-book .chapter.book-page {
-    margin-left: 0;
-    margin-right: 26px;
+    width: calc(100vw - 88px);
+    margin-inline: auto;
   }
   .tab-rail-right .tab {
     border-radius: 0 8px 8px 0;
   }
 }
 
-/* The read pile: finished manuscript pages tossed to the left. */
+/* The read pile: finished manuscript pages, in the left desk margin. */
 .read-pile {
   position: fixed;
-  left: -56px;
+  left: 18px;
   top: 16%;
-  width: 200px;
-  height: 260px;
+  width: 140px;
+  height: 190px;
   z-index: 800;
   pointer-events: none;
 }
@@ -1232,12 +1233,38 @@ body.has-book .chapter.book-page {
   overflow: hidden;
   /* The toss (rotation/offset) is set inline per page. */
 }
+/* The tab sticks to its page in the pile. */
+.read-pile .pile-page::after {
+  content: attr(data-tab);
+  position: absolute;
+  right: -14px;
+  top: 10px;
+  width: 28px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: var(--page);
+  border: 1px solid var(--line-soft);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+}
 @media (max-width: 640px) {
   .read-pile {
-    left: -72px;
+    left: 6px;
     top: 14%;
-    width: 150px;
-    height: 200px;
+    width: 72px;
+    height: 100px;
+  }
+  .read-pile .pile-page::after {
+    right: -10px;
+    top: 8px;
+    width: 20px;
+    height: 30px;
+    font-size: 0.7rem;
   }
 }
 

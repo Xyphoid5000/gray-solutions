@@ -9,6 +9,11 @@ const emit = defineEmits<{
   contact: [];
 }>();
 
+const props = defineProps<{
+  /** Chapter indices currently in the read pile — their tabs live there. */
+  piled: Set<number>;
+}>();
+
 interface RailTab {
   ch: ChapterMeta;
   active: boolean;
@@ -25,12 +30,13 @@ const rowOf = (ch: ChapterMeta) => chapters.indexOf(ch) + 1;
 const currentRow = computed(() => currentIndex.value + 1);
 
 /**
- * All tabs on the right: previous pages (top), current (active),
- * next pages, then contact. The read pile owns the left now.
+ * Tabs on the right: only for pages NOT in the read pile.
+ * Piled pages keep their tabs attached to the pile card (left).
  */
 const allTabs = computed<RailTab[]>(() => {
   const tabs: RailTab[] = [];
   chapters.forEach((ch, i) => {
+    if (props.piled.has(i)) return;
     tabs.push({
       ch,
       active: i === currentIndex.value,

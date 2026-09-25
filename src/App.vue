@@ -226,11 +226,12 @@ router.beforeEach((to, from) => {
     updateCandle();
   }
   // Manuscript pile: finished pages get tossed left.
+  // The cover (index 0) never goes in the pile.
   if (!reducedMotion && fi >= 0 && ti >= 0) {
     if (ti > fi) {
-      for (let i = fi; i < ti; i++) addToPile(i);
+      for (let i = Math.max(fi, 1); i < ti; i++) addToPile(i);
     } else if (ti < fi) {
-      for (let i = ti; i < fi; i++) removeFromPile(i);
+      for (let i = Math.max(ti, 1); i < fi; i++) removeFromPile(i);
     }
   }
   // Leaving the chapters entirely — clear the pile.
@@ -256,6 +257,9 @@ function pileToss(index: number): { rotation: number; x: number; y: number } {
   };
 }
 
+/** Chapters currently in the read pile (by index). TabRail hides these. */
+const pileIndices = ref<Set<number>>(new Set());
+
 function addToPile(chapterIndex: number) {
   const page = document.querySelector(
     '.book-viewport .book-page',
@@ -266,10 +270,13 @@ function addToPile(chapterIndex: number) {
   const state = Flip.getState(page);
   const clone = page.cloneNode(true) as HTMLElement;
   clone.setAttribute('data-pile-index', String(chapterIndex));
+  // The tab sticks to its page: 1-based chapter number.
+  clone.setAttribute('data-tab', String(chapterIndex));
   clone.classList.add('pile-page');
   clone.setAttribute('aria-hidden', 'true');
   const toss = pileToss(chapterIndex);
   pile.appendChild(clone);
+  pileIndices.value.add(chapterIndex);
   // The clone lands in the pile slot; Flip animates it from the page.
   gsap.set(clone, {
     rotation: toss.rotation,
@@ -289,6 +296,7 @@ function removeFromPile(chapterIndex: number) {
   const el = pile.querySelector(
     `[data-pile-index="${chapterIndex}"]`,
   ) as HTMLElement | null;
+  pileIndices.value.delete(chapterIndex);
   if (el) {
     gsap.to(el, {
       opacity: 0,
@@ -302,6 +310,7 @@ function removeFromPile(chapterIndex: number) {
 
 function clearPile() {
   const pile = document.querySelector('.read-pile');
+  pileIndices.value.clear();
   if (!pile) return;
   gsap.to(pile.children, {
     opacity: 0,
@@ -633,6 +642,7 @@ onUnmounted(() => {
   <PageTurner v-if="isChapter(route.path)" />
   <TabRail
     v-if="isChapter(route.path) && route.path !== '/'"
+    :piled="pileIndices"
     @select="selectChapter"
     @contact="goToContact"
   />

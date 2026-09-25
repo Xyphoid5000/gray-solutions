@@ -26,12 +26,12 @@
 .desk-pencil {
   position: fixed;
   z-index: 840;
-  width: 110px;
+  width: 150px;
   pointer-events: none;
   opacity: 0.9;
   transform: rotate(-14deg);
   /* Desktop: on the desk, right of the page, below the candle. */
-  right: 72px;
+  right: 56px;
   top: 58%;
 }
 .desk-pencil svg {
@@ -61,8 +61,8 @@
 }
 @media (max-width: 640px) {
   .desk-pencil {
-    width: 84px;
-    right: 44px;
+    width: 110px;
+    right: 36px;
     top: auto;
     bottom: 110px;
     transform: rotate(-18deg);
