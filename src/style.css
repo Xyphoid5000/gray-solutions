@@ -1228,12 +1228,35 @@ body.has-book .chapter.book-page {
 .read-pile {
   position: fixed;
   left: 18px;
-  top: 16%;
+  bottom: 24px;
   width: 140px;
   height: 190px;
   z-index: 800;
   /* The pile cards are buttons — clickable to go back. */
   pointer-events: auto;
+}
+/* When spread, the cards fan out so a specific page can be picked. */
+.read-pile.is-spread {
+  width: min(90vw, 560px);
+  height: 220px;
+}
+.read-pile.is-spread .pile-page {
+  left: calc(var(--spread-pos, 0) * 96px);
+  top: 0;
+  transform: rotate(0deg) !important;
+}
+.pile-hint {
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  appearance: none;
+  border: none;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  cursor: pointer;
 }
 .read-pile .pile-page {
   position: absolute;
@@ -2388,8 +2411,6 @@ html[data-theme='dark'] body.has-book .chapter {
       transparent 7px
     ),
     linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
-  /* Reserve the pile's lane on the left. */
-  padding-left: 170px;
   outline: none;
 }
 .page-stack {
@@ -2401,6 +2422,11 @@ html[data-theme='dark'] body.has-book .chapter {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  /* The wrap is the sized container — paper fills it, tab sits at its edge. */
+  width: min(680px, 100% - 56px);
+  margin-inline: auto;
+  left: 0;
+  right: 0;
 }
 .page-wrap.is-current {
   /* The current page is in flow so the stack has height. */
@@ -2416,13 +2442,10 @@ html[data-theme='dark'] body.has-book .chapter {
   z-index: 10;
   background: #fffdf6;
   color: #1a1510;
-  width: min(620px, 100% - 120px);
-  margin-inline: auto;
-  margin-top: 5rem;
-  margin-bottom: 5rem;
-  padding: clamp(2rem, 5vw, 4rem) clamp(1.5rem, 4vw, 3rem);
-  /* Right margin: room for the attached tab. */
-  margin-right: max(70px, calc((100% - 620px) / 2 + 40px));
+  width: 100%;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 3vw, 2rem);
   border-radius: 3px;
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.55),
@@ -2441,8 +2464,9 @@ html[data-theme='dark'] .page-paper {
 .page-tab {
   position: absolute;
   z-index: 20;
-  right: max(12px, calc((100% - 620px) / 2 - 18px));
-  top: calc(120px + var(--tab-row, 0) * 58px);
+  /* At the paper's right edge, protruding like a real tab. */
+  right: -14px;
+  top: calc(100px + var(--tab-row, 0) * 58px);
   width: 52px;
   height: 46px;
   display: grid;
@@ -2472,48 +2496,23 @@ html[data-theme='dark'] .page-tab {
 .page-tab.is-piled {
   opacity: 0.6;
 }
-/* Prev/next bar. */
-.book-nav {
-  position: sticky;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: linear-gradient(transparent, rgba(10, 4, 2, 0.85));
-}
-.nav-btn {
-  appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  padding: 0.6rem 1.2rem;
-  border-radius: 999px;
-  font: inherit;
-  cursor: pointer;
-}
-.nav-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-.nav-pos {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.9rem;
-}
 @media (max-width: 640px) {
   .manuscript-desk {
-    padding-left: 84px;
+    padding-left: 0;
   }
-  .page-paper {
-    width: calc(100% - 32px);
-    margin-right: 16px;
+  .page-wrap {
+    width: calc(100% - 48px);
   }
   .page-tab {
-    right: 2px;
+    right: -10px;
     width: 40px;
     height: 38px;
     font-size: 0.85rem;
+  }
+  .read-pile {
+    left: 12px;
+    bottom: 16px;
+    width: 110px;
+    height: 150px;
   }
 }

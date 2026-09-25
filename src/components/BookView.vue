@@ -3,6 +3,7 @@ import { computed, ref, nextTick } from 'vue';
 import { gsap } from 'gsap';
 import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
+import ChapterModal from './ChapterModal.vue';
 
 gsap.registerPlugin(Flip);
 
@@ -102,26 +103,83 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'ArrowRight') next();
   if (e.key === 'ArrowLeft') prev();
 }
+
+/** The chapter modal: tabs open a preview, "Turn to this page" goes. */
+const modalIndex = ref<number | null>(null);
+function openModal(i: number) {
+  modalIndex.value = i;
+}
+function closeModal() {
+  modalIndex.value = null;
+}
+function goFromModal(i: number) {
+  modalIndex.value = null;
+  goTo(i);
+}
+
+/** The pile spreads when tapped, so a specific page can be picked. */
+const pileSpread = ref(false);
+function togglePileSpread() {
+  pileSpread.value = !pileSpread.value;
+}
+function pickFromPile(i: number) {
+  pileSpread.value = false;
+  goTo(i);
+}
+
+/** Swipe to turn pages. */
+let touchX: number | null = null;
+function onTouchStart(e: TouchEvent) {
+  touchX = e.touches[0].clientX;
+}
+function onTouchEnd(e: TouchEvent) {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  touchX = null;
+  if (Math.abs(dx) < 48) return;
+  if (dx < 0) next();
+  else prev();
+}
 </script>
 
 <template>
-  <div class="manuscript-desk" @keydown="onKey" tabindex="0">
+  <div
+    class="manuscript-desk"
+    @keydown="onKey"
+    @touchstart.passive="onTouchStart"
+    @touchend.passive="onTouchEnd"
+    tabindex="0"
+  >
     <!-- Desk props: candle, pencil, pull-cord live here (App provides them). -->
     <slot name="desk-props" />
 
-    <!-- Left: the read pile. Click a card to go back. -->
-    <div class="read-pile" aria-label="Finished pages">
+    <!-- Bottom left: the read pile. Tap to spread, tap a card to go back. -->
+    <div
+      class="read-pile"
+      :class="{ 'is-spread': pileSpread }"
+      aria-label="Finished pages"
+    >
       <button
-        v-for="i in pile"
+        v-for="(i, pos) in pile"
         :key="i"
         type="button"
         class="pile-page"
         :data-pile-index="i"
+        :style="pileSpread ? { '--spread-pos': pos } : undefined"
         :aria-label="`Go back to ${chapters[i].label}`"
-        @click="goTo(i)"
+        @click="pileSpread ? pickFromPile(i) : togglePileSpread()"
       >
         <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
         <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>
+      </button>
+      <button
+        v-if="pile.length > 1 && !pileSpread"
+        type="button"
+        class="pile-hint"
+        @click="togglePileSpread"
+        aria-label="Spread the pile to pick a page"
+      >
+        {{ pile.length }} pages
       </button>
     </div>
 
@@ -154,30 +212,20 @@ function onKey(e: KeyboardEvent) {
           :style="{ '--tab-row': i }"
           :aria-label="`Go to ${ch.label}`"
           :aria-current="i === currentIndex ? 'page' : undefined"
-          @click="goTo(i)"
+          @click="openModal(i)"
         >
           {{ ch.num }}
         </button>
       </div>
     </div>
 
-    <!-- Persistent prev/next. -->
-    <div class="book-nav" aria-label="Page navigation">
-      <button type="button" class="nav-btn" :disabled="currentIndex === 0" @click="prev">
-        ← Prev
-      </button>
-      <span class="nav-pos">{{ currentIndex + 1 }} / {{ chapters.length }}</span>
-      <button
-        type="button"
-        class="nav-btn"
-        :disabled="currentIndex === chapters.length - 1"
-        @click="next"
-      >
-        Next →
-      </button>
-      <button type="button" class="nav-btn nav-cover" @click="emit('back-to-cover')">
-        Cover
-      </button>
-    </div>
+    <!-- The chapter modal: preview, then turn to the page. -->
+    <ChapterModal
+      v-if="modalIndex !== null"
+      :chapter="chapters[modalIndex]"
+      :current="modalIndex === currentIndex"
+      @close="closeModal"
+      @go="goFromModal"
+    />
   </div>
 </template>
