@@ -12,7 +12,7 @@ const emit = defineEmits<{
 interface RailTab {
   ch: ChapterMeta;
   active: boolean;
-  /** 1-based grid row — every page owns its row on either rail. */
+  /** 1-based grid row — every page owns its row. */
   row: number;
   /** Distance from the current page — drives the depth shadow. */
   depth: number;
@@ -24,34 +24,20 @@ const currentIndex = computed(() =>
 const rowOf = (ch: ChapterMeta) => chapters.indexOf(ch) + 1;
 const currentRow = computed(() => currentIndex.value + 1);
 
-/** Pages behind the reader — backward navigation. */
-const leftTabs = computed<RailTab[]>(() =>
-  chapters
-    .slice(0, currentIndex.value)
-    .map((ch) => ({
-      ch,
-      active: false,
-      row: rowOf(ch),
-      depth: currentRow.value - rowOf(ch),
-    })),
-);
 /**
- * The current page first and highlighted, then the pages ahead —
- * forward navigation.
+ * All tabs on the right: previous pages (top), current (active),
+ * next pages, then contact. The read pile owns the left now.
  */
-const rightTabs = computed<RailTab[]>(() => {
+const allTabs = computed<RailTab[]>(() => {
   const tabs: RailTab[] = [];
-  const current = chapters[currentIndex.value];
-  if (current)
-    tabs.push({ ch: current, active: true, row: rowOf(current), depth: 0 });
-  for (const ch of chapters.slice(currentIndex.value + 1)) {
+  chapters.forEach((ch, i) => {
     tabs.push({
       ch,
-      active: false,
+      active: i === currentIndex.value,
       row: rowOf(ch),
-      depth: rowOf(ch) - currentRow.value,
+      depth: Math.abs(i - currentIndex.value),
     });
-  }
+  });
   return tabs;
 });
 /** The contact envelope sits in its own row beneath the last page. */
@@ -76,43 +62,9 @@ function tabLabel(ch: ChapterMeta): string {
 
 <template>
   <div class="tab-rails" aria-hidden="false">
-    <div class="book-spine" aria-hidden="true"></div>
-    <div class="book-side-left" aria-hidden="true"></div>
-    <nav class="tab-rail tab-rail-left" aria-label="Previous pages">
+    <nav class="tab-rail tab-rail-right" aria-label="Pages">
       <button
-        v-for="t in leftTabs"
-        :key="t.ch.path"
-        class="tab"
-        :style="{ gridRow: t.row, '--depth': t.depth }"
-        :aria-label="tabLabel(t.ch)"
-        :title="t.ch.label"
-        @click="emit('select', t.ch)"
-      >
-        <span v-if="glyph(t.ch) === 'num'" class="tab-num" aria-hidden="true">{{
-          tabNum(t.ch)
-        }}</span>
-        <svg
-          v-else-if="glyph(t.ch) === 'avatar'"
-          class="tab-icon"
-          viewBox="0 0 24 24"
-          width="17"
-          height="17"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="8.2" r="3.4" />
-          <path d="M5.8 19.2c1.1-3.2 3.4-4.9 6.2-4.9s5.1 1.7 6.2 4.9" />
-        </svg>
-        <span v-else class="tab-num" aria-hidden="true">{{ t.ch.num }}</span>
-      </button>
-    </nav>
-    <nav class="tab-rail tab-rail-right" aria-label="Current and next pages">
-      <button
-        v-for="t in rightTabs"
+        v-for="t in allTabs"
         :key="t.ch.path"
         class="tab"
         :class="{ active: t.active }"

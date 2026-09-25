@@ -1161,7 +1161,9 @@ body.has-book {
 }
 body.has-book .chapter.book-page {
   background: var(--page);
-  margin-inline: 34px;
+  /* Manuscript pages run off the left edge — the read pile lives there. */
+  margin-left: -24px;
+  margin-right: 34px;
   border-left: 1px solid var(--line-soft);
   border-right: 1px solid var(--line-soft);
   box-shadow:
@@ -1172,47 +1174,41 @@ body.has-book .chapter.book-page {
 @media (max-width: 640px) {
   /* Mobile tabs are 26px wide — the page edges meet them exactly. */
   body.has-book .chapter.book-page {
-    margin-inline: 26px;
-  }
-  .tab-rail-left .tab {
-    border-radius: 8px 0 0 8px;
+    margin-right: 26px;
   }
   .tab-rail-right .tab {
     border-radius: 0 8px 8px 0;
   }
 }
 
-.tab-rails-hidden {
-  visibility: hidden;
-}
-/* Snapshot of the old tabs, rolling out with the old page on mobile. */
-.tab-rails-clone {
+/* The read pile: finished manuscript pages tossed to the left. */
+.read-pile {
   position: fixed;
-  inset: 0;
-  z-index: 901;
+  left: -56px;
+  top: 16%;
+  width: 200px;
+  height: 260px;
+  z-index: 800;
   pointer-events: none;
 }
-/* The scroll roll: a paper cylinder that rides the unrolling edge. */
-.scroll-roll {
+.read-pile .pile-page {
   position: absolute;
-  left: -3%;
-  right: -3%;
-  height: 32px;
-  margin-top: -16px;
-  border-radius: 16px;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.3) 0%,
-    rgba(255, 255, 255, 0.32) 24%,
-    var(--page) 46%,
-    var(--ember) 54%,
-    rgba(0, 0, 0, 0.34) 100%
-  );
+  inset: 0;
+  background: var(--page);
+  border: 1px solid var(--line-soft);
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.35),
-    0 -3px 8px rgba(0, 0, 0, 0.22);
-  pointer-events: none;
-  z-index: 5;
+    0 10px 28px rgba(0, 0, 0, 0.28),
+    0 3px 8px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  /* The toss (rotation/offset) is set inline per page. */
+}
+@media (max-width: 640px) {
+  .read-pile {
+    left: -72px;
+    top: 14%;
+    width: 150px;
+    height: 200px;
+  }
 }
 
 /* ---------- page turner (persistent chrome) ---------- */
@@ -1823,20 +1819,7 @@ body.has-book .chapter.book-page {
   transform: translateX(-4px);
 }
 /* Left rail: the back of the right tabs — the page flipped over. Outer
-   (left) side carries the radius and border, page-facing (right) side is
-   square and borderless. Depth shadow on the tab's outer side. */
-.tab-rail-left .tab {
-  border-radius: 10px 0 0 10px;
-  border-right: none;
-  border-left: 1px solid var(--line);
-  box-shadow:
-    calc(var(--depth, 0) * -4px) 4px calc(var(--depth, 0) * 8px + 6px)
-    rgba(0, 0, 0, 0.35);
-}
-.tab-rail-left .tab:hover {
-  transform: translateX(-4px);
-}
-/* Right-rail tabs mirror the left: the page-facing (left) side is square
+/* Right-rail tabs: the page-facing (left) side is square
    and borderless, the outer (right) side carries the radius and border.
    The current page's tab has no left border — it sits flush to the page. */
 .tab-rail-right .tab {
@@ -1852,56 +1835,6 @@ body.has-book .chapter.book-page {
 }
 .tab-rail-right .tab.active {
   border-left: none;
-}
-/* Book spine + left side (desktop only): a real binding before the tabs. */
-.book-spine,
-.book-side-left {
-  display: none;
-}
-@media (min-width: 641px) {
-  body.has-book .book-spine {
-    display: block;
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 34px;
-    background: linear-gradient(
-      to right,
-      #0b0805 0%,
-      #241c12 45%,
-      #171209 75%,
-      #0e0a06 100%
-    );
-    box-shadow: 6px 0 18px rgba(0, 0, 0, 0.35);
-    pointer-events: none;
-  }
-  body.has-book .book-side-left {
-    display: block;
-    position: absolute;
-    left: 34px;
-    top: 0;
-    bottom: 0;
-    width: 62px;
-    background:
-      repeating-linear-gradient(
-        to right,
-        var(--page) 0px,
-        var(--page) 2px,
-        rgba(0, 0, 0, 0.07) 2px,
-        rgba(0, 0, 0, 0.07) 3px
-      );
-    border-right: 1px solid var(--line-soft);
-    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.18);
-    pointer-events: none;
-  }
-  /* The left rail sits on the page edge, after the spine + side. */
-  body.has-book .tab-rails {
-    padding-left: 96px;
-  }
-  body.has-book .chapter.book-page {
-    margin-left: 130px;
-  }
 }
 .tab.active {
   width: 44px;
@@ -1925,12 +1858,6 @@ body.has-book .chapter.book-page {
   .wrap {
     width: min(var(--wrap), 100% - 4.25rem);
   }
-}
-
-/* The left rail mirrors the right: backward navigation. */
-.tab-rail-left {
-  right: auto;
-  left: 0;
 }
 
 /* ---------- chapter modal ---------- */

@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Flip } from 'gsap/Flip';
 import { RouterView, useRouter, useRoute } from 'vue-router';
 import SiteNav from './components/SiteNav.vue';
 import PageTurner from './components/PageTurner.vue';
@@ -12,7 +13,7 @@ import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
 import { returnToSection } from './lib/ui';
 import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
 
-gsap.registerPlugin(ScrollTrigger);
+gsap.registerPlugin(ScrollTrigger, Flip);
 
 const router = useRouter();
 const route = useRoute();
@@ -167,33 +168,91 @@ router.beforeEach((to, from) => {
   turnDir = ti >= fi ? 1 : -1;
   toIdx = ti;
   fromIdx = fi;
-  // fromIdx/toIdx are set, so useScrollRoll() is valid here.
-  snapshotTabsForRoll();
+  // Manuscript pile: finished pages get tossed left.
+  if (!reducedMotion && fi >= 0 && ti >= 0) {
+    if (ti > fi) {
+      for (let i = fi; i < ti; i++) addToPile(i);
+    } else if (ti < fi) {
+      for (let i = ti; i < fi; i++) removeFromPile(i);
+    }
+  }
+  // Leaving the chapters entirely — clear the pile.
+  if (!reducedMotion && fi >= 0 && ti < 0) {
+    clearPile();
+  }
 });
 
-const isMobile = () =>
-  typeof window !== 'undefined' &&
-  window.matchMedia('(max-width: 640px)').matches;
-
 /**
- * Interior chapter-to-chapter on mobile: the old scroll rolls up off the
- * desk and the new one rolls down — not a page turn. The book open
- * (Cover → Premise) and close keep their cinematics.
+ * The read pile: finished manuscript pages, tossed to the left in a
+ * slightly messy stack. Each page gets a deterministic toss so it
+ * lands the same way every time.
  */
-const useScrollRoll = () =>
-  !reducedMotion && isMobile() && fromIdx >= 1 && toIdx >= 1;
+function pileToss(index: number): { rotation: number; x: number; y: number } {
+  const h1 = (index * 9301 + 49297) % 233280;
+  const h2 = (index * 49297 + 9301) % 233280;
+  const r1 = h1 / 233280;
+  const r2 = h2 / 233280;
+  return {
+    rotation: (r1 - 0.5) * 16,
+    x: (r2 - 0.5) * 28,
+    y: (r1 - 0.5) * 20,
+  };
+}
 
-/** Snapshot the tab rails before they re-render, so the old tabs can roll
-    out with the old page on mobile. */
-function snapshotTabsForRoll() {
-  if (!useScrollRoll()) return;
-  const rails = document.querySelector('.tab-rails');
-  if (!rails || document.querySelector('.tab-rails-clone')) return;
-  const clone = rails.cloneNode(true) as HTMLElement;
-  clone.classList.add('tab-rails-clone');
+function addToPile(chapterIndex: number) {
+  const page = document.querySelector(
+    '.book-viewport .chapter.book-page',
+  ) as HTMLElement | null;
+  const pile = document.querySelector('.read-pile');
+  if (!page || !pile) return;
+  if (pile.querySelector(`[data-pile-index="${chapterIndex}"]`)) return;
+  const state = Flip.getState(page);
+  const clone = page.cloneNode(true) as HTMLElement;
+  clone.setAttribute('data-pile-index', String(chapterIndex));
+  clone.classList.add('pile-page');
   clone.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(clone);
-  rails.classList.add('tab-rails-hidden');
+  const toss = pileToss(chapterIndex);
+  pile.appendChild(clone);
+  // The clone lands in the pile slot; Flip animates it from the page.
+  gsap.set(clone, {
+    rotation: toss.rotation,
+    x: toss.x,
+    y: toss.y,
+  });
+  Flip.from(state, {
+    targets: clone,
+    duration: 0.85,
+    ease: 'power2.inOut',
+  });
+}
+
+function removeFromPile(chapterIndex: number) {
+  const pile = document.querySelector('.read-pile');
+  if (!pile) return;
+  const el = pile.querySelector(
+    `[data-pile-index="${chapterIndex}"]`,
+  ) as HTMLElement | null;
+  if (el) {
+    gsap.to(el, {
+      opacity: 0,
+      y: -24,
+      duration: 0.35,
+      ease: 'power2.in',
+      onComplete: () => el.remove(),
+    });
+  }
+}
+
+function clearPile() {
+  const pile = document.querySelector('.read-pile');
+  if (!pile) return;
+  gsap.to(pile.children, {
+    opacity: 0,
+    duration: 0.3,
+    onComplete: () => {
+      pile.innerHTML = '';
+    },
+  });
 }
 
 function beforeEnter(el: Element) {
@@ -204,16 +263,10 @@ function beforeEnter(el: Element) {
     gsap.set(page, { opacity: 1 });
     return;
   }
-  if (useScrollRoll()) {
-    // The new scroll starts rolled up — nothing visible yet.
-    gsap.set(page, {
-      opacity: 1,
-      zIndex: 1,
-      position: 'relative',
-      height: '100svh',
-      overflow: 'hidden',
-      clipPath: 'inset(100% 0% 0% 0%)',
-    });
+  // Chapter-to-chapter: the new page was underneath all along — it fades
+  // in as the old one tosses onto the pile.
+  if (fromIdx >= 0 && toIdx >= 0) {
+    gsap.set(page, { opacity: 0, y: 18 });
     return;
   }
   if (turnDir >= 0) {
@@ -236,52 +289,19 @@ function beforeEnter(el: Element) {
 
 function enter(el: Element, done: () => void) {
   const page = el as HTMLElement;
-  if (useScrollRoll()) {
-    // The new scroll unrolls down from the top, the roll leading the way.
-    // Slight delay so the old scroll is mostly up before this drops.
-    // The new tabs unroll with it.
-    const roll = document.createElement('div');
-    roll.className = 'scroll-roll';
-    page.appendChild(roll);
-    const rails = document.querySelector('.tab-rails') as HTMLElement | null;
-    if (rails) {
-      rails.classList.remove('tab-rails-hidden');
-      gsap.set(rails, { clipPath: 'inset(100% 0% 0% 0%)' });
-    }
-    const tl = gsap.timeline({
-      delay: 0.7,
+  // Chapter-to-chapter: reveal the page from underneath the pile toss.
+  if (!reducedMotion && fromIdx >= 0 && toIdx >= 0) {
+    gsap.to(page, {
+      opacity: 1,
+      y: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      delay: 0.35,
       onComplete: () => {
-        roll.remove();
-        document
-          .querySelectorAll('.tab-rails-clone')
-          .forEach((c) => c.remove());
         gsap.set(page, { clearProps: 'all' });
-        if (rails) gsap.set(rails, { clearProps: 'clipPath' });
         done();
       },
     });
-    tl.to(
-      page,
-      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.8, ease: 'power2.inOut' },
-      0,
-    );
-    tl.fromTo(
-      roll,
-      { top: '0%' },
-      { top: '100%', duration: 1.8, ease: 'power2.inOut' },
-      0,
-    );
-    if (rails) {
-      tl.to(
-        rails,
-        {
-          clipPath: 'inset(0% 0% 0% 0%)',
-          duration: 1.8,
-          ease: 'power2.inOut',
-        },
-        0,
-      );
-    }
     return;
   }
   if (reducedMotion || turnDir >= 0) {
@@ -308,53 +328,15 @@ function leave(el: Element, done: () => void) {
     done();
     return;
   }
-  if (useScrollRoll()) {
-    // The old scroll rolls up off the desk, the roll riding its tail.
-    // The old tabs (snapshotted clone) roll up with it.
-    const roll = document.createElement('div');
-    roll.className = 'scroll-roll';
-    page.appendChild(roll);
-    gsap.set(page, {
-      position: 'absolute',
-      inset: '0',
-      width: '100%',
-      height: '100svh',
-      overflow: 'hidden',
-      zIndex: 2,
-      clipPath: 'inset(0% 0% 0% 0%)',
+  // Chapter-to-chapter: the page already tossed to the pile in beforeEach —
+  // the original just bows out.
+  if (fromIdx >= 0 && toIdx >= 0) {
+    gsap.to(page, {
+      opacity: 0,
+      duration: 0.3,
+      ease: 'power1.in',
+      onComplete: done,
     });
-    const clone = document.querySelector(
-      '.tab-rails-clone',
-    ) as HTMLElement | null;
-    if (clone) gsap.set(clone, { clipPath: 'inset(0% 0% 0% 0%)' });
-    const tl = gsap.timeline({
-      onComplete: () => {
-        // The enter timeline removes the clone once the new tabs land.
-        done();
-      },
-    });
-    tl.to(
-      page,
-      { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.0, ease: 'power2.in' },
-      0,
-    );
-    tl.fromTo(
-      roll,
-      { top: '100%' },
-      { top: '0%', duration: 1.0, ease: 'power2.in' },
-      0,
-    );
-    if (clone) {
-      tl.to(
-        clone,
-        {
-          clipPath: 'inset(0% 0% 100% 0%)',
-          duration: 1.0,
-          ease: 'power2.in',
-        },
-        0,
-      );
-    }
     return;
   }
   if (turnDir >= 0) {
@@ -391,15 +373,6 @@ function leave(el: Element, done: () => void) {
 
 function cancelTurn(el: Element) {
   gsap.killTweensOf(el);
-  (el as HTMLElement)
-    .querySelectorAll('.scroll-roll')
-    .forEach((r) => r.remove());
-  document.querySelectorAll('.tab-rails-clone').forEach((c) => c.remove());
-  const rails = document.querySelector('.tab-rails');
-  if (rails) {
-    rails.classList.remove('tab-rails-hidden');
-    gsap.set(rails as HTMLElement, { clearProps: 'clipPath' });
-  }
   gsap.set(el as HTMLElement, { clearProps: 'all' });
 }
 
@@ -559,6 +532,8 @@ onUnmounted(() => {
 <template>
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="goToContact" />
+  <!-- The read pile: finished manuscript pages, tossed left. -->
+  <div class="read-pile" aria-hidden="true"></div>
   <div ref="viewport" class="book-viewport">
     <RouterView v-slot="{ Component, route }">
       <Transition
