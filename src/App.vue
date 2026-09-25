@@ -274,36 +274,39 @@ function addToPile(chapterIndex: number) {
   ) as HTMLElement | null;
   const tabState = tab ? Flip.getState(tab) : null;
   const state = Flip.getState(page);
-  const clone = page.cloneNode(true) as HTMLElement;
-  clone.setAttribute('data-pile-index', String(chapterIndex));
-  // Strip the chapter layout classes — the pile card is its own thing,
-  // a plain paper slab. (Keeps body.has-book .chapter rules from
-  // overriding the pile's paper background.)
-  clone.classList.remove('chapter', 'book-page');
-  clone.classList.add('pile-page');
-  clone.setAttribute('aria-hidden', 'true');
-  const toss = pileToss(chapterIndex);
-  pile.appendChild(clone);
+  // The pile card is a minimal paper slab — not a clone of the full
+  // chapter. A real pile shows page edges, not readable text.
+  const card = document.createElement('div');
+  card.setAttribute('data-pile-index', String(chapterIndex));
+  card.classList.add('pile-page');
+  card.setAttribute('aria-hidden', 'true');
+  const num = document.createElement('span');
+  num.classList.add('pile-num');
+  num.textContent = String(chapterIndex);
+  card.appendChild(num);
   // The tab travels with its page: clone it onto the pile card and Flip it
   // from the rail to the pile, so it never just disappears.
   let tabClone: HTMLElement | null = null;
-  if (tab && tabState) {
+  if (tab) {
     tabClone = tab.cloneNode(true) as HTMLElement;
     tabClone.classList.add('pile-tab');
     tabClone.setAttribute('aria-hidden', 'true');
-    clone.appendChild(tabClone);
+    tabClone.removeAttribute('style');
+    card.appendChild(tabClone);
   }
+  const toss = pileToss(chapterIndex);
+  pile.appendChild(card);
   pileIndices.value.add(chapterIndex);
-  // The clone lands in the pile slot; Flip animates it from the page
+  // The card lands in the pile slot; Flip animates it from the page
   // (unless the reader prefers reduced motion — then it just appears).
-  gsap.set(clone, {
+  gsap.set(card, {
     rotation: toss.rotation,
     x: toss.x,
     y: toss.y,
   });
   if (!reducedMotion) {
     Flip.from(state, {
-      targets: clone,
+      targets: card,
       duration: 0.85,
       ease: 'power2.inOut',
     });
@@ -316,7 +319,6 @@ function addToPile(chapterIndex: number) {
     }
   }
 }
-
 function removeFromPile(chapterIndex: number) {
   const pile = document.querySelector('.read-pile');
   if (!pile) return;

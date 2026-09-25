@@ -1243,11 +1243,23 @@ body.has-book .chapter.book-page {
     0 10px 28px rgba(0, 0, 0, 0.28),
     0 3px 8px rgba(0, 0, 0, 0.18);
   overflow: hidden;
+  display: grid;
+  place-items: center;
   /* The toss (rotation/offset) is set inline per page. */
+}
+.pile-num {
+  font-family: var(--serif);
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: rgba(26, 21, 16, 0.22);
+  user-select: none;
 }
 html[data-theme='dark'] .read-pile .pile-page {
   background: #d9cbb0;
   border-color: rgba(60, 45, 30, 0.5);
+}
+html[data-theme='dark'] .pile-num {
+  color: rgba(60, 45, 30, 0.35);
 }
 /* The tab sticks to its page in the pile. */
 .read-pile .pile-page {
