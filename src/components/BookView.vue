@@ -54,8 +54,6 @@ async function tossToPile(i: number): Promise<void> {
   await nextTick();
   const card = pileCardEl(i);
   if (state && card && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const toss = pileToss(i);
-    gsap.set(card, { rotation: toss.rotation, x: toss.x, y: toss.y });
     await Flip.from(state, {
       targets: card,
       duration: 0.7,
@@ -117,14 +115,13 @@ function goFromModal(i: number) {
   goTo(i);
 }
 
-/** The pile spreads when tapped, so a specific page can be picked. */
-const pileSpread = ref(false);
-function togglePileSpread() {
-  pileSpread.value = !pileSpread.value;
-}
-function pickFromPile(i: number) {
-  pileSpread.value = false;
-  goTo(i);
+/** The pile is always fanned out vertically — every finished page visible
+    and tappable. Tapping one opens its modal. */
+function pileCardStyle(i: number): Record<string, string> {
+  const toss = pileToss(i);
+  return {
+    '--pile-rot': `${toss.rotation}deg`,
+  };
 }
 
 /** Swipe to turn pages. */
@@ -153,33 +150,20 @@ function onTouchEnd(e: TouchEvent) {
     <!-- Desk props: candle, pencil, pull-cord live here (App provides them). -->
     <slot name="desk-props" />
 
-    <!-- Bottom left: the read pile. Tap to spread, tap a card to go back. -->
-    <div
-      class="read-pile"
-      :class="{ 'is-spread': pileSpread }"
-      aria-label="Finished pages"
-    >
+    <!-- Left lane: the read pile, fanned out. Tap a card for its modal. -->
+    <div class="read-pile" aria-label="Finished pages">
       <button
-        v-for="(i, pos) in pile"
+        v-for="i in pile"
         :key="i"
         type="button"
         class="pile-page"
         :data-pile-index="i"
-        :style="pileSpread ? { '--spread-pos': pos } : undefined"
-        :aria-label="`Go back to ${chapters[i].label}`"
-        @click="pileSpread ? pickFromPile(i) : togglePileSpread()"
+        :style="pileCardStyle(i)"
+        :aria-label="`Preview ${chapters[i].label}`"
+        @click="openModal(i)"
       >
         <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
         <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>
-      </button>
-      <button
-        v-if="pile.length > 1 && !pileSpread"
-        type="button"
-        class="pile-hint"
-        @click="togglePileSpread"
-        aria-label="Spread the pile to pick a page"
-      >
-        {{ pile.length }} pages
       </button>
     </div>
 
