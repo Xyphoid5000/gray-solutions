@@ -2559,6 +2559,49 @@ html[data-theme='dark'] .page-paper {
   max-width: 100%;
   overflow-x: auto;
 }
+/* Mobile readability pass: smaller display type, calmer body copy,
+   tighter rhythm — pages get shorter and nothing pushes past the paper. */
+@media (max-width: 640px) {
+  .page-paper {
+    padding: 1.15rem 1rem;
+    font-size: 0.9375rem;
+  }
+  .page-paper .ch-title {
+    font-size: clamp(1.6rem, 7.4vw, 2rem);
+  }
+  .page-paper .ch-num {
+    font-size: clamp(3.2rem, 17vw, 4.5rem);
+  }
+  .page-paper .ch-head {
+    margin-bottom: 2rem;
+  }
+  .page-paper .premise-statement {
+    font-size: 1.32rem;
+    line-height: 1.35;
+    margin-bottom: 1.6rem;
+  }
+  .page-paper .lede {
+    font-size: 1.06rem;
+    line-height: 1.55;
+  }
+  .page-paper .proof-panel h3 {
+    font-size: 1.42rem;
+  }
+  .page-paper .premise-point h3,
+  .page-paper .craft-card h3,
+  .page-paper .arc-act h3 {
+    font-size: 1.12rem;
+  }
+  .page-paper .proof-strip .proof-panel {
+    width: min(82vw, 420px);
+  }
+  .page-paper .arc-svg-wrap {
+    margin-bottom: 2rem;
+  }
+  .page-paper .marquee {
+    padding: 0.9rem 0;
+  }
+}
 /* Buried pages: paper hidden, but the tab still shows. */
 .page-wrap.is-buried .page-paper {
   visibility: hidden;
