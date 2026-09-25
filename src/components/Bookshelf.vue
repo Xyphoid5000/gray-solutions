@@ -40,6 +40,13 @@ const bottomLeft: ShelfBook[] = [
 const bottomRight: ShelfBook[] = [
   { title: 'The Odyssey', color: '#4a4a1f', h: 226, w: 44 },
 ];
+
+/** Backdrop mode: one long shelf of books, no slot, no titles. */
+const backdropBooks: ShelfBook[] = [
+  ...topShelf,
+  ...bottomLeft,
+  ...bottomRight,
+];
 </script>
 
 <template>
@@ -54,6 +61,20 @@ const bottomRight: ShelfBook[] = [
 
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
+      <template v-if="backdrop">
+        <div class="bs-shelf">
+          <div class="bs-books">
+            <div
+              v-for="b in backdropBooks"
+              :key="'bg-' + b.title"
+              class="bs-book"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+            ></div>
+          </div>
+          <div class="bs-plank"></div>
+        </div>
+      </template>
+      <template v-else>
       <div class="bs-shelf">
         <div class="bs-books">
           <div
@@ -62,7 +83,7 @@ const bottomRight: ShelfBook[] = [
             class="bs-book"
             :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
           >
-            <span v-if="!backdrop">{{ b.title }}</span>
+            <span>{{ b.title }}</span>
           </div>
         </div>
         <div class="bs-plank"></div>
@@ -75,10 +96,10 @@ const bottomRight: ShelfBook[] = [
             class="bs-book"
             :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
           >
-            <span v-if="!backdrop">{{ b.title }}</span>
+            <span>{{ b.title }}</span>
           </div>
           <div class="bs-slot" data-bind-slot>
-            <div class="bs-ours"><span v-if="!backdrop">Gray Solutions</span></div>
+            <div class="bs-ours"><span>Gray Solutions</span></div>
           </div>
           <div
             v-for="b in bottomRight"
@@ -86,13 +107,15 @@ const bottomRight: ShelfBook[] = [
             class="bs-book"
             :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
           >
-            <span v-if="!backdrop">{{ b.title }}</span>
+            <span>{{ b.title }}</span>
           </div>
         </div>
         <div class="bs-plank"></div>
       </div>
+      </template>
       <div class="bs-base"></div>
     </div>
+    <div v-if="backdrop" class="bs-blur-veil" aria-hidden="true"></div>
 
     <div v-if="!backdrop" class="bs-foreground">
       <button
@@ -154,22 +177,24 @@ const bottomRight: ShelfBook[] = [
   );
 }
 
-/* Backdrop mode: the shelf is pure scenery behind the home hero —
-   dim, soft, and out of the way. */
+/* Backdrop mode: the shelf is pure scenery behind the home hero.
+   No dimming — a clear veil over it carries the blur. */
 .bookshelf-hero.is-backdrop {
   position: absolute;
   inset: 0;
   min-height: 0;
   pointer-events: none;
-  opacity: 0.5;
-  filter: blur(3px) brightness(0.55) saturate(0.85);
 }
-.bookshelf-hero.is-backdrop .bs-vignette {
-  background: radial-gradient(
-    90% 75% at 50% 45%,
-    transparent 40%,
-    rgba(0, 0, 0, 0.7) 100%
-  );
+.bookshelf-hero.is-backdrop .bs-case {
+  transform: scale(1.35);
+}
+.bs-blur-veil {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  pointer-events: none;
 }
 .bs-kicker {
   position: absolute;
