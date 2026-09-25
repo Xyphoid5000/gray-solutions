@@ -115,12 +115,25 @@ function goFromModal(i: number) {
   goTo(i);
 }
 
-/** The pile is always fanned out vertically — every finished page visible
-    and tappable. Tapping one opens its modal. */
+/** The pile is a messy stack. Clicking it opens the overlay with clear pages. */
+const pileOpen = ref(false);
+function openPile() {
+  pileOpen.value = true;
+}
+function closePile() {
+  pileOpen.value = false;
+}
+function pickFromOverlay(i: number) {
+  pileOpen.value = false;
+  openModal(i);
+}
+
 function pileCardStyle(i: number): Record<string, string> {
   const toss = pileToss(i);
   return {
     '--pile-rot': `${toss.rotation}deg`,
+    '--pile-x': `${toss.x}px`,
+    '--pile-y': `${toss.y}px`,
   };
 }
 
@@ -150,8 +163,8 @@ function onTouchEnd(e: TouchEvent) {
     <!-- Desk props: candle, pencil, pull-cord live here (App provides them). -->
     <slot name="desk-props" />
 
-    <!-- Left lane: the read pile, fanned out. Tap a card for its modal. -->
-    <div class="read-pile" aria-label="Finished pages">
+    <!-- Left lane: the read pile, a messy stack. Click to open the overlay. -->
+    <div class="read-pile" aria-label="Finished pages" @click="openPile">
       <button
         v-for="i in pile"
         :key="i"
@@ -159,13 +172,52 @@ function onTouchEnd(e: TouchEvent) {
         class="pile-page"
         :data-pile-index="i"
         :style="pileCardStyle(i)"
-        :aria-label="`Preview ${chapters[i].label}`"
-        @click="openModal(i)"
+        :aria-label="`Open finished pages`"
+        tabindex="-1"
       >
         <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
         <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>
       </button>
     </div>
+
+    <!-- Pile overlay: clear full pages, flex-wrap. Click one for its modal. -->
+    <Transition name="pile-overlay">
+      <div
+        v-if="pileOpen"
+        class="pile-overlay-backdrop"
+        @click.self="closePile"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Finished pages"
+      >
+        <div class="pile-overlay">
+          <button
+            type="button"
+            class="pile-overlay-close"
+            @click="closePile"
+            aria-label="Close finished pages"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <p class="pile-overlay-kicker">Finished pages</p>
+          <h3 class="pile-overlay-title">The pile</h3>
+          <div class="pile-grid">
+            <button
+              v-for="i in pile"
+              :key="i"
+              type="button"
+              class="pile-grid-card"
+              :aria-label="`Preview ${chapters[i].label}`"
+              @click="pickFromOverlay(i)"
+            >
+              <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
+              <span class="pile-grid-label" aria-hidden="true">{{ chapters[i].label }}</span>
+              <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- The stack: each page is a transparent wrap, paper inside with a
          right margin, tab attached in that margin. -->
