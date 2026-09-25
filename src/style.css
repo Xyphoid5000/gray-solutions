@@ -2296,3 +2296,19 @@ html[data-theme='dark'] .b-stamp {
 html[data-theme='dark'] .b-msub {
   color: rgba(90, 55, 30, 0.75);
 }
+
+/* Dark mode: an open manuscript chapter is candlelit paper, not black.
+   Scope-override the ink variables so text flips to dark-on-paper. */
+html[data-theme='dark'] body.has-book .chapter {
+  --page: #d9cbb0;
+  --ink: #1c1712;
+  --muted: #57503f;
+  --faint: #857768;
+  --line: rgba(28, 23, 18, 0.16);
+  --line-soft: rgba(28, 23, 18, 0.09);
+  background: var(--page);
+  border-radius: 3px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(255, 170, 80, 0.06);
+}
