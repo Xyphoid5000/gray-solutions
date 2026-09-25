@@ -1,20 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { gsap } from 'gsap';
-import Bookshelf from './Bookshelf.vue';
 
 const emit = defineEmits<{
   done: [];
   /** Fired at full black so the home page can swap in the finished book. */
   blackout: [];
+  /** Fired when the shelf beat starts so the home page (and its real
+   * bookshelf) can be mounted behind the cinematic. */
+  shelf: [];
 }>();
 
 const overlay = ref<HTMLElement | null>(null);
+const backdrop = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const book3d = ref<HTMLElement | null>(null);
 const msCover = ref<HTMLElement | null>(null);
-const cameraWrap = ref<HTMLElement | null>(null);
 const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
@@ -39,11 +41,8 @@ function finish() {
     gsap.set(book3d.value, { clearProps: 'all', display: 'none', opacity: 0 });
   if (msCover.value)
     gsap.set(msCover.value, { clearProps: 'all', display: 'none', opacity: 0 });
-  if (cameraWrap.value) gsap.set(cameraWrap.value, { yPercent: 100 });
+  if (backdrop.value) gsap.set(backdrop.value, { opacity: 1 });
   if (veil.value) gsap.set(veil.value, { opacity: 0 });
-  // The shelf's own spine only appears once the book is filed.
-  const ours = ov?.querySelector('.bs-ours');
-  if (ours) gsap.set(ours, { opacity: 0 });
   playing.value = false;
   tl = null;
   emit('done');
@@ -56,14 +55,16 @@ function skip() {
 
 /**
  * The binding, beat by beat (no hands — everything moves on its own):
- * 1. the pages gather (5-4-3-2-1); page 5 drops in with a bounce, then
- *    the stamped MANUSCRIPT cover drops down in front of the stack;
- * 2. the stamped cover lifts off the front and flies away;
- * 3. the dark cover drops from above and the pages tuck inside;
- * 4. the title is written on;
- * 5. the finished book rises as a 3D object, turns, and files itself
- *    into its slot on a shelf of classics;
- * 6. fade to black, fade back in on the home page with the finished book.
+ * 1. page 5 drops into the pile with a bounce;
+ * 2. the pages fan out and shuffle themselves into order, chapter 1 on top;
+ * 3. the stamped MANUSCRIPT cover drops onto the stack, then gets thrown
+ *    off to the side, leaving chapter 1;
+ * 4. the dark cover drops from above and the pages tuck inside;
+ * 5. the title is written on;
+ * 6. the finished book rises as a 3D object; the dark backdrop dissolves
+ *    to reveal the home page's real bookshelf, and the book files itself
+ *    into its waiting slot, staying as the 3D model;
+ * 7. fade to black, fade back in on the home page with the finished book.
  *
  * App tosses the open page into the pile before calling start(), so
  * page 5 is always the real page, never a stand-in.
@@ -74,9 +75,8 @@ function start() {
   const cv = coverEl.value;
   const b3d = book3d.value;
   const msc = msCover.value;
-  const cam = cameraWrap.value;
   const vl = veil.value;
-  if (!ov || !st || !cv || !b3d || !msc || !cam || !vl) return;
+  if (!ov || !st || !cv || !b3d || !msc || !vl) return;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
     .matches;
   if (reduced) {
@@ -135,10 +135,7 @@ function start() {
     yPercent: -50,
     scaleY: 1,
   });
-  gsap.set(cam, { yPercent: 100 });
   gsap.set(vl, { opacity: 0 });
-  const ours = ov.querySelector('.bs-ours');
-  if (ours) gsap.set(ours, { opacity: 0 });
   titleTyped.value = '';
   titled.value = false;
   st.innerHTML = '';
@@ -190,8 +187,7 @@ function start() {
   const T = tl as gsap.core.Timeline;
 
   // Beat 1 — the overlay rises; page 5 drops into the stack with a
-  // bounce you can't miss; then the stamped MANUSCRIPT cover drops
-  // down in front of the stack, facing the viewer.
+  // bounce you can't miss.
   T.to(ov, { opacity: 1, duration: 0.5 }, 0);
   const ch5 = chCards[4];
   T.fromTo(
@@ -203,35 +199,54 @@ function start() {
   // Landing bounce and settle — page five has arrived.
   T.to(ch5, { y: -22, duration: 0.18, ease: 'power2.out' }, 1.17);
   T.to(ch5, { y: 0, duration: 0.34, ease: 'bounce.out' }, 1.35);
-  // The rest of the stack settles out of a slight scatter.
-  allCards.forEach((c, k) => {
-    if (c === ch5) return;
-    T.fromTo(
+  const b1 = 1.78;
+
+  // Beat 2 — the pages fan out and shuffle themselves into order,
+  // chapter 1 ending on top.
+  const fanAt = b1 + 0.3;
+  const fanStep = Math.min(46, ((vw * 0.92 - 220) / 2) / 2);
+  chCards.forEach((c, k) => {
+    const spread = (k - 2) * fanStep;
+    T.to(
       c,
-      { rotation: k % 2 ? 4 : -4 },
-      { rotation: 0, duration: 0.6, ease: 'power2.out' },
-      0.5 + k * 0.05,
+      { x: spread, rotation: spread * 0.06, duration: 0.5, ease: 'power2.out' },
+      fanAt + k * 0.04,
     );
   });
-  // The stamped cover drops in front.
-  const coverDropAt = 1.9;
+  const shuffleAt = fanAt + 0.75;
+  T.call(
+    () => {
+      [...chCards].reverse().forEach((c) => st.appendChild(c));
+    },
+    [],
+    shuffleAt,
+  );
+  chCards.forEach((c, k) => {
+    T.to(
+      c,
+      { y: -90, duration: 0.22, ease: 'power2.out' },
+      shuffleAt + k * 0.07,
+    );
+    T.to(
+      c,
+      { y: 0, x: 0, rotation: 0, duration: 0.42, ease: 'power2.inOut' },
+      shuffleAt + k * 0.07 + 0.22,
+    );
+  });
+  const b2 = shuffleAt + 5 * 0.07 + 0.64 + 0.15;
+
+  // Beat 3 — the stamped MANUSCRIPT cover drops onto the top of the
+  // neat stack, stamp facing up; then it's thrown off to the side,
+  // leaving chapter 1 on top.
+  const msDropAt = b2 + 0.2;
   T.to(
     msc,
     { opacity: 1, y: 0, rotation: 0, duration: 0.7, ease: 'power2.out' },
-    coverDropAt,
+    msDropAt,
   );
-  T.to(msc, { y: -14, duration: 0.16, ease: 'power2.out' }, coverDropAt + 0.7);
-  T.to(msc, { y: 0, duration: 0.3, ease: 'bounce.out' }, coverDropAt + 0.86);
-  const b1 = coverDropAt + 1.35;
-
-  // Beat 2 — the stamped cover lifts off the front and flies away
-  // on its own.
-  const liftAt = b1 + 0.45;
-  T.to(
-    msc,
-    { y: -70, rotation: -7, duration: 0.45, ease: 'power2.out' },
-    liftAt,
-  );
+  T.to(msc, { y: -14, duration: 0.16, ease: 'power2.out' }, msDropAt + 0.7);
+  T.to(msc, { y: 0, duration: 0.3, ease: 'bounce.out' }, msDropAt + 0.86);
+  const throwAt = msDropAt + 1.35;
   T.to(
     msc,
     {
@@ -242,14 +257,14 @@ function start() {
       duration: 0.7,
       ease: 'power2.in',
     },
-    liftAt + 0.45,
+    throwAt,
   );
-  T.set(msc, { display: 'none' }, liftAt + 1.2);
-  const b2 = liftAt + 1.3;
+  T.set(msc, { display: 'none' }, throwAt + 0.75);
+  const b3 = throwAt + 0.8;
 
   // Beat 4 — the dark cover drops from above, dead-center, and seals
   // over the pages; the pages tuck inside.
-  const dropAt = b2 + 0.15;
+  const dropAt = b3 + 0.15;
   // Pin the stack dead-center under the falling cover.
   T.set(st, { x: 0, y: 0, xPercent: -50, yPercent: -50 }, dropAt);
   T.set(
@@ -322,18 +337,23 @@ function start() {
   T.to(b3d, { y: '-=46', duration: 0.5, ease: 'power2.out' }, grabAt + 0.2);
   const b6 = grabAt + 0.85;
 
-  // Beat 6b — the camera tilts back up: the bookshelf glides in and
-  // takes the frame while the book hovers, waiting.
-  T.to(cam, { yPercent: 0, duration: 1.35, ease: 'power3.inOut' }, b6);
+  // Beat 6b — the dark backdrop dissolves, revealing the home page's
+  // real bookshelf behind the cinematic while the book hovers, waiting.
+  // App mounts the home page on the 'shelf' emit.
+  const bd = backdrop.value!;
+  T.call(() => emit('shelf'), [], b6);
+  T.to(bd, { opacity: 0, duration: 1.1, ease: 'power2.inOut' }, b6 + 0.15);
   const b7 = b6 + 1.35;
 
-  // Beat 6c — the book flies itself to its slot, turns so the spine
-  // faces the reader, and files itself among the classics. The slot
-  // is measured live, once the shelf has settled.
+  // Beat 6c — the book flies itself to the home page shelf's slot,
+  // turns so the spine faces the reader, and files itself among the
+  // classics as the 3D model. The slot is measured live, once the
+  // home page has settled.
   T.call(
     () => {
-      const slot = ov.querySelector('[data-bind-slot]') as HTMLElement | null;
-      const spine = ov.querySelector('.bs-ours');
+      const slot = document.querySelector(
+        '.view-home [data-bind-slot]',
+      ) as HTMLElement | null;
       let dx = 0;
       let dy = 0;
       let s = 0.7;
@@ -346,18 +366,16 @@ function start() {
       const file = gsap.timeline();
       // Fly to the slot.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      // Turn: the spine swings toward the reader as it seats.
-      file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.85);
+      // Turn: the spine swings toward the reader as it seats, angled
+      // just enough to read as a 3D object on the shelf.
+      file.to(b3d, { rotationY: 62, duration: 0.7, ease: 'power2.inOut' }, 0.85);
       file.to(b3d, { scale: s, duration: 0.7, ease: 'power2.inOut' }, 0.85);
-      // The 3D book becomes the shelf's own spine.
-      file.to(b3d, { opacity: 0, duration: 0.35, ease: 'power1.in' }, 1.7);
-      if (spine)
-        file.to(spine, { opacity: 1, duration: 0.35, ease: 'power1.out' }, 1.7);
+      // It stays as the 3D model in the slot — no flat swap.
     },
     [],
     b7,
   );
-  const b8 = b7 + 2.45;
+  const b8 = b7 + 2.0;
 
   // Beat 7 — hold on the completed shelf; fade to black; behind it the
   // home page takes the bound shelf; fade back in on it.
@@ -376,6 +394,9 @@ defineExpose({ start });
     role="dialog"
     aria-label="Binding the manuscript"
   >
+    <!-- The dark cinematic backdrop; dissolves for the shelf beat. -->
+    <div ref="backdrop" class="bind-backdrop" aria-hidden="true"></div>
+
     <!-- The neat stack forms here. -->
     <div ref="stack" class="bind-stack" aria-hidden="true"></div>
 
@@ -415,12 +436,6 @@ defineExpose({ start });
       <div class="b3d-face b3d-pages"></div>
     </div>
 
-    <!-- The camera tilts up to the real bookshelf; the book is filed
-         into its waiting slot. -->
-    <div ref="cameraWrap" class="bind-camera" aria-hidden="true">
-      <Bookshelf :interactive="false" :show-manuscript="false" />
-    </div>
-
     <!-- Fade-to-black veil for the final beat. -->
     <div ref="veil" class="bind-veil" aria-hidden="true"></div>
 
@@ -441,6 +456,11 @@ defineExpose({ start });
   inset: 0;
   z-index: 2000;
   display: none;
+  overflow: hidden;
+}
+.bind-backdrop {
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(
       120% 90% at 50% 10%,
@@ -448,7 +468,6 @@ defineExpose({ start });
       rgba(32, 19, 12, 0.99) 55%,
       rgba(18, 11, 7, 1) 100%
     );
-  overflow: hidden;
 }
 .bind-skip {
   position: absolute;
@@ -733,12 +752,6 @@ defineExpose({ start });
     #d3c096 0 2px,
     #a68f63 2px 3px
   );
-}
-/* The camera tilt: the real bookshelf glides in and takes the frame. */
-.bind-camera {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
 }
 /* Fade-to-black veil for the final beat. */
 .bind-veil {

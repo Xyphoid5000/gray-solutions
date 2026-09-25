@@ -23,6 +23,10 @@ const showBook = ref(false);
 const homeMounted = ref(true);
 const bookMounted = ref(false);
 const cameraMoving = ref(false);
+/** True while the binding's shelf beat reveals the home page's real
+ * bookshelf behind the cinematic; hides the manuscript stack so the
+ * filing reads clean. */
+const shelfReveal = ref(false);
 
 function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
@@ -156,8 +160,16 @@ function onBindDone() {
 /** The binding's fade-to-black: swap in the finished book behind it so
     the fade back in lands on the home page with the bound book. */
 function onBindBlackout() {
+  shelfReveal.value = false;
   markManuscriptBound();
   closeBook();
+}
+/** The binding's shelf beat: mount the home page behind the cinematic
+    so the 3D book files into the real bookshelf. */
+function onBindShelf() {
+  bookMounted.value = false;
+  homeMounted.value = true;
+  shelfReveal.value = true;
 }
 /** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
 function onNavContact() {
@@ -366,7 +378,7 @@ onUnmounted(() => {
   <div class="app-root" :class="{ 'camera-moving': cameraMoving }">
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="onNavContact" @home="onNavHome" />
-  <div v-if="homeMounted" class="view view-home">
+  <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
     <Cover @open-book="openBook" />
   </div>
   <div v-if="bookMounted" class="view view-book">
@@ -388,7 +400,12 @@ onUnmounted(() => {
   </BookView>
   </div>
   <LostPage :visible="blacklight" @close="onLostPageClose" />
-  <BindCinematic ref="bindCinematic" @done="onBindDone" @blackout="onBindBlackout" />
+  <BindCinematic
+    ref="bindCinematic"
+    @done="onBindDone"
+    @blackout="onBindBlackout"
+    @shelf="onBindShelf"
+  />
   <!-- Light rituals: true darkness between the cord pull and the flame. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
   <MatchHand
@@ -403,6 +420,12 @@ onUnmounted(() => {
 <style>
 .gs-no-scroll {
   overflow: hidden;
+}
+/* During the binding's shelf beat the home page sits behind the
+   cinematic; hide its manuscript stack so the filing reads clean. */
+.view-home.shelf-reveal .cover-scene {
+  opacity: 0;
+  pointer-events: none;
 }
 /* While the camera tilts, both views are fixed full-screen stages. */
 .camera-moving .view {

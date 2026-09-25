@@ -65,7 +65,16 @@ const backdropBooks: ShelfBook[] = [
         <div class="bs-shelf">
           <div class="bs-books">
             <div
-              v-for="b in backdropBooks"
+              v-for="b in backdropBooks.slice(0, Math.ceil(backdropBooks.length / 2))"
+              :key="'bg-' + b.title"
+              class="bs-book"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+            ></div>
+            <div class="bs-slot" data-bind-slot>
+              <div class="bs-ours"><span>Gray Solutions</span></div>
+            </div>
+            <div
+              v-for="b in backdropBooks.slice(Math.ceil(backdropBooks.length / 2))"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
