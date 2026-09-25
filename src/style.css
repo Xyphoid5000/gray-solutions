@@ -1265,14 +1265,42 @@ html[data-theme='dark'] .pile-num {
 .read-pile .pile-page {
   overflow: visible;
 }
-.read-pile .pile-page .pile-tab {
+.read-pile .pile-page .pile-tab-mark {
   position: absolute;
   right: -14px;
   top: 10px;
   width: 28px;
   height: 40px;
-  margin: 0;
-  pointer-events: none;
+  display: grid;
+  place-items: center;
+  background: #fffdf6;
+  border: 1px solid rgba(26, 21, 16, 0.18);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(26, 21, 16, 0.65);
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+}
+html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
+  background: #d9cbb0;
+  border-color: rgba(60, 45, 30, 0.5);
+  color: rgba(60, 45, 30, 0.7);
+}
+/* A tab whose chapter is in the pile: still clickable, just marked. */
+.tab-rail .tab.is-piled {
+  opacity: 0.55;
+}
+.tab-rail .tab.is-piled::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ember);
 }
 @media (max-width: 640px) {
   .read-pile {
@@ -1281,11 +1309,12 @@ html[data-theme='dark'] .pile-num {
     width: 72px;
     height: 100px;
   }
-  .read-pile .pile-page .pile-tab {
+  .read-pile .pile-page .pile-tab-mark {
     right: -10px;
     top: 8px;
     width: 20px;
     height: 30px;
+    font-size: 0.7rem;
   }
 }
 

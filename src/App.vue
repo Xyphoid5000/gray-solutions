@@ -268,6 +268,309 @@ function addToPile(chapterIndex: number) {
   const pile = document.querySelector('.read-pile');
   if (!page || !pile) return;
   if (pile.querySelector(`[data-pile-index="${chapterIndex}"]`)) return;
+  const state = Flip.getState(page);
+  // The pile card is a minimal paper slab — not a clone of the full
+  // chapter. A real pile shows page edges, not readable text.
+  // The tab sticks to its page: a static marker with the chapter number.
+  const card = document.createElement('div');
+  card.setAttribute('data-pile-index', String(chapterIndex));
+  card.classList.add('pile-page');
+  card.setAttribute('aria-hidden', 'true');
+  const num = document.createElement('span');
+  num.classList.add('pile-num');
+  num.textContent = String(chapterIndex);
+  card.appendChild(num);
+  const tabMark = document.createElement('span');
+  tabMark.classList.add('pile-tab-mark');
+  tabMark.textContent = String(chapterIndex);
+  card.appendChild(tabMark);
+  const toss = pileToss(chapterIndex);
+  pile.appendChild(card);
+  pileIndices.value.add(chapterIndex);
+  // The card lands in the pile slot; Flip animates it from the page
+  // (unless the reader prefers reduced motion — then it just appears).
+  gsap.set(card, {
+    rotation: toss.rotation,
+    x: toss.x,
+    y: toss.y,
+  });
+  if (!reducedMotion) {
+    Flip.from(state, {
+      targets: card,
+      duration: 0.85,
+      ease: 'power2.inOut',
+    });
+  }
+}cript setup lang="ts">
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import Lenis from 'lenis';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Flip } from 'gsap/Flip';
+import { RouterView, useRouter, useRoute } from 'vue-router';
+import SiteNav from './components/SiteNav.vue';
+import PageTurner from './components/PageTurner.vue';
+import TabRail from './components/TabRail.vue';
+import BindCinematic from './components/BindCinematic.vue';
+import ChapterModal from './components/ChapterModal.vue';
+import DeskCandle from './components/DeskCandle.vue';
+import DeskPencil from './components/DeskPencil.vue';
+import LostPage from './components/LostPage.vue';
+import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
+import { returnToSection } from './lib/ui';
+import { setLenis, scrollToTopImmediate, stopScroll, startScroll, scrollSlowTo } from './lib/scroll';
+
+gsap.registerPlugin(ScrollTrigger, Flip);
+
+const router = useRouter();
+const route = useRoute();
+const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
+
+/** Flip ID for the current page — matches its pile card when tossed. */
+const pageFlipId = computed(() => {
+  const i = chapters.findIndex((c) => c.path === route.path);
+  return i >= 0 ? `pile-${i}` : undefined;
+});
+
+/** The desk props (candle, pencil) only appear when the book is open —
+    i.e. on a content chapter, not the cover or about. */
+const isChapterRoute = computed(
+  () => route.path !== '/' && chapters.some((c) => c.path === route.path),
+);
+
+/** Blacklight: the candle is blown out, the lost page surfaces. */
+const blacklight = ref(false);
+const isDark = () => document.documentElement.dataset.theme === 'dark';
+const candleLit = ref(false);
+
+function updateCandle() {
+  candleLit.value = isDark() && !blacklight.value;
+  document.documentElement.dataset.blacklight = blacklight.value
+    ? 'on'
+    : 'off';
+}
+
+function blowOutCandle() {
+  if (!candleLit.value) return;
+  blacklight.value = true;
+  updateCandle();
+}
+const reducedMotion =
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let lenis: Lenis | null = null;
+
+function nextPage() {
+  const n = neighbor(router.currentRoute.value.path, 1);
+  if (n) router.push(n.path);
+}
+function prevPage() {
+  const n = neighbor(router.currentRoute.value.path, -1);
+  if (n) router.push(n.path);
+}
+
+/* ---------- chapter modal (opened from the side tabs) ---------- */
+const modalChapter = ref<ChapterMeta | null>(null);
+// A chapter picked from the modal. We wait for the modal to fully leave
+// before pushing the route, so the page turn never plays underneath it.
+let pendingChapterPath: string | null = null;
+
+function selectChapter(ch: ChapterMeta) {
+  pendingChapterPath = null; // a fresh pick cancels any pending turn
+  modalChapter.value = ch;
+}
+
+function goToChapter(path: string) {
+  pendingChapterPath = path;
+  modalChapter.value = null;
+}
+
+function onModalAfterLeave() {
+  if (pendingChapterPath && !modalChapter.value) {
+    const path = pendingChapterPath;
+    pendingChapterPath = null;
+    router.push(path);
+  }
+}
+
+/**
+ * The reader asked for the contact form: the book closes, we zoom
+ * back out to the cover, then drift slowly down to the form.
+ */
+function goToContact() {
+  // From the Finale: bind the manuscript before the contact form.
+  if (route.path === '/finale' && bindCinematic.value) {
+    bindCinematic.value.start();
+    return;
+  }
+  if (route.path === '/') {
+    const form = document.getElementById('contact');
+    if (form) scrollSlowTo(form);
+    return;
+  }
+  returnToSection.value = 'contact';
+  router.push('/');
+}
+
+function onBindDone() {
+  // The book is bound — tell the cover, then go to the contact form.
+  window.dispatchEvent(new CustomEvent('gs:manuscript-bound'));
+  if (route.path === '/') {
+    const form = document.getElementById('contact');
+    if (form) scrollSlowTo(form);
+  } else {
+    returnToSection.value = 'contact';
+    router.push('/');
+  }
+}
+
+/**
+ * Same cinematic return, but landing on the about-me section instead.
+ */
+function goToAbout() {
+  if (route.path === '/') {
+    const about = document.getElementById('about');
+    if (about) scrollSlowTo(about);
+    return;
+  }
+  returnToSection.value = 'about';
+  router.push('/');
+}
+
+watch(modalChapter, (ch) => {
+  if (ch) {
+    stopScroll();
+    document.body.style.overflow = 'hidden';
+  } else {
+    document.body.style.overflow = '';
+    startScroll();
+  }
+});
+
+/* The book: chapter pages sit on a darker desk. */
+watch(
+  () => route.path,
+  (path) => {
+    document.body.classList.toggle('has-book', isChapter(path) && path !== '/');
+  },
+  { immediate: true },
+);
+
+/* ---------- snap cards into full view ---------- */
+// When the reader stops scrolling with a card half-cut, settle it
+// neatly under the nav — proximity only, never yanks mid-scroll.
+let snapTimer: number | null = null;
+let snapping = false;
+let cardSnapArmed = false;
+
+function armCardSnap() {
+  cardSnapArmed = true;
+}
+
+function onLenisScroll() {
+  if (snapping || !cardSnapArmed) return;
+  if (snapTimer) window.clearTimeout(snapTimer);
+  snapTimer = window.setTimeout(trySnapCard, 220);
+}
+
+function trySnapCard() {
+  snapTimer = null;
+  if (snapping || !cardSnapArmed || modalChapter.value) return;
+  // Only the settled (non-turning) page owns snap candidates.
+  const pages = Array.from(
+    document.querySelectorAll<HTMLElement>('.book-page'),
+  );
+  const active =
+    pages.find((p) => p.style.position !== 'absolute') ?? pages[0];
+  const cards = active
+    ? Array.from(active.querySelectorAll<HTMLElement>('.snap-card'))
+    : [];
+  if (!cards.length) return;
+  const vh = window.innerHeight;
+  const navH =
+    parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue('--nav-h'),
+    ) || 72;
+  const targetTop = navH + 14;
+  let best: { el: HTMLElement; dy: number } | null = null;
+  for (const el of cards) {
+    const r = el.getBoundingClientRect();
+    if (r.bottom < targetTop || r.top > vh * 0.6) continue;
+    const dy = r.top - targetTop;
+    if (Math.abs(dy) < 8 || Math.abs(dy) > 160) continue;
+    if (!best || Math.abs(dy) < Math.abs(best.dy)) best = { el, dy };
+  }
+  if (!best) return;
+  snapping = true;
+  lenis?.scrollTo(best.el, {
+    offset: -targetTop,
+    duration: 0.7,
+    easing: (t: number) => 1 - Math.pow(1 - t, 3),
+    onComplete: () => {
+      snapping = false;
+    },
+  });
+}
+
+/* ---------- page turns (a real book, not a slideshow) ---------- */
+// Which way the reader is moving through the book: +1 forward, -1 back.
+let turnDir = 1;
+let fromIdx = -1;
+let toIdx = -1;
+router.beforeEach((to, from) => {
+  const ti = chapters.findIndex((c) => c.path === to.path);
+  const fi = chapters.findIndex((c) => c.path === from.path);
+  turnDir = ti >= fi ? 1 : -1;
+  toIdx = ti;
+  fromIdx = fi;
+  // Navigating in blacklight: the candle re-lights, the page is lost again.
+  if (blacklight.value) {
+    blacklight.value = false;
+    updateCandle();
+  }
+  // Manuscript pile: finished pages get tossed left.
+  // The cover (index 0) never goes in the pile.
+  // (Reduced motion still piles the pages — it just skips the Flip.)
+  if (fi >= 0 && ti >= 0) {
+    if (ti > fi) {
+      for (let i = Math.max(fi, 1); i < ti; i++) addToPile(i);
+    } else if (ti < fi) {
+      for (let i = Math.max(ti, 1); i < fi; i++) removeFromPile(i);
+    }
+  }
+  // Leaving the chapters entirely — clear the pile.
+  if (fi >= 0 && ti < 0) {
+    clearPile();
+  }
+});
+
+/**
+ * The read pile: finished manuscript pages, tossed to the left in a
+ * slightly messy stack. Each page gets a deterministic toss so it
+ * lands the same way every time.
+ */
+function pileToss(index: number): { rotation: number; x: number; y: number } {
+  const h1 = (index * 9301 + 49297) % 233280;
+  const h2 = (index * 49297 + 9301) % 233280;
+  const r1 = h1 / 233280;
+  const r2 = h2 / 233280;
+  return {
+    rotation: (r1 - 0.5) * 16,
+    x: (r2 - 0.5) * 28,
+    y: (r1 - 0.5) * 20,
+  };
+}
+
+/** Chapters currently in the read pile (by index). TabRail hides these. */
+const pileIndices = ref<Set<number>>(new Set());
+
+function addToPile(chapterIndex: number) {
+  const page = document.querySelector(
+    '.book-viewport .book-page',
+  ) as HTMLElement | null;
+  const pile = document.querySelector('.read-pile');
+  if (!page || !pile) return;
+  if (pile.querySelector(`[data-pile-index="${chapterIndex}"]`)) return;
   // Grab the tab BEFORE the rail re-renders it away.
   const tab = document.querySelector(
     `.tab-rail .tab[data-tab-ch="${chapterIndex}"]`,

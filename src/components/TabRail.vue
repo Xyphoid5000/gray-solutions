@@ -18,6 +18,8 @@ interface RailTab {
   ch: ChapterMeta;
   chIndex: number;
   active: boolean;
+  /** True when this chapter is sitting in the read pile. */
+  piled: boolean;
   /** 1-based grid row — every page owns its row. */
   row: number;
   /** Distance from the current page — drives the depth shadow. */
@@ -37,11 +39,13 @@ const currentRow = computed(() => currentIndex.value + 1);
 const allTabs = computed<RailTab[]>(() => {
   const tabs: RailTab[] = [];
   chapters.forEach((ch, i) => {
-    if (props.piled.has(i)) return;
+    // All tabs stay visible — they're the nav system. Piled chapters
+    // get a marker but remain clickable.
     tabs.push({
       ch,
       chIndex: i,
       active: i === currentIndex.value,
+      piled: props.piled.has(i),
       row: rowOf(ch),
       depth: Math.abs(i - currentIndex.value),
     });
@@ -76,7 +80,7 @@ function tabLabel(ch: ChapterMeta): string {
         :key="t.ch.path"
         class="tab"
         :data-tab-ch="t.chIndex"
-        :class="{ active: t.active }"
+        :class="{ active: t.active, 'is-piled': t.piled }"
         :style="{ gridRow: t.row, '--depth': t.depth }"
         :aria-label="
           t.active ? `${tabLabel(t.ch)} (current page)` : tabLabel(t.ch)
