@@ -2277,3 +2277,22 @@ html[data-blacklight='on'] body::after {
   padding: 1.2rem 0.8rem;
   gap: 0.6rem;
 }
+
+/* Manuscript in dark mode: candlelit paper, not black. */
+html[data-theme='dark'] .ms-page {
+  background: #d9cbb0;
+  border-color: rgba(60, 45, 30, 0.55);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 170, 80, 0.08);
+}
+html[data-theme='dark'] .ms-page .b-manuscript-frame {
+  border-color: rgba(90, 60, 35, 0.6);
+}
+html[data-theme='dark'] .b-stamp {
+  color: rgba(90, 55, 30, 0.92);
+  border-color: rgba(90, 55, 30, 0.75);
+}
+html[data-theme='dark'] .b-msub {
+  color: rgba(90, 55, 30, 0.75);
+}
