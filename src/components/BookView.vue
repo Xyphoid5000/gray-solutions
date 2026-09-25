@@ -129,6 +129,7 @@ function scatterOut() {
     const r = card.getBoundingClientRect();
     const dx = c ? c.x - (r.left + r.width / 2) : 0;
     const dy = c ? c.y - (r.top + r.height / 2) : 0;
+    card.classList.add('flying');
     gsap.from(card, {
       x: dx,
       y: dy,
@@ -138,6 +139,7 @@ function scatterOut() {
       delay: idx * 0.08,
       ease: 'back.out(1.4)',
       clearProps: 'transform',
+      onComplete: () => card.classList.remove('flying'),
     });
   });
 }
@@ -153,6 +155,7 @@ function scatterBack(): Promise<void> {
     let done = 0;
     cards.forEach((card, idx) => {
       const r = card.getBoundingClientRect();
+      card.classList.add('flying');
       gsap.to(card, {
         x: c.x - (r.left + r.width / 2),
         y: c.y - (r.top + r.height / 2),
