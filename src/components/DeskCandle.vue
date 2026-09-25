@@ -55,9 +55,10 @@ const emit = defineEmits<{
 <style scoped>
 .desk-candle {
   position: absolute;
-  /* On the desk, in the left lane with the pile. Anchored to the desk
-     itself so it can never drift off it. */
-  left: 66px;
+  /* On the desk, in the left lane with the pile — centered on the wood,
+     clear of the paper. Anchored to the desk itself so it can never
+     drift off it. */
+  left: 38px;
   top: 52svh;
   width: 44px;
   height: 66px;
@@ -71,7 +72,7 @@ const emit = defineEmits<{
 }
 @media (max-width: 640px) {
   .desk-candle {
-    left: 30px;
+    left: 17px;
     top: 48svh;
     width: 36px;
     height: 54px;
@@ -125,8 +126,8 @@ const emit = defineEmits<{
   position: absolute;
   left: 50%;
   top: 22%;
-  width: 130px;
-  height: 130px;
+  width: 100px;
+  height: 100px;
   transform: translate(-50%, -50%);
   background: radial-gradient(
     closest-side,
