@@ -20,6 +20,8 @@ const currentIndex = computed(() =>
   chapters.findIndex((c) => c.path === route.path),
 );
 const rowOf = (ch: ChapterMeta) => chapters.indexOf(ch) + 1;
+/** 1-based grid row of the open (active) tab — the page edge breaks there. */
+const activeRow = computed(() => currentIndex.value + 1);
 
 /** Pages behind the reader — backward navigation. */
 const leftTabs = computed<RailTab[]>(() =>
@@ -62,6 +64,12 @@ function tabLabel(ch: ChapterMeta): string {
 
 <template>
   <div class="tab-rails" aria-hidden="false">
+    <div class="page-edge page-edge-left" aria-hidden="true"></div>
+    <div
+      class="page-edge page-edge-right"
+      :style="{ '--active-row': activeRow }"
+      aria-hidden="true"
+    ></div>
     <nav class="tab-rail tab-rail-left" aria-label="Previous pages">
       <button
         v-for="t in leftTabs"

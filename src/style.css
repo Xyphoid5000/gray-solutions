@@ -166,7 +166,7 @@ a {
 
 /* ---------- layout ---------- */
 .wrap {
-  width: min(var(--wrap), 100% - 3rem);
+  width: min(var(--wrap), 100% - 4.5rem);
   margin-inline: auto;
 }
 
@@ -1274,7 +1274,7 @@ a {
 /* ---------- mobile comfort ---------- */
 @media (max-width: 640px) {
   .wrap {
-    width: min(var(--wrap), 100% - 2.25rem);
+    width: min(var(--wrap), 100% - 4.5rem);
   }
   .chapter.book-page {
     padding-top: 5rem;
@@ -1688,6 +1688,16 @@ a {
   border-color: var(--ember);
   transform: translateX(-4px);
 }
+/* Left rail: page-facing (right) side is square and borderless, the outer
+   (left) side carries the radius and border. */
+.tab-rail-left .tab {
+  border-radius: 10px 0 0 10px;
+  border-right: none;
+  border-left: 1px solid var(--line);
+}
+.tab-rail-left .tab:hover {
+  transform: translateX(-4px);
+}
 /* Right-rail tabs mirror the left: the page-facing (left) side is square
    and borderless, the outer (right) side carries the radius and border.
    The current page's tab has no left border — it sits flush to the page. */
@@ -1701,6 +1711,39 @@ a {
 }
 .tab-rail-right .tab.active {
   border-left: none;
+}
+/* Page edges: a hairline at the innermost side of each tab rail, marking
+   the page boundary. The right edge breaks where the open tab sits. */
+.page-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.page-edge-left {
+  left: 34px;
+}
+.page-edge-right {
+  right: 34px;
+  --gap-top: calc(var(--nav-h) + 1.25rem + (var(--active-row) - 1) * var(--tab-row));
+  --gap-bottom: calc(var(--gap-top) + 48px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 var(--gap-top),
+    transparent var(--gap-top),
+    transparent var(--gap-bottom),
+    #000 var(--gap-bottom)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 var(--gap-top),
+    transparent var(--gap-top),
+    transparent var(--gap-bottom),
+    #000 var(--gap-bottom)
+  );
 }
 .tab.active {
   width: 44px;
