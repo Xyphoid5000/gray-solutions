@@ -2488,26 +2488,36 @@ html[data-theme='dark'] body.has-book .chapter {
     ),
     linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
   outline: none;
-  /* Left lane: desk space where the pile and candle live. */
-  padding-left: 120px;
-  /* Right clearance: tabs live completely off the page. */
-  padding-right: 70px;
+  /* Side lanes: pile + candle on the left, tabs on the right. */
+  --desk-pl: 120px;
+  --desk-pr: 60px;
+  padding-left: var(--desk-pl);
+  padding-right: var(--desk-pr);
 }
 /* Each page: a transparent wrap. No stacking context here so tabs
    can rise above the papers of pages above them. */
 .page-wrap {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  /* The wrap is the sized container — paper fills it, tab sits at its edge. */
-  width: min(640px, 100% - 64px);
+  /* Pin to the same content box the current page centers in,
+     so every tab lands at the same x. */
+  top: 0;
+  bottom: 0;
+  left: var(--desk-pl);
+  right: var(--desk-pr);
+  width: auto;
+  max-width: 640px;
   margin-inline: auto;
-  left: 0;
-  right: 0;
+  pointer-events: none;
 }
 .page-wrap.is-current {
   /* The current page is in flow so the stack has height. */
   position: relative;
+  top: auto;
+  bottom: auto;
+  left: auto;
+  right: auto;
+  width: min(640px, 100%);
+  max-width: none;
   pointer-events: auto;
 }
 .page-wrap.is-piled {
@@ -2601,11 +2611,8 @@ html[data-theme='dark'] .page-tab {
 }
 @media (max-width: 640px) {
   .manuscript-desk {
-    padding-left: 70px;
-    padding-right: 48px;
-  }
-  .page-wrap {
-    width: calc(100% - 40px);
+    --desk-pl: 70px;
+    --desk-pr: 44px;
   }
   .page-tab {
     right: -40px;
