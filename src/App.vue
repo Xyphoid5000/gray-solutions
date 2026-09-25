@@ -159,11 +159,27 @@ function trySnapCard() {
 /* ---------- page turns (a real book, not a slideshow) ---------- */
 // Which way the reader is moving through the book: +1 forward, -1 back.
 let turnDir = 1;
+let fromIdx = -1;
+let toIdx = -1;
 router.beforeEach((to, from) => {
   const ti = chapters.findIndex((c) => c.path === to.path);
   const fi = chapters.findIndex((c) => c.path === from.path);
   turnDir = ti >= fi ? 1 : -1;
+  toIdx = ti;
+  fromIdx = fi;
 });
+
+const isMobile = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(max-width: 640px)').matches;
+
+/**
+ * Interior chapter-to-chapter on mobile: the old scroll rolls up off the
+ * desk and the new one rolls down — not a page turn. The book open
+ * (Cover → Premise) and close keep their cinematics.
+ */
+const useScrollRoll = () =>
+  !reducedMotion && isMobile() && fromIdx >= 1 && toIdx >= 1;
 
 function beforeEnter(el: Element) {
   const page = el as HTMLElement;
@@ -171,6 +187,18 @@ function beforeEnter(el: Element) {
   scrollToTopImmediate();
   if (reducedMotion) {
     gsap.set(page, { opacity: 1 });
+    return;
+  }
+  if (useScrollRoll()) {
+    // The new scroll starts rolled up — nothing visible yet.
+    gsap.set(page, {
+      opacity: 1,
+      zIndex: 1,
+      position: 'relative',
+      height: '100svh',
+      overflow: 'hidden',
+      clipPath: 'inset(100% 0% 0% 0%)',
+    });
     return;
   }
   if (turnDir >= 0) {
@@ -193,6 +221,33 @@ function beforeEnter(el: Element) {
 
 function enter(el: Element, done: () => void) {
   const page = el as HTMLElement;
+  if (useScrollRoll()) {
+    // The new scroll unrolls down from the top, the roll leading the way.
+    // Slight delay so the old scroll is mostly up before this drops.
+    const roll = document.createElement('div');
+    roll.className = 'scroll-roll';
+    page.appendChild(roll);
+    const tl = gsap.timeline({
+      delay: 0.4,
+      onComplete: () => {
+        roll.remove();
+        gsap.set(page, { clearProps: 'all' });
+        done();
+      },
+    });
+    tl.to(
+      page,
+      { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.7, ease: 'power2.inOut' },
+      0,
+    );
+    tl.fromTo(
+      roll,
+      { top: '0%' },
+      { top: '100%', duration: 0.7, ease: 'power2.inOut' },
+      0,
+    );
+    return;
+  }
   if (reducedMotion || turnDir >= 0) {
     // Forward: the page is already there beneath the turn — nothing to animate.
     gsap.set(page, { clearProps: 'all' });
@@ -215,6 +270,34 @@ function leave(el: Element, done: () => void) {
   const page = el as HTMLElement;
   if (reducedMotion) {
     done();
+    return;
+  }
+  if (useScrollRoll()) {
+    // The old scroll rolls up off the desk, the roll riding its tail.
+    const roll = document.createElement('div');
+    roll.className = 'scroll-roll';
+    page.appendChild(roll);
+    gsap.set(page, {
+      position: 'absolute',
+      inset: '0',
+      width: '100%',
+      height: '100svh',
+      overflow: 'hidden',
+      zIndex: 2,
+      clipPath: 'inset(0% 0% 0% 0%)',
+    });
+    const tl = gsap.timeline({ onComplete: done });
+    tl.to(
+      page,
+      { clipPath: 'inset(0% 0% 100% 0%)', duration: 0.6, ease: 'power2.in' },
+      0,
+    );
+    tl.fromTo(
+      roll,
+      { top: '100%' },
+      { top: '0%', duration: 0.6, ease: 'power2.in' },
+      0,
+    );
     return;
   }
   if (turnDir >= 0) {
@@ -251,6 +334,9 @@ function leave(el: Element, done: () => void) {
 
 function cancelTurn(el: Element) {
   gsap.killTweensOf(el);
+  (el as HTMLElement)
+    .querySelectorAll('.scroll-roll')
+    .forEach((r) => r.remove());
   gsap.set(el as HTMLElement, { clearProps: 'all' });
 }
 
