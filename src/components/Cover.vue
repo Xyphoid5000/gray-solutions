@@ -9,18 +9,11 @@ import { scrollSlowTo } from '../lib/scroll';
 
 const router = useRouter();
 
-/** The manuscript becomes a book once the reader finishes and binds it. */
-const isBound = ref(
-  typeof localStorage !== 'undefined' &&
-    localStorage.getItem('gs-manuscript-bound') === '1',
-);
+/** The manuscript becomes a book once the reader finishes and binds it.
+    Resets on refresh — every visit starts with the manuscript. */
+const isBound = ref(false);
 function markBound() {
   isBound.value = true;
-  try {
-    localStorage.setItem('gs-manuscript-bound', '1');
-  } catch {
-    /* ignore */
-  }
 }
 // The binding cinematic sets this; listen for it.
 window.addEventListener('gs:manuscript-bound', markBound);
