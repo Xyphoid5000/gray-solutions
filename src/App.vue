@@ -30,9 +30,9 @@ const pageFlipId = computed(() => {
 });
 
 /** The desk props (candle, pencil) only appear when the book is open —
-    i.e. on a chapter route, not the cover or about. */
-const isChapterRoute = computed(() =>
-  chapters.some((c) => c.path === route.path),
+    i.e. on a content chapter, not the cover or about. */
+const isChapterRoute = computed(
+  () => route.path !== '/' && chapters.some((c) => c.path === route.path),
 );
 
 /** Blacklight: the candle is blown out, the lost page surfaces. */
