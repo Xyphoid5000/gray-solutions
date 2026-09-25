@@ -2442,13 +2442,20 @@ html[data-theme='dark'] body.has-book .chapter {
   background: #fffdf6;
   color: #1a1510;
   width: 100%;
-  margin-top: 2rem;
-  margin-bottom: 2rem;
-  padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 3vw, 2rem);
+  margin: 0;
+  padding: 0;
   border-radius: 3px;
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.55),
     0 0 60px rgba(255, 170, 80, 0.06);
+}
+/* Inside the book, chapters use the full paper — no extra inset. */
+.page-paper .chapter {
+  padding: 0;
+}
+.page-paper .wrap {
+  width: 100%;
+  margin: 0;
 }
 html[data-theme='dark'] .page-paper {
   background: #d9cbb0;
