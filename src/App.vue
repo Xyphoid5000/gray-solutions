@@ -262,13 +262,13 @@ function enter(el: Element, done: () => void) {
     });
     tl.to(
       page,
-      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.1, ease: 'power2.inOut' },
+      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.8, ease: 'power2.inOut' },
       0,
     );
     tl.fromTo(
       roll,
       { top: '0%' },
-      { top: '100%', duration: 1.1, ease: 'power2.inOut' },
+      { top: '100%', duration: 1.8, ease: 'power2.inOut' },
       0,
     );
     if (rails) {
@@ -276,7 +276,7 @@ function enter(el: Element, done: () => void) {
         rails,
         {
           clipPath: 'inset(0% 0% 0% 0%)',
-          duration: 1.1,
+          duration: 1.8,
           ease: 'power2.inOut',
         },
         0,

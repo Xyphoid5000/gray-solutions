@@ -1120,31 +1120,43 @@ a {
 .chapter.book-page {
   padding-top: clamp(6rem, 12vw, 10rem);
 }
-/* The book: chapter pages are paper slabs on a darker desk, with the
-   edges aligned to the tabs' inner sides. */
+/* The book: chapter pages are paper slabs on a dark mahogany desk, with
+   the edges aligned to the tabs' inner sides. */
 body.has-book {
-  background-color: var(--desk);
+  background-color: #2a140c;
   background-image:
+    /* fine grain */
     repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.025) 0 1px,
-      transparent 1px 9px
+      94deg,
+      rgba(10, 4, 2, 0.18) 0px,
+      rgba(10, 4, 2, 0.18) 1px,
+      transparent 1px,
+      transparent 6px
     ),
+    /* soft wide streaks */
     repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.05) 0 2px,
-      transparent 2px 17px
+      91deg,
+      rgba(0, 0, 0, 0.12) 0px,
+      rgba(0, 0, 0, 0.12) 3px,
+      transparent 3px,
+      transparent 23px
     ),
+    /* warm highlights */
     repeating-linear-gradient(
-      93deg,
-      rgba(0, 0, 0, 0.03) 0 1px,
-      transparent 1px 29px
+      88deg,
+      rgba(255, 175, 115, 0.05) 0px,
+      rgba(255, 175, 115, 0.05) 2px,
+      transparent 2px,
+      transparent 17px
     ),
+    /* broad mahogany tonal sweep */
     linear-gradient(
-      105deg,
-      rgba(255, 255, 255, 0.03) 0%,
-      transparent 40%,
-      rgba(0, 0, 0, 0.06) 100%
+      103deg,
+      #3e2113 0%,
+      #2f170d 28%,
+      #251009 52%,
+      #341f0f 76%,
+      #27120a 100%
     );
 }
 body.has-book .chapter.book-page {
@@ -1393,28 +1405,36 @@ body.has-book .chapter.book-page {
 .cover-desk {
   position: absolute;
   inset: 0;
-  background-color: var(--desk);
+  background-color: #2a140c;
   background-image:
     repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.025) 0 1px,
-      transparent 1px 9px
+      94deg,
+      rgba(10, 4, 2, 0.18) 0px,
+      rgba(10, 4, 2, 0.18) 1px,
+      transparent 1px,
+      transparent 6px
     ),
     repeating-linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0.05) 0 2px,
-      transparent 2px 17px
+      91deg,
+      rgba(0, 0, 0, 0.12) 0px,
+      rgba(0, 0, 0, 0.12) 3px,
+      transparent 3px,
+      transparent 23px
     ),
     repeating-linear-gradient(
-      93deg,
-      rgba(0, 0, 0, 0.03) 0 1px,
-      transparent 1px 29px
+      88deg,
+      rgba(255, 175, 115, 0.05) 0px,
+      rgba(255, 175, 115, 0.05) 2px,
+      transparent 2px,
+      transparent 17px
     ),
     linear-gradient(
-      105deg,
-      rgba(255, 255, 255, 0.03) 0%,
-      transparent 40%,
-      rgba(0, 0, 0, 0.06) 100%
+      103deg,
+      #3e2113 0%,
+      #2f170d 28%,
+      #251009 52%,
+      #341f0f 76%,
+      #27120a 100%
     );
   opacity: 0;
   pointer-events: none;
@@ -1790,13 +1810,13 @@ body.has-book .chapter.book-page {
   border-color: var(--ember);
   transform: translateX(-4px);
 }
-/* Left rail (inverted): the inner (right) side carries the radius and
-   border, the outer (left) side is square and borderless.
-   Depth shadow on the page-facing side grows with distance from current. */
+/* Left rail: the back of the right tabs — the page flipped over. Outer
+   (left) side carries the radius and border, page-facing (right) side is
+   square and borderless. Depth shadow on the page-facing side. */
 .tab-rail-left .tab {
-  border-radius: 0 10px 10px 0;
-  border-left: none;
-  border-right: 1px solid var(--line);
+  border-radius: 10px 0 0 10px;
+  border-right: none;
+  border-left: 1px solid var(--line);
   box-shadow:
     calc(var(--depth, 0) * 5px) 3px calc(var(--depth, 0) * 8px + 6px)
     rgba(0, 0, 0, 0.3);
