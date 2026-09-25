@@ -2459,7 +2459,7 @@ html[data-blacklight='on'] body::after {  content: '';
   transition: opacity 0.45s ease;
 }
 .pitch-black.on {
-  opacity: 1;
+  opacity: 0.9;
   pointer-events: auto;
 }
 /* Blacklight entrance: the page shivers before the UV washes in. */

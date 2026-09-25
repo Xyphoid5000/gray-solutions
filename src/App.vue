@@ -177,8 +177,9 @@ function updateCandle() {
   document.documentElement.dataset.blacklight = blacklight.value ? 'on' : 'off';
 }
 
-/** Blow out the candle for blacklight: the flame dies, the dark holds
-    a beat longer than usual, the page shivers — then the UV washes in. */
+/** Blow out the candle for blacklight: the flame dies, the same beat
+    of darkness falls but holds longer, the black lifts as the page
+    shivers — then the UV washes in. */
 function blowOutCandle() {
   if (!candleLit.value || ritualRunning.value) return;
   if (reducedMotion()) {
@@ -188,17 +189,20 @@ function blowOutCandle() {
   }
   ritualRunning.value = true;
   candleLit.value = false;
+  pitchBlack.value = true;
   later(() => {
+    // The black lifts and the page shivers as it does.
+    pitchBlack.value = false;
     document.documentElement.classList.add('page-shake');
-  }, 2000);
+  }, 2200);
   later(() => {
     blacklight.value = true;
     updateCandle();
-  }, 2700);
+  }, 3000);
   later(() => {
     document.documentElement.classList.remove('page-shake');
     ritualRunning.value = false;
-  }, 2900);
+  }, 3200);
 }
 
 function onLightsOn() {
