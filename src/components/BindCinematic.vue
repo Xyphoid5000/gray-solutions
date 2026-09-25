@@ -655,7 +655,7 @@ defineExpose({ start });
   display: none;
   opacity: 0;
   z-index: 3;
-  filter: drop-shadow(0 30px 44px rgba(0, 0, 0, 0.55));
+  /* No filter here — filter flattens preserve-3d into a flat card. */
 }
 .b3d-face {
   position: absolute;
