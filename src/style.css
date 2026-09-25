@@ -2368,3 +2368,150 @@ html[data-theme='dark'] body.has-book .chapter {
     0 24px 70px rgba(0, 0, 0, 0.55),
     0 0 60px rgba(255, 170, 80, 0.06);
 }
+
+/* ============================================================
+   BookView: the manuscript as a SPA. No router — pages are
+   transparent wraps stacked up, paper inside with a right margin,
+   tab attached in that margin. Flip tosses finished pages left.
+   ============================================================ */
+.manuscript-desk {
+  position: relative;
+  min-height: 100svh;
+  /* Mahogany desk. */
+  background-color: #2a140c;
+  background-image:
+    repeating-linear-gradient(
+      94deg,
+      rgba(10, 4, 2, 0.18) 0px,
+      rgba(10, 4, 2, 0.18) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
+  /* Reserve the pile's lane on the left. */
+  padding-left: 170px;
+  outline: none;
+}
+.page-stack {
+  position: relative;
+}
+/* Each page: a transparent wrap. No stacking context here so tabs
+   can rise above the papers of pages above them. */
+.page-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.page-wrap.is-current {
+  pointer-events: auto;
+}
+.page-wrap.is-piled {
+  display: none;
+}
+/* The paper: inner div with a right margin where the tab lives. */
+.page-paper {
+  position: relative;
+  z-index: 10;
+  background: #fffdf6;
+  color: #1a1510;
+  width: min(620px, 100% - 120px);
+  margin-inline: auto;
+  margin-top: 5rem;
+  margin-bottom: 5rem;
+  padding: clamp(2rem, 5vw, 4rem) clamp(1.5rem, 4vw, 3rem);
+  /* Right margin: room for the attached tab. */
+  margin-right: max(70px, calc((100% - 620px) / 2 + 40px));
+  border-radius: 3px;
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.55),
+    0 0 60px rgba(255, 170, 80, 0.06);
+}
+html[data-theme='dark'] .page-paper {
+  background: #d9cbb0;
+  color: #1c1712;
+}
+/* Buried pages: paper hidden, but the tab still shows. */
+.page-wrap.is-buried .page-paper {
+  visibility: hidden;
+}
+/* The tab: attached to its page in the right margin. All tabs stay
+   visible and clickable — they're the nav. Staggered vertically. */
+.page-tab {
+  position: absolute;
+  z-index: 20;
+  right: max(12px, calc((100% - 620px) / 2 - 18px));
+  top: calc(120px + var(--tab-row, 0) * 58px);
+  width: 52px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  background: #fffdf6;
+  border: 1px solid rgba(26, 21, 16, 0.2);
+  border-radius: 0 8px 8px 0;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a1510;
+  cursor: pointer;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+  appearance: none;
+}
+html[data-theme='dark'] .page-tab {
+  background: #d9cbb0;
+  color: #1c1712;
+  border-color: rgba(60, 45, 30, 0.4);
+}
+.page-tab.active {
+  background: var(--ember);
+  color: #fff;
+  border-color: var(--ember-deep);
+}
+.page-tab.is-piled {
+  opacity: 0.6;
+}
+/* Prev/next bar. */
+.book-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(transparent, rgba(10, 4, 2, 0.85));
+}
+.nav-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+}
+.nav-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.nav-pos {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+@media (max-width: 640px) {
+  .manuscript-desk {
+    padding-left: 84px;
+  }
+  .page-paper {
+    width: calc(100% - 32px);
+    margin-right: 16px;
+  }
+  .page-tab {
+    right: 2px;
+    width: 40px;
+    height: 38px;
+    font-size: 0.85rem;
+  }
+}

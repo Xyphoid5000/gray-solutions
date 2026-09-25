@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
@@ -8,7 +7,7 @@ import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound, markManuscriptBound } from '../lib/manuscript';
 
-const router = useRouter();
+const emit = defineEmits(['open-book']);
 
 /** The manuscript becomes a book once the reader finishes and binds it.
     Resets on refresh — every visit starts with the manuscript. */
@@ -283,7 +282,7 @@ function coverFit() {
 
 function open() {
   if (reducedMotion()) {
-    router.push('/premise');
+    emit('open-book');
     return;
   }
   introTl?.kill();
@@ -292,7 +291,7 @@ function open() {
   dragPointerId = null;
   const book = bookRef.value;
   if (!book) {
-    router.push('/premise');
+    emit('open-book');
     return;
   }
   const fit = coverFit();
@@ -300,7 +299,7 @@ function open() {
   // the book turns to face the camera — then the dive: square to camera
   // and grow until the cover fills the frame, and the router's normal
   // page-turn carries us into the book.
-  const tl = gsap.timeline({ onComplete: () => router.push('/premise') });
+  const tl = gsap.timeline({ onComplete: () => emit('open-book') });
   tl.to('.cover-ui, .cover-kicker', { opacity: 0, y: -24, duration: 0.45, ease: 'power2.in' }, 0)
     .to('.cover-desk', { opacity: 1, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.cover-glow', { opacity: 0.2, duration: 0.9, ease: 'power1.inOut' }, 0)

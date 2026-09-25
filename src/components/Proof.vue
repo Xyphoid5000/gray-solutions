@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
 import ChapterHeading from './ChapterHeading.vue';
 import { siteConfig } from '../config';
 
-const router = useRouter();
+const emit = defineEmits<{
+  (e: 'go', index: number): void;
+}>();
 </script>
 
 <template>
@@ -80,7 +81,7 @@ const router = useRouter();
               they&rsquo;d done first.
             </p>
           </div>
-          <button class="btn btn-solid" @click="router.push('/finale')">
+          <button class="btn btn-solid" @click="emit('go', 4)">
             Claim the page <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
         </article>
