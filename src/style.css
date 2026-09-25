@@ -1406,7 +1406,7 @@ a {
 .b-mark {
   font-family: var(--serif);
   font-style: italic;
-  color: var(--ember);
+  color: #d08a4e;
   font-size: 1.5rem;
 }
 .b-title {
@@ -1416,17 +1416,17 @@ a {
   line-height: 1.02;
   letter-spacing: -0.01em;
   margin: 0;
-  color: var(--ink);
+  color: #f2ecdf;
 }
 .b-title em {
   font-style: italic;
-  color: var(--ember);
+  color: #d08a4e;
   font-weight: 400;
 }
 .b-tag {
   font-family: var(--serif);
   font-style: italic;
-  color: var(--muted);
+  color: #a7a192;
   font-size: 0.98rem;
   margin: 0.35rem 0 0;
 }
@@ -1435,7 +1435,7 @@ a {
   font-weight: 600;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--faint);
+  color: #6f6a5e;
   margin: auto 0 0;
 }
 .b-back {
@@ -1463,7 +1463,7 @@ a {
   font-weight: 600;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: var(--ember);
+  color: #d08a4e;
   white-space: nowrap;
 }
 .b-pages {
@@ -1545,7 +1545,7 @@ a {
 .pull-cord {
   position: fixed;
   top: 0;
-  right: 3.5rem;
+  left: 3.5rem;
   z-index: 1100;
   display: flex;
   flex-direction: column;
@@ -1576,7 +1576,6 @@ a {
   pointer-events: auto;
   width: 36px;
   height: 36px;
-  margin-top: -2px;
   border-radius: 50%;
   border: 1px solid var(--ember-deep);
   background: radial-gradient(circle at 35% 30%, var(--ember-bright), var(--ember) 55%, var(--ember-deep));
@@ -1618,7 +1617,7 @@ a {
 }
 @media (max-width: 640px) {
   .pull-cord {
-    right: 2.5rem;
+    left: 2.5rem;
   }
   .cord-line {
     height: 88px;

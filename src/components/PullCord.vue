@@ -49,7 +49,10 @@ const stopSway = () => {
 
 const applyPull = (dy: number) => {
   pull = Math.max(0, Math.min(PULL_MAX, dy));
-  if (line.value) gsap.set(line.value, { scaleY: 1 + pull / LINE_H });
+  // Measure the real line height (it shrinks on mobile) so the knob
+  // always rides the line's visual end instead of separating from it.
+  const lineH = line.value?.offsetHeight || LINE_H;
+  if (line.value) gsap.set(line.value, { scaleY: 1 + pull / lineH });
   if (knob.value) gsap.set(knob.value, { y: pull });
 };
 
