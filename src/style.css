@@ -1614,14 +1614,16 @@ body.has-book .chapter.book-page {
 }
 .b-stamp {
   font-family: var(--serif);
-  font-size: clamp(1.6rem, 7vw, 2.1rem);
-  letter-spacing: 0.28em;
+  font-size: clamp(1.1rem, 5.5vw, 1.5rem);
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(120, 70, 40, 0.82);
   margin: 0;
   transform: rotate(-4deg);
   border: 3px double rgba(120, 70, 40, 0.6);
-  padding: 0.4em 0.7em 0.4em 0.9em;
+  padding: 0.35em 0.5em 0.35em 0.65em;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .b-msub {
   font-size: 0.85rem;
