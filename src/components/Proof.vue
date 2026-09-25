@@ -8,7 +8,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section id="proof" class="chapter book-page" aria-label="Chapter 3 — The proof">
+  <section id="proof" class="chapter" aria-label="Chapter 3 — The proof">
     <div class="wrap">
       <ChapterHeading
         index="03"

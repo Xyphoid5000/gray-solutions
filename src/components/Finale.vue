@@ -81,7 +81,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="prologue book-page finale" aria-label="About the author">
+  <section class="prologue finale" aria-label="About the author">
     <div class="wrap">
       <p class="kicker">
         <span class="k-num">&#10022;</span> About the author

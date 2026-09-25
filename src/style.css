@@ -2466,8 +2466,8 @@ html[data-theme='dark'] .page-paper {
 .page-tab {
   position: absolute;
   z-index: 20;
-  /* At the paper's right edge, protruding like a real tab. */
-  right: -14px;
+  /* Half on the paper, half off — like a real divider tab. */
+  right: -26px;
   top: calc(100px + var(--tab-row, 0) * 58px);
   width: 52px;
   height: 46px;
@@ -2506,7 +2506,7 @@ html[data-theme='dark'] .page-tab {
     width: calc(100% - 40px);
   }
   .page-tab {
-    right: -10px;
+    right: -20px;
     width: 40px;
     height: 38px;
     font-size: 0.85rem;
