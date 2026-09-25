@@ -8,6 +8,10 @@ defineProps<{
   visible: boolean;
 }>();
 
+const emit = defineEmits<{
+  close: [];
+}>();;
+
 const NONSENSE = [
   'the margin notes ate the index and the index forgave them,',
   'a paperclip dreamed of being a staple and woke up tired,',
@@ -28,6 +32,14 @@ const NONSENSE = [
       aria-label="A lost manuscript page"
     >
       <div class="lost-sheet">
+        <button
+          type="button"
+          class="lost-close"
+          @click="emit('close')"
+          aria-label="Close the lost page"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
         <p class="lost-kicker">recovered from the desk drawer</p>
         <div class="lost-nonsense" aria-hidden="true">
           <p v-for="(line, i) in NONSENSE" :key="i">{{ line }}</p>
@@ -66,6 +78,26 @@ const NONSENSE = [
   transform: rotate(-1.5deg);
   display: grid;
   grid-template-rows: auto 1fr;
+  pointer-events: auto;
+}
+.lost-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  appearance: none;
+  border: 1px solid rgba(150, 110, 255, 0.4);
+  background: rgba(13, 10, 24, 0.8);
+  color: #e2ccff;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+}
+.lost-close:hover {
+  background: rgba(150, 110, 255, 0.25);
 }
 .lost-kicker {
   grid-row: 1;

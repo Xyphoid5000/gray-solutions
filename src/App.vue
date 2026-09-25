@@ -53,6 +53,12 @@ function onLightsOn() {
   updateCandle();
 }
 
+function onLostPageClose() {
+  // Closing the lost page exits blacklight and relights the candle.
+  blacklight.value = false;
+  updateCandle();
+}
+
 let themeObs: MutationObserver | null = null;
 let lenis: Lenis | null = null;
 
@@ -103,6 +109,6 @@ onUnmounted(() => {
       <DeskPencil />
     </template>
   </BookView>
-  <LostPage :visible="blacklight" />
+  <LostPage :visible="blacklight" @close="onLostPageClose" />
   <BindCinematic />
 </template>
