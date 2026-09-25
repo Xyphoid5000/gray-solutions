@@ -33,3 +33,32 @@ export function scrollToElement(el: HTMLElement): void {
     el.scrollIntoView({ behavior: 'auto' });
   }
 }
+
+/** Slow, cinematic scroll to an element — the contact-form reveal. */
+export function scrollSlowTo(el: HTMLElement, onComplete?: () => void): void {
+  if (lenis) {
+    lenis.scrollTo(el, { duration: 3.4, onComplete });
+  } else {
+    el.scrollIntoView({ behavior: 'smooth' });
+    if (onComplete) window.setTimeout(onComplete, 700);
+  }
+}
+
+/** Jump to the very top without animation (page turns). */
+export function scrollToTopImmediate(): void {
+  if (lenis) {
+    lenis.scrollTo(0, { immediate: true });
+  } else {
+    window.scrollTo(0, 0);
+  }
+}
+
+/** Pause smooth scrolling (e.g. while a full-screen menu is open). */
+export function stopScroll(): void {
+  lenis?.stop();
+}
+
+/** Resume smooth scrolling. */
+export function startScroll(): void {
+  lenis?.start();
+}
