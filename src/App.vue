@@ -91,6 +91,15 @@ watch(modalChapter, (ch) => {
   }
 });
 
+/* The book: chapter pages sit on a darker desk. */
+watch(
+  () => route.path,
+  (path) => {
+    document.body.classList.toggle('has-book', isChapter(path) && path !== '/');
+  },
+  { immediate: true },
+);
+
 /* ---------- snap cards into full view ---------- */
 // When the reader stops scrolling with a card half-cut, settle it
 // neatly under the nav — proximity only, never yanks mid-scroll.

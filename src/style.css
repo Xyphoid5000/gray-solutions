@@ -9,6 +9,8 @@
   --bg: #0a0d16;
   --bg-2: #0d1220;
   --panel: #111829;
+  --desk: #04060b;
+  --page: #10141f;
   --ink: #f2ecdf;
   --muted: #a7a192;
   --faint: #6f6a5e;
@@ -29,6 +31,8 @@
   --bg: #faf6ec;
   --bg-2: #f1ead9;
   --panel: #fffdf6;
+  --desk: #e2d7bd;
+  --page: #fffdf6;
   --ink: #1a1510;
   --muted: #6d6455;
   --faint: #a39c8a;
@@ -566,7 +570,7 @@ a {
   position: relative;
   border: 1px solid var(--line-soft);
   border-radius: 18px;
-  padding: 2.4rem 2.2rem;
+  padding: 3.2rem 3rem;
   background: linear-gradient(160deg, rgba(242, 236, 223, 0.025), transparent 55%);
   transition: border-color 0.4s, transform 0.4s var(--ease-out),
     background 0.4s;
@@ -1115,6 +1119,21 @@ a {
 }
 .chapter.book-page {
   padding-top: clamp(6rem, 12vw, 10rem);
+}
+/* The book: chapter pages are paper slabs on a darker desk, with the
+   edges aligned to the tabs' inner sides. */
+body.has-book {
+  background: var(--desk);
+}
+body.has-book .chapter.book-page {
+  background: var(--page);
+  margin-inline: 34px;
+  border-left: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.22),
+    0 4px 14px rgba(0, 0, 0, 0.14);
+  position: relative;
 }
 
 /* ---------- page turner (persistent chrome) ---------- */
@@ -1665,9 +1684,7 @@ a {
   border-radius: 10px 0 0 10px;
   border: 1px solid var(--line);
   border-right: none;
-  background: color-mix(in srgb, var(--panel) 92%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: var(--page);
   color: var(--muted);
   font-family: var(--serif);
   font-style: italic;
@@ -1712,38 +1729,55 @@ a {
 .tab-rail-right .tab.active {
   border-left: none;
 }
-/* Page edges: a hairline at the innermost side of each tab rail, marking
-   the page boundary. The right edge breaks where the open tab sits. */
-.page-edge {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--line);
-  opacity: 0.7;
-  pointer-events: none;
+/* Book spine + left side (desktop only): a real binding before the tabs. */
+.book-spine,
+.book-side-left {
+  display: none;
 }
-.page-edge-left {
-  left: 34px;
-}
-.page-edge-right {
-  right: 34px;
-  --gap-top: calc(var(--nav-h) + 1.25rem + (var(--active-row) - 1) * var(--tab-row));
-  --gap-bottom: calc(var(--gap-top) + 48px);
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 var(--gap-top),
-    transparent var(--gap-top),
-    transparent var(--gap-bottom),
-    #000 var(--gap-bottom)
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 var(--gap-top),
-    transparent var(--gap-top),
-    transparent var(--gap-bottom),
-    #000 var(--gap-bottom)
-  );
+@media (min-width: 641px) {
+  body.has-book .book-spine {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 34px;
+    background: linear-gradient(
+      to right,
+      #0b0805 0%,
+      #241c12 45%,
+      #171209 75%,
+      #0e0a06 100%
+    );
+    box-shadow: 6px 0 18px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+  }
+  body.has-book .book-side-left {
+    display: block;
+    position: absolute;
+    left: 34px;
+    top: 0;
+    bottom: 0;
+    width: 62px;
+    background:
+      repeating-linear-gradient(
+        to right,
+        var(--page) 0px,
+        var(--page) 2px,
+        rgba(0, 0, 0, 0.07) 2px,
+        rgba(0, 0, 0, 0.07) 3px
+      );
+    border-right: 1px solid var(--line-soft);
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.18);
+    pointer-events: none;
+  }
+  /* The left rail sits on the page edge, after the spine + side. */
+  body.has-book .tab-rails {
+    padding-left: 96px;
+  }
+  body.has-book .chapter.book-page {
+    margin-left: 130px;
+  }
 }
 .tab.active {
   width: 44px;
