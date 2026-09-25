@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { gsap } from 'gsap';
+import Bookshelf from './Bookshelf.vue';
 
 const emit = defineEmits<{
   done: [];
@@ -11,10 +12,10 @@ const emit = defineEmits<{
 const overlay = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
+const book3d = ref<HTMLElement | null>(null);
 const handL = ref<HTMLElement | null>(null);
 const handR = ref<HTMLElement | null>(null);
-const shelf = ref<HTMLElement | null>(null);
-const slotEl = ref<HTMLElement | null>(null);
+const cameraWrap = ref<HTMLElement | null>(null);
 const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
@@ -35,10 +36,15 @@ function finish() {
   }
   if (coverEl.value)
     gsap.set(coverEl.value, { clearProps: 'all', display: 'none', opacity: 0 });
-  if (shelf.value) gsap.set(shelf.value, { clearProps: 'all', opacity: 0 });
+  if (book3d.value)
+    gsap.set(book3d.value, { clearProps: 'all', display: 'none', opacity: 0 });
+  if (cameraWrap.value) gsap.set(cameraWrap.value, { yPercent: 100 });
   if (veil.value) gsap.set(veil.value, { opacity: 0 });
   if (handL.value) gsap.set(handL.value, { clearProps: 'all', opacity: 0 });
   if (handR.value) gsap.set(handR.value, { clearProps: 'all', opacity: 0 });
+  // The shelf's own spine only appears once the book is filed.
+  const ours = ov?.querySelector('.bs-ours');
+  if (ours) gsap.set(ours, { opacity: 0 });
   playing.value = false;
   tl = null;
   emit('done');
@@ -64,15 +70,17 @@ function start() {
   const ov = overlay.value;
   const st = stack.value;
   const cv = coverEl.value;
+  const b3d = book3d.value;
   const hl = handL.value;
   const hr = handR.value;
-  const sh = shelf.value;
-  const sl = slotEl.value;
+  const cam = cameraWrap.value;
   const vl = veil.value;
-  if (!ov || !st || !cv || !hl || !hr || !sh || !sl || !vl) return;
+  if (!ov || !st || !cv || !b3d || !hl || !hr || !cam || !vl) return;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
     .matches;
   if (reduced) {
+    // No animation: mark it bound and hand off, same end state.
+    emit('blackout');
     emit('done');
     return;
   }
@@ -82,25 +90,58 @@ function start() {
   const cx = vw / 2;
   const cy = vh / 2;
 
-  // The pile's screen spot — the stack starts life there.
+  // The pile's screen spot — the stack starts life there. The real
+  // pile hugs the screen edge, so the spot is clamped to keep the
+  // 220x300 stack fully visible for the opening beats.
   const pileRect = document
     .querySelector('.read-pile')
     ?.getBoundingClientRect();
-  const pileCx = pileRect ? pileRect.left + pileRect.width / 2 : vw * 0.16;
-  const pileCy = pileRect ? pileRect.top + pileRect.height / 2 : vh * 0.78;
+  const clamp = (v: number, lo: number, hi: number) =>
+    Math.min(hi, Math.max(lo, v));
+  const pileCx = pileRect
+    ? clamp(pileRect.left + pileRect.width / 2, 132, vw - 132)
+    : vw * 0.16;
+  const pileCy = pileRect
+    ? clamp(pileRect.top + pileRect.height / 2, 172, vh - 172)
+    : vh * 0.78;
 
-  // Reset.
+  // Reset. Centering is pinned explicitly (xPercent/yPercent) rather
+  // than trusting the CSS transform parse.
   gsap.set(ov, { display: 'block', opacity: 0 });
-  gsap.set(cv, { display: 'none', opacity: 0, x: 0, y: 0, scale: 1, rotation: 0 });
+  gsap.set(cv, {
+    display: 'none',
+    opacity: 0,
+    x: 0,
+    y: 0,
+    xPercent: -50,
+    yPercent: -50,
+    scale: 1,
+    rotation: 0,
+  });
+  gsap.set(b3d, {
+    display: 'none',
+    opacity: 0,
+    x: 0,
+    y: 0,
+    xPercent: -50,
+    yPercent: -50,
+    scale: 1,
+    rotationY: 18,
+    transformPerspective: 900,
+  });
   gsap.set(st, {
     display: 'block',
     opacity: 1,
     x: pileCx - cx,
     y: pileCy - cy,
+    xPercent: -50,
+    yPercent: -50,
     scaleY: 1,
   });
-  gsap.set(sh, { opacity: 0, y: 0 });
+  gsap.set(cam, { yPercent: 100 });
   gsap.set(vl, { opacity: 0 });
+  const ours = ov.querySelector('.bs-ours');
+  if (ours) gsap.set(ours, { opacity: 0 });
   // Both hands work from the right side; the left hand is mirrored so
   // both reach toward the pile.
   gsap.set([hl, hr], {
@@ -169,37 +210,32 @@ function start() {
     }),
   );
 
-  // Where the finished book lands on the shelf (measured while the
-  // shelf is invisible but laid out; the cover itself is 260x340 and
-  // lands centered, so its geometry is computed, not measured).
-  const sr = sl.getBoundingClientRect();
-  const slotDx = sr.left + sr.width / 2 - cx;
-  const slotDy = sr.top + sr.height / 2 - cy;
-  const slotScale = Math.min(0.8, (sr.height - 8) / 340);
-
   tl = gsap.timeline({ onComplete: finish });
   const T = tl as gsap.core.Timeline;
 
-  // Beat 1 — the overlay rises; the final page drops into the pile,
-  // leaving it 5-4-3-2-1 over the cover.
+  // Beat 1 — the overlay rises; the final page drops into the pile and
+  // lands with a bounce you can't miss, leaving 5-4-3-2-1 over the cover.
   T.to(ov, { opacity: 1, duration: 0.5 }, 0);
   const ch5 = chCards[4];
   T.fromTo(
     ch5,
-    { y: -vh * 0.5, opacity: 0, rotation: -8 },
+    { y: -vh * 0.7, opacity: 0, rotation: -10 },
     { y: 0, opacity: 1, rotation: 0, duration: 0.7, ease: 'power2.in' },
     0.45,
   );
+  // Landing bounce and settle — page five has arrived.
+  T.to(ch5, { y: -22, duration: 0.18, ease: 'power2.out' }, 1.17);
+  T.to(ch5, { y: 0, duration: 0.34, ease: 'bounce.out' }, 1.35);
   allCards.forEach((c, k) => {
     if (c === ch5) return;
     T.fromTo(
       c,
       { rotation: k % 2 ? 5 : -5 },
       { rotation: 0, duration: 0.6, ease: 'power2.out' },
-      0.35 + k * 0.05,
+      1.3 + k * 0.05,
     );
   });
-  const b1 = 1.35;
+  const b1 = 1.78;
 
   // Beat 2 — hands swing in from the right, grab the pile, drag it to
   // center, fan the pages and shuffle them into 1-2-3-4-5.
@@ -297,28 +333,46 @@ function start() {
   T.set(hr, { opacity: 0 }, flingAt + 0.6);
   const b3 = flingAt + 0.65;
 
-  // Beat 4 — the dark cover drops from above; the pages tuck inside.
+  // Beat 4 — the dark cover drops from above, dead-center, and seals
+  // over the pages; the pages tuck inside.
   const dropAt = b3 + 0.15;
+  // Pin the stack dead-center under the falling cover.
+  T.set(st, { x: 0, y: 0, xPercent: -50, yPercent: -50 }, dropAt);
   T.set(
     cv,
-    { display: 'flex', opacity: 1, x: 0, y: -(vh + 260), scale: 1, rotation: 0 },
+    {
+      display: 'flex',
+      opacity: 1,
+      x: 0,
+      y: -(vh + 260),
+      xPercent: -50,
+      yPercent: -50,
+      scale: 1,
+      rotation: 0,
+    },
     dropAt,
   );
   T.to(cv, { y: 0, duration: 1.05, ease: 'power2.out' }, dropAt);
+  // Landing squash — the cover seals shut over the pages.
+  T.to(
+    cv,
+    { scaleY: 0.92, scaleX: 1.03, duration: 0.14, ease: 'power2.in' },
+    dropAt + 1.05,
+  );
+  T.to(
+    cv,
+    { scaleY: 1, scaleX: 1, duration: 0.45, ease: 'elastic.out(1, 0.55)' },
+    dropAt + 1.19,
+  );
   const tuckAt = dropAt + 1.05;
   chCards.forEach((c, k) => {
     T.to(
       c,
-      { y: -34, scale: 0.84, opacity: 0, duration: 0.45, ease: 'power2.in' },
+      { y: -30, scale: 0.78, opacity: 0, duration: 0.4, ease: 'power2.in' },
       tuckAt + k * 0.03,
     );
   });
-  T.set(st, { display: 'none' }, tuckAt + 0.6);
-  T.to(
-    cv,
-    { scaleY: 0.94, duration: 0.18, yoyo: true, repeat: 1, ease: 'power2.inOut' },
-    tuckAt + 0.55,
-  );
+  T.set(st, { display: 'none' }, tuckAt + 0.55);
   const b4 = tuckAt + 1.0;
 
   // Beat 5 — the title is written on.
@@ -343,34 +397,76 @@ function start() {
   );
   const b5 = titledAt + 0.9;
 
-  // Beat 6 — the bookshelf rises; the finished book takes its slot
-  // among the classics.
-  T.fromTo(
-    sh,
-    { y: 46, opacity: 0 },
-    { y: 0, opacity: 1, duration: 0.7, ease: 'power2.out' },
-    b5,
-  );
-  const slotAt = b5 + 0.8;
+  // Beat 6a — a hand picks up the finished book; the flat cover
+  // becomes a real 3D object in its grip.
+  T.set(hr, { x: vw + 240, y: cy, opacity: 1 }, b5);
+  T.to(hr, { x: cx + 130, duration: 0.55, ease: 'power3.out' }, b5 + 0.05);
+  const grabAt = b5 + 0.65;
+  T.to(cv, { opacity: 0, duration: 0.25, ease: 'power1.in' }, grabAt);
+  T.set(cv, { display: 'none' }, grabAt + 0.3);
+  T.set(b3d, { display: 'block' }, grabAt);
+  T.to(b3d, { opacity: 1, duration: 0.25, ease: 'power1.in' }, grabAt);
+  // Lift off the desk.
   T.to(
-    cv,
-    {
-      x: `+=${slotDx}`,
-      y: `+=${slotDy}`,
-      scale: slotScale,
-      rotation: -4,
-      duration: 1.15,
-      ease: 'power2.inOut',
-    },
-    slotAt,
+    [hr, b3d],
+    { y: '-=46', duration: 0.5, ease: 'power2.out' },
+    grabAt + 0.2,
   );
-  const b6 = slotAt + 1.15 + 0.7;
+  const b6 = grabAt + 0.85;
 
-  // Beat 7 — fade to black; behind it the home page swaps in the
-  // finished book; fade back in on it.
-  T.to(vl, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, b6);
-  T.call(() => emit('blackout'), [], b6 + 0.85);
-  T.to(ov, { opacity: 0, duration: 1.0, ease: 'power1.inOut' }, b6 + 1.35);
+  // Beat 6b — the camera tilts back up: the bookshelf glides in and
+  // takes the frame; the hand holds the book steady through the move.
+  T.to(cam, { yPercent: 0, duration: 1.35, ease: 'power3.inOut' }, b6);
+  const b7 = b6 + 1.35;
+
+  // Beat 6c — the hand carries the book to its slot, turns it so the
+  // spine faces the reader, and files it among the classics. The slot
+  // is measured live, once the shelf has settled.
+  T.call(
+    () => {
+      const slot = ov.querySelector('[data-bind-slot]') as HTMLElement | null;
+      const spine = ov.querySelector('.bs-ours');
+      let dx = 0;
+      let dy = 0;
+      let s = 0.7;
+      if (slot) {
+        const r = slot.getBoundingClientRect();
+        dx = r.left + r.width / 2 - cx;
+        dy = r.top + r.height / 2 - cy;
+        s = Math.min(0.75, (r.height - 10) / 340);
+      }
+      const file = gsap.timeline();
+      // Carry to the slot.
+      file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
+      file.to(
+        hr,
+        { x: `+=${dx}`, y: `+=${dy}`, duration: 1.0, ease: 'power2.inOut' },
+        0,
+      );
+      // Turn: the spine swings toward the reader as it seats.
+      file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.85);
+      file.to(b3d, { scale: s, duration: 0.7, ease: 'power2.inOut' }, 0.85);
+      // The 3D book becomes the shelf's own spine.
+      file.to(b3d, { opacity: 0, duration: 0.35, ease: 'power1.in' }, 1.7);
+      if (spine)
+        file.to(spine, { opacity: 1, duration: 0.35, ease: 'power1.out' }, 1.7);
+      // The hand lets go and leaves.
+      file.to(
+        hr,
+        { x: vw + 260, opacity: 0, duration: 0.5, ease: 'power2.in' },
+        1.95,
+      );
+    },
+    [],
+    b7,
+  );
+  const b8 = b7 + 2.75;
+
+  // Beat 7 — hold on the completed shelf; fade to black; behind it the
+  // home page takes the bound shelf; fade back in on it.
+  T.to(vl, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, b8);
+  T.call(() => emit('blackout'), [], b8 + 0.85);
+  T.to(ov, { opacity: 0, duration: 1.0, ease: 'power1.inOut' }, b8 + 1.35);
 }
 
 defineExpose({ start });
@@ -421,19 +517,23 @@ defineExpose({ start });
       </div>
     </div>
 
-    <!-- The bookshelf: classics on a plank; the book takes its slot. -->
-    <div ref="shelf" class="bind-shelf" aria-hidden="true">
-      <div class="shelf-row">
-        <div class="shelf-book" style="height: 240px; background: #4a1f1f">Moby-Dick</div>
-        <div class="shelf-book" style="height: 220px; background: #1f3a5a">Pride and Prejudice</div>
-        <div class="shelf-book" style="height: 250px; background: #2e4a2e">Frankenstein</div>
-        <div class="shelf-book" style="height: 230px; background: #5a3a1f">Jane Eyre</div>
-        <div ref="slotEl" class="shelf-slot"></div>
-        <div class="shelf-book" style="height: 245px; background: #3a1f3a">Dracula</div>
-        <div class="shelf-book" style="height: 215px; background: #1f4a4a">Wuthering Heights</div>
-        <div class="shelf-book" style="height: 235px; background: #4a4a1f">The Odyssey</div>
+    <!-- The finished book as a 3D object, picked up by the hand. -->
+    <div ref="book3d" class="bind-book3d" aria-hidden="true">
+      <div class="b3d-face b3d-front">
+        <div class="b3d-frame">
+          <p class="b3d-title">Gray Solutions</p>
+          <p class="b3d-tag"><em>Websites that tell stories.</em></p>
+          <p class="b3d-by">Chris Gray</p>
+        </div>
       </div>
-      <div class="shelf-plank"></div>
+      <div class="b3d-face b3d-spine"><span>Gray Solutions</span></div>
+      <div class="b3d-face b3d-pages"></div>
+    </div>
+
+    <!-- The camera tilts up to the real bookshelf; the book is filed
+         into its waiting slot. -->
+    <div ref="cameraWrap" class="bind-camera" aria-hidden="true">
+      <Bookshelf :interactive="false" :show-manuscript="false" />
     </div>
 
     <!-- Fade-to-black veil for the final beat. -->
@@ -509,7 +609,7 @@ defineExpose({ start });
   font-family: var(--serif);
   font-size: 1.8rem;
   font-weight: 600;
-  color: rgba(242, 236, 223, 0.25);
+  color: rgba(74, 52, 32, 0.6);
   user-select: none;
 }
 .bind-hand {
@@ -520,6 +620,7 @@ defineExpose({ start });
   opacity: 0;
   transform: translateY(-50%);
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
+  z-index: 4;
 }
 .bind-hand-l {
   left: -4vw;
@@ -582,57 +683,92 @@ defineExpose({ start });
   color: rgba(235, 225, 210, 0.55);
   margin: 0;
 }
-/* The bookshelf: classic spines on a wooden plank. */
-.bind-shelf {
+/* The finished book as a 3D object: front, spine, page block. */
+.bind-book3d {
+  --t: 36px;
   position: absolute;
   left: 50%;
-  bottom: 5vh;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: 94vw;
+  top: 50%;
+  width: 260px;
+  height: 340px;
+  transform-style: preserve-3d;
+  display: none;
   opacity: 0;
   z-index: 3;
+  filter: drop-shadow(0 30px 44px rgba(0, 0, 0, 0.55));
 }
-.shelf-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 7px;
-  padding: 0 8px;
+.b3d-face {
+  position: absolute;
 }
-.shelf-book {
-  width: 52px;
-  flex-shrink: 0;
-  writing-mode: vertical-rl;
+.b3d-front {
+  inset: 0;
+  transform: translateZ(calc(var(--t) / 2));
+  background: linear-gradient(145deg, #1a120b 0%, #0f0a06 100%);
+  border: 1px solid rgba(208, 138, 78, 0.35);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--serif);
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  color: rgba(232, 205, 150, 0.92);
-  border-radius: 3px 3px 0 0;
-  padding: 14px 0;
-  white-space: nowrap;
+}
+.b3d-frame {
+  text-align: center;
+  padding: 2rem;
+}
+.b3d-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--ember);
+  margin: 0 0 0.5rem;
+}
+.b3d-tag {
+  font-size: 0.85rem;
+  color: rgba(235, 225, 210, 0.75);
+  margin: 0 0 0.35rem;
+}
+.b3d-by {
+  font-size: 0.8rem;
+  color: rgba(235, 225, 210, 0.55);
+  margin: 0;
+}
+.b3d-spine {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--t);
+  transform: rotateY(-90deg) translateZ(calc(var(--t) / 2));
+  background: linear-gradient(to bottom, #1d140c 0%, #100c07 100%);
+  border-left: 1px solid rgba(208, 138, 78, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  box-shadow: inset -3px 0 6px rgba(0, 0, 0, 0.35);
 }
-.shelf-slot {
-  width: 170px;
-  height: 248px;
-  flex-shrink: 0;
+.b3d-spine span {
+  writing-mode: vertical-rl;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #d08a4e;
+  white-space: nowrap;
 }
-.shelf-plank {
-  height: 16px;
-  background: linear-gradient(180deg, #4a2c17 0%, #2e1a0d 60%, #1d1008 100%);
-  border-radius: 3px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+.b3d-pages {
+  top: 1.5%;
+  bottom: 1.5%;
+  right: 0;
+  width: var(--t);
+  transform: rotateY(90deg) translateZ(calc(var(--t) / 2));
+  background: repeating-linear-gradient(
+    to bottom,
+    #d3c096 0 2px,
+    #a68f63 2px 3px
+  );
 }
-@media (max-width: 640px) {
-  /* The CSS `scale` property composes with GSAP's transform untouched. */
-  .bind-shelf {
-    scale: 0.62;
-  }
+/* The camera tilt: the real bookshelf glides in and takes the frame. */
+.bind-camera {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
 }
 /* Fade-to-black veil for the final beat. */
 .bind-veil {
@@ -641,6 +777,9 @@ defineExpose({ start });
   background: #000;
   opacity: 0;
   pointer-events: none;
-  z-index: 4;
+  z-index: 5;
+}
+.bind-skip {
+  z-index: 6;
 }
 </style>

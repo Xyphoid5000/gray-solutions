@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -16,17 +16,111 @@ import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** The book is a SPA now — no router. Cover or the stacked manuscript. */
+/** The book is a SPA now — no router. Shelf or the open book, with a
+    camera tilt between them. `showBook` is the logical state; the mount
+    flags let a tilt hold both views at once. */
 const showBook = ref(false);
-function openBook() {
-  showBook.value = true;
+const homeMounted = ref(true);
+const bookMounted = ref(false);
+const cameraMoving = ref(false);
+
+function noScroll(on: boolean) {
+  document.documentElement.classList.toggle('gs-no-scroll', on);
 }
+
+/** Tilt down: the shelf glides up and away, the desk glides in from below. */
+async function openBook() {
+  if (showBook.value || cameraMoving.value) return;
+  if (reducedMotion()) {
+    showBook.value = true;
+    bookMounted.value = true;
+    homeMounted.value = false;
+    window.scrollTo(0, 0);
+    return;
+  }
+  cameraMoving.value = true;
+  noScroll(true);
+  showBook.value = true;
+  bookMounted.value = true;
+  await nextTick();
+  const home = document.querySelector('.view-home') as HTMLElement | null;
+  const book = document.querySelector('.view-book') as HTMLElement | null;
+  const vh = window.innerHeight;
+  window.scrollTo(0, 0);
+  if (home && book) {
+    gsap.set(book, { y: vh * 0.6, opacity: 0 });
+    await gsap
+      .timeline()
+      .to(
+        home,
+        {
+          y: -vh * 0.35,
+          opacity: 0,
+          scale: 0.98,
+          duration: 1.25,
+          ease: 'power3.inOut',
+        },
+        0,
+      )
+      .to(book, { y: 0, opacity: 1, duration: 1.25, ease: 'power3.inOut' }, 0)
+      .then();
+    gsap.set(book, { clearProps: 'all' });
+  }
+  homeMounted.value = false;
+  cameraMoving.value = false;
+  noScroll(false);
+}
+
+/** Tilt up: the desk slides away below, the shelf glides back in. */
+async function tiltUp() {
+  if (!showBook.value || cameraMoving.value) return;
+  if (reducedMotion()) {
+    closeBook();
+    window.scrollTo(0, 0);
+    return;
+  }
+  cameraMoving.value = true;
+  noScroll(true);
+  showBook.value = false;
+  homeMounted.value = true;
+  await nextTick();
+  const home = document.querySelector('.view-home') as HTMLElement | null;
+  const book = document.querySelector('.view-book') as HTMLElement | null;
+  const vh = window.innerHeight;
+  window.scrollTo(0, 0);
+  if (home && book) {
+    gsap.set(home, { y: -vh * 0.35, opacity: 0, scale: 0.98 });
+    await gsap
+      .timeline()
+      .to(
+        book,
+        { y: vh * 0.6, opacity: 0, duration: 1.15, ease: 'power3.inOut' },
+        0,
+      )
+      .to(
+        home,
+        { y: 0, opacity: 1, scale: 1, duration: 1.15, ease: 'power3.inOut' },
+        0,
+      )
+      .then();
+    gsap.set(home, { clearProps: 'all' });
+  }
+  bookMounted.value = false;
+  cameraMoving.value = false;
+  noScroll(false);
+}
+
+/** Instant close — used under the binding's blackout, where the swap
+    is invisible. */
 function closeBook() {
   showBook.value = false;
+  bookMounted.value = false;
+  homeMounted.value = true;
 }
-function closeBookToSection(section: 'about' | 'contact', after = 100) {
-  showBook.value = false;
-  // After the cover renders, scroll to the section.
+async function closeBookToSection(section: 'about' | 'contact', after = 100) {
+  if (showBook.value) await tiltUp();
+  else closeBook();
+  // After the shelf is back, scroll to the section.
   requestAnimationFrame(() => {
     setTimeout(() => {
       document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
@@ -70,7 +164,11 @@ function onNavContact() {
   }
 }
 function onNavHome() {
-  showBook.value = false;
+  if (showBook.value) {
+    tiltUp();
+  } else {
+    closeBook();
+  }
   requestAnimationFrame(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
@@ -257,12 +355,15 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="app-root" :class="{ 'camera-moving': cameraMoving }">
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="onNavContact" @home="onNavHome" />
-  <Cover v-if="!showBook" @open-book="openBook" />
+  <div v-if="homeMounted" class="view view-home">
+    <Cover @open-book="openBook" />
+  </div>
+  <div v-if="bookMounted" class="view view-book">
   <BookView
-    v-else
-    @back-to-cover="closeBook"
+    @back-to-cover="tiltUp"
     @back-to-cover-section="closeBookToSection"
     @finale-contact="onFinaleContact"
   >
@@ -276,6 +377,7 @@ onUnmounted(() => {
       <DeskPencil />
     </template>
   </BookView>
+  </div>
   <LostPage :visible="blacklight" @close="onLostPageClose" />
   <BindCinematic ref="bindCinematic" @done="onBindDone" @blackout="onBindBlackout" />
   <!-- Light rituals: true darkness between the cord pull and the flame. -->
@@ -286,4 +388,23 @@ onUnmounted(() => {
     :y="matchXY.y"
     :at-wick="matchAtWick"
   />
+  </div>
 </template>
+
+<style>
+.gs-no-scroll {
+  overflow: hidden;
+}
+/* While the camera tilts, both views are fixed full-screen stages. */
+.camera-moving .view {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+.camera-moving .view-home {
+  z-index: 1;
+}
+.camera-moving .view-book {
+  z-index: 2;
+}
+</style>
