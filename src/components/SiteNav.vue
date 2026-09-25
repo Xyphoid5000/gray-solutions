@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
 import PullCord from './PullCord.vue';
 
-const router = useRouter();
 const emit = defineEmits<{
   contact: [];
+  home: [];
 }>();
 </script>
 
@@ -14,7 +13,7 @@ const emit = defineEmits<{
       <a
         class="brand"
         href="#/"
-        @click.prevent="router.push('/')"
+        @click.prevent="emit('home')"
         aria-label="Gray Solutions — back to the cover"
       >
         <span class="brand-mark" aria-hidden="true">G.</span>

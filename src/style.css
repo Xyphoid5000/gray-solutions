@@ -2192,6 +2192,10 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .cover-page .cover {
   padding-bottom: 2rem; /* the form section carries the turner clearance */
 }
+/* Home page sections: keep copy clear of the pull-cord knob on the left. */
+.cover-page .wrap {
+  padding-left: 1.25rem;
+}
 .cover-contact {
   position: relative;
   padding: 5rem 0 7rem;

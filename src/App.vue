@@ -31,6 +31,20 @@ function closeBookToSection(section: 'about' | 'contact') {
     }, 100);
   });
 }
+/** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
+function onNavContact() {
+  if (showBook.value) {
+    closeBookToSection('contact');
+  } else {
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+function onNavHome() {
+  showBook.value = false;
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+}
 
 /** Blacklight: the candle is blown out, the lost page surfaces. */
 const blacklight = ref(false);
@@ -97,7 +111,7 @@ onUnmounted(() => {
 
 <template>
   <div class="grain" aria-hidden="true"></div>
-  <SiteNav />
+  <SiteNav @contact="onNavContact" @home="onNavHome" />
   <Cover v-if="!showBook" @open-book="openBook" />
   <BookView
     v-else
