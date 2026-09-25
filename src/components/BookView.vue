@@ -129,18 +129,25 @@ function scatterOut() {
     const r = card.getBoundingClientRect();
     const dx = c ? c.x - (r.left + r.width / 2) : 0;
     const dy = c ? c.y - (r.top + r.height / 2) : 0;
+    const rot = SCATTER_ROTS[idx % SCATTER_ROTS.length];
     card.classList.add('flying');
-    gsap.from(card, {
-      x: dx,
-      y: dy,
-      scale: 0.4,
-      rotation: 0,
-      duration: 0.6,
-      delay: idx * 0.08,
-      ease: 'back.out(1.4)',
-      clearProps: 'transform',
-      onComplete: () => card.classList.remove('flying'),
-    });
+    gsap.fromTo(
+      card,
+      { x: dx, y: dy, scale: 0.4, rotation: 0 },
+      {
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotation: rot,
+        duration: 0.6,
+        delay: idx * 0.08,
+        ease: 'back.out(1.4)',
+        onComplete: () => {
+          card.classList.remove('flying');
+          gsap.set(card, { clearProps: 'transform' });
+        },
+      }
+    );
   });
 }
 /** Pages fly back into the pile. */
