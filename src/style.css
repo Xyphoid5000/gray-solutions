@@ -1227,10 +1227,10 @@ body.has-book .chapter.book-page {
 /* The read pile: finished manuscript pages, in the left desk margin. */
 .read-pile {
   position: fixed;
-  left: 18px;
-  bottom: 24px;
-  width: 140px;
-  height: 190px;
+  left: 14px;
+  bottom: 18px;
+  width: 104px;
+  height: 140px;
   z-index: 800;
   /* The pile cards are buttons — clickable to go back. */
   pointer-events: auto;
@@ -2425,7 +2425,7 @@ html[data-theme='dark'] body.has-book .chapter {
   inset: 0;
   pointer-events: none;
   /* The wrap is the sized container — paper fills it, tab sits at its edge. */
-  width: min(560px, 100% - 64px);
+  width: min(520px, 100% - 96px);
   margin-inline: auto;
   left: 0;
   right: 0;
@@ -2503,7 +2503,7 @@ html[data-theme='dark'] .page-tab {
     padding-left: 0;
   }
   .page-wrap {
-    width: calc(100% - 64px);
+    width: calc(100% - 40px);
   }
   .page-tab {
     right: -10px;
@@ -2512,9 +2512,9 @@ html[data-theme='dark'] .page-tab {
     font-size: 0.85rem;
   }
   .read-pile {
-    left: 12px;
-    bottom: 16px;
-    width: 110px;
-    height: 150px;
+    left: 10px;
+    bottom: 12px;
+    width: 84px;
+    height: 112px;
   }
 }
