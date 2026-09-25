@@ -2413,7 +2413,7 @@ html[data-theme='dark'] body.has-book .chapter {
     linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
   outline: none;
   /* Left lane: desk space where the pile and candle live. */
-  padding-left: 180px;
+  padding-left: 120px;
 }
 /* Each page: a transparent wrap. No stacking context here so tabs
    can rise above the papers of pages above them. */
@@ -2422,7 +2422,7 @@ html[data-theme='dark'] body.has-book .chapter {
   inset: 0;
   pointer-events: none;
   /* The wrap is the sized container — paper fills it, tab sits at its edge. */
-  width: min(600px, 100% - 96px);
+  width: min(640px, 100% - 64px);
   margin-inline: auto;
   left: 0;
   right: 0;
@@ -2443,7 +2443,7 @@ html[data-theme='dark'] body.has-book .chapter {
   color: #1a1510;
   width: 100%;
   margin: 0;
-  padding: 0;
+  padding: 1.5rem;
   border-radius: 3px;
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.55),
@@ -2489,8 +2489,9 @@ html[data-theme='dark'] .page-paper {
 .page-tab {
   position: absolute;
   z-index: 20;
-  /* Half on the paper, half off — like a real divider tab. */
-  right: -26px;
+  /* Centered on the paper's right edge — half on, half off. */
+  right: 0;
+  transform: translateX(50%);
   top: calc(100px + var(--tab-row, 0) * 58px);
   width: 52px;
   height: 46px;
@@ -2523,13 +2524,14 @@ html[data-theme='dark'] .page-tab {
 }
 @media (max-width: 640px) {
   .manuscript-desk {
-    padding-left: 104px;
+    padding-left: 70px;
   }
   .page-wrap {
     width: calc(100% - 40px);
   }
   .page-tab {
-    right: -20px;
+    right: 0;
+    transform: translateX(50%);
     width: 40px;
     height: 38px;
     font-size: 0.85rem;
