@@ -24,7 +24,9 @@
 
 <style scoped>
 .desk-pencil {
-  position: fixed;
+  position: absolute;
+  /* On the desk, right of the page. Anchored to the desk itself so it
+     can never drift off it. */
   z-index: 840;
   width: 150px;
   pointer-events: none;
@@ -38,7 +40,7 @@
     visibility 0.4s;
   /* Desktop: on the desk, right of the page, below the candle. */
   right: 56px;
-  top: 58%;
+  top: 58svh;
 }
 .desk-pencil svg {
   width: 100%;
@@ -69,8 +71,8 @@
   .desk-pencil {
     width: 110px;
     right: 36px;
-    top: auto;
-    bottom: 110px;
+    top: 80svh;
+    bottom: auto;
     transform:
       translate(var(--pencil-dx, 0px), var(--pencil-dy, 0px))
       rotate(calc(-18deg + var(--pencil-rot, 0deg)));
