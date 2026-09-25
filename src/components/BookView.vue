@@ -90,6 +90,16 @@ async function tossToPile(i: number): Promise<void> {
   }
 }
 
+/** Toss the currently open page into the pile — the binding calls this
+    first so the final page is really in the list, not a stand-in. */
+async function tossCurrentToPile(): Promise<void> {
+  if (!pile.value.includes(currentIndex.value)) {
+    await tossToPile(currentIndex.value);
+  }
+}
+
+defineExpose({ tossCurrentToPile });
+
 async function bringBack(i: number): Promise<void> {
   const card = pileCardEl(i);
   const state = card ? Flip.getState(card) : null;

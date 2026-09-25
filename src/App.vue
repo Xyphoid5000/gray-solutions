@@ -132,9 +132,17 @@ async function closeBookToSection(section: 'about' | 'contact', after = 100) {
     contact form; so does the header's CONTACT ME while the book is
     open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
+const bookView = ref<InstanceType<typeof BookView> | null>(null);
+/** The binding, from any trigger: the open page joins the pile first so
+    the final page is really in the list, then the cinematic gathers it. */
+async function runBinding() {
+  if (manuscriptBound.value || !bindCinematic.value) return;
+  await bookView.value?.tossCurrentToPile();
+  bindCinematic.value.start();
+}
 function onFinaleContact() {
   if (!manuscriptBound.value && bindCinematic.value) {
-    bindCinematic.value.start();
+    runBinding();
     return;
   }
   closeBookToSection('contact');
@@ -155,7 +163,7 @@ function onBindBlackout() {
 function onNavContact() {
   if (showBook.value) {
     if (!manuscriptBound.value && bindCinematic.value) {
-      bindCinematic.value.start();
+      runBinding();
       return;
     }
     closeBookToSection('contact');
@@ -363,6 +371,7 @@ onUnmounted(() => {
   </div>
   <div v-if="bookMounted" class="view view-book">
   <BookView
+    ref="bookView"
     @back-to-cover="tiltUp"
     @back-to-cover-section="closeBookToSection"
     @finale-contact="onFinaleContact"

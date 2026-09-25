@@ -56,9 +56,10 @@ const emit = defineEmits<{
 .desk-candle {
   position: absolute;
   /* On the desk, in the left lane with the pile — centered on the wood,
-     clear of the paper. Anchored to the desk itself so it can never
-     drift off it. */
-  left: 38px;
+     clear of the paper. The desk-stage's containing block starts after
+     the desk's left padding, so the lane offset is subtracted back out
+     to land the candle on the real wooden lane. */
+  left: calc(38px - var(--desk-pl));
   top: 52svh;
   width: 44px;
   height: 66px;
@@ -72,7 +73,7 @@ const emit = defineEmits<{
 }
 @media (max-width: 640px) {
   .desk-candle {
-    left: 17px;
+    left: calc(17px - var(--desk-pl));
     top: 48svh;
     width: 36px;
     height: 54px;

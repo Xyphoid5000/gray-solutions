@@ -13,14 +13,13 @@ const overlay = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const book3d = ref<HTMLElement | null>(null);
-const handL = ref<HTMLElement | null>(null);
-const handR = ref<HTMLElement | null>(null);
+const msCover = ref<HTMLElement | null>(null);
 const cameraWrap = ref<HTMLElement | null>(null);
 const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
 const titled = ref(false);
-const TITLE = 'Gray Solutions';
+const TITLE = 'Gray Solutions.';
 
 let tl: gsap.core.Timeline | null = null;
 
@@ -38,10 +37,10 @@ function finish() {
     gsap.set(coverEl.value, { clearProps: 'all', display: 'none', opacity: 0 });
   if (book3d.value)
     gsap.set(book3d.value, { clearProps: 'all', display: 'none', opacity: 0 });
+  if (msCover.value)
+    gsap.set(msCover.value, { clearProps: 'all', display: 'none', opacity: 0 });
   if (cameraWrap.value) gsap.set(cameraWrap.value, { yPercent: 100 });
   if (veil.value) gsap.set(veil.value, { opacity: 0 });
-  if (handL.value) gsap.set(handL.value, { clearProps: 'all', opacity: 0 });
-  if (handR.value) gsap.set(handR.value, { clearProps: 'all', opacity: 0 });
   // The shelf's own spine only appears once the book is filed.
   const ours = ov?.querySelector('.bs-ours');
   if (ours) gsap.set(ours, { opacity: 0 });
@@ -56,26 +55,28 @@ function skip() {
 }
 
 /**
- * The binding, beat by beat:
- * 1. the final pages land in the pile (5-4-3-2-1 over the cover);
- * 2. hands swing in from the right, drag the pile to center, fan the
- *    pages and shuffle them into 1-2-3-4-5;
- * 3. the MANUSCRIPT cover is plucked out and flung away;
- * 4. the dark cover drops from above and the pages tuck inside;
- * 5. the title is written on;
- * 6. the finished book takes its slot on a shelf of classics;
- * 7. fade to black, fade back in on the home page with the finished book.
+ * The binding, beat by beat (no hands — everything moves on its own):
+ * 1. the pages gather (5-4-3-2-1); page 5 drops in with a bounce, then
+ *    the stamped MANUSCRIPT cover drops down in front of the stack;
+ * 2. the stamped cover lifts off the front and flies away;
+ * 3. the dark cover drops from above and the pages tuck inside;
+ * 4. the title is written on;
+ * 5. the finished book rises as a 3D object, turns, and files itself
+ *    into its slot on a shelf of classics;
+ * 6. fade to black, fade back in on the home page with the finished book.
+ *
+ * App tosses the open page into the pile before calling start(), so
+ * page 5 is always the real page, never a stand-in.
  */
 function start() {
   const ov = overlay.value;
   const st = stack.value;
   const cv = coverEl.value;
   const b3d = book3d.value;
-  const hl = handL.value;
-  const hr = handR.value;
+  const msc = msCover.value;
   const cam = cameraWrap.value;
   const vl = veil.value;
-  if (!ov || !st || !cv || !b3d || !hl || !hr || !cam || !vl) return;
+  if (!ov || !st || !cv || !b3d || !msc || !cam || !vl) return;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
     .matches;
   if (reduced) {
@@ -90,23 +91,9 @@ function start() {
   const cx = vw / 2;
   const cy = vh / 2;
 
-  // The pile's screen spot — the stack starts life there. The real
-  // pile hugs the screen edge, so the spot is clamped to keep the
-  // 220x300 stack fully visible for the opening beats.
-  const pileRect = document
-    .querySelector('.read-pile')
-    ?.getBoundingClientRect();
-  const clamp = (v: number, lo: number, hi: number) =>
-    Math.min(hi, Math.max(lo, v));
-  const pileCx = pileRect
-    ? clamp(pileRect.left + pileRect.width / 2, 132, vw - 132)
-    : vw * 0.16;
-  const pileCy = pileRect
-    ? clamp(pileRect.top + pileRect.height / 2, 172, vh - 172)
-    : vh * 0.78;
-
   // Reset. Centering is pinned explicitly (xPercent/yPercent) rather
-  // than trusting the CSS transform parse.
+  // than trusting the CSS transform parse. The stack starts centered —
+  // nothing to drag in from the pile anymore.
   gsap.set(ov, { display: 'block', opacity: 0 });
   gsap.set(cv, {
     display: 'none',
@@ -129,11 +116,21 @@ function start() {
     rotationY: 18,
     transformPerspective: 900,
   });
+  gsap.set(msc, {
+    display: 'flex',
+    opacity: 0,
+    x: 0,
+    y: -(vh * 0.6),
+    xPercent: -50,
+    yPercent: -50,
+    scale: 1,
+    rotation: -5,
+  });
   gsap.set(st, {
     display: 'block',
     opacity: 1,
-    x: pileCx - cx,
-    y: pileCy - cy,
+    x: 0,
+    y: 0,
     xPercent: -50,
     yPercent: -50,
     scaleY: 1,
@@ -142,35 +139,21 @@ function start() {
   gsap.set(vl, { opacity: 0 });
   const ours = ov.querySelector('.bs-ours');
   if (ours) gsap.set(ours, { opacity: 0 });
-  // Both hands work from the right side; the left hand is mirrored so
-  // both reach toward the pile.
-  gsap.set([hl, hr], {
-    left: 0,
-    top: 0,
-    right: 'auto',
-    xPercent: -50,
-    yPercent: -50,
-    x: vw + 240,
-    y: pileCy,
-    scaleX: 1,
-    opacity: 0,
-  });
-  gsap.set(hl, { scaleX: -1 });
   titleTyped.value = '';
   titled.value = false;
   st.innerHTML = '';
   playing.value = true;
 
-  // The stack, bottom to top: cover, then chapters 1-5. Clones from the
-  // real pile where present; numbered blanks stand in for the rest.
+  // The stack, bottom to top: chapters 1-5. Clones from the real pile
+  // where present; numbered blanks stand in for the rest. Page 5 is
+  // real — App tossed the open page into the pile before start().
+  // The stamped MANUSCRIPT cover is its own element (msCover) and sits
+  // in front of the stack, facing the viewer.
   const pilePages = [
     ...document.querySelectorAll('.read-pile .pile-page'),
   ] as HTMLElement[];
   const pageFor = (i: number) =>
     pilePages.find((el) => el.dataset.pileIndex === String(i));
-  const coverSrc = pilePages.find(
-    (el) => el.dataset.pileIndex === undefined,
-  );
   const chCards: HTMLElement[] = [];
   for (let i = 0; i < 5; i++) {
     const src = pageFor(i);
@@ -189,13 +172,6 @@ function start() {
     }
     chCards.push(card);
   }
-  let coverCard: HTMLElement | null = null;
-  if (coverSrc) {
-    coverCard = coverSrc.cloneNode(true) as HTMLElement;
-    coverCard.removeAttribute('data-pile-index');
-    coverCard.setAttribute('aria-hidden', 'true');
-  }
-  if (coverCard) st.appendChild(coverCard);
   chCards.forEach((c) => st.appendChild(c));
   const allCards = [...st.children] as HTMLElement[];
   allCards.forEach((c) =>
@@ -213,8 +189,9 @@ function start() {
   tl = gsap.timeline({ onComplete: finish });
   const T = tl as gsap.core.Timeline;
 
-  // Beat 1 — the overlay rises; the final page drops into the pile and
-  // lands with a bounce you can't miss, leaving 5-4-3-2-1 over the cover.
+  // Beat 1 — the overlay rises; page 5 drops into the stack with a
+  // bounce you can't miss; then the stamped MANUSCRIPT cover drops
+  // down in front of the stack, facing the viewer.
   T.to(ov, { opacity: 1, duration: 0.5 }, 0);
   const ch5 = chCards[4];
   T.fromTo(
@@ -226,116 +203,53 @@ function start() {
   // Landing bounce and settle — page five has arrived.
   T.to(ch5, { y: -22, duration: 0.18, ease: 'power2.out' }, 1.17);
   T.to(ch5, { y: 0, duration: 0.34, ease: 'bounce.out' }, 1.35);
+  // The rest of the stack settles out of a slight scatter.
   allCards.forEach((c, k) => {
     if (c === ch5) return;
     T.fromTo(
       c,
-      { rotation: k % 2 ? 5 : -5 },
+      { rotation: k % 2 ? 4 : -4 },
       { rotation: 0, duration: 0.6, ease: 'power2.out' },
-      1.3 + k * 0.05,
+      0.5 + k * 0.05,
     );
   });
-  const b1 = 1.78;
+  // The stamped cover drops in front.
+  const coverDropAt = 1.9;
+  T.to(
+    msc,
+    { opacity: 1, y: 0, rotation: 0, duration: 0.7, ease: 'power2.out' },
+    coverDropAt,
+  );
+  T.to(msc, { y: -14, duration: 0.16, ease: 'power2.out' }, coverDropAt + 0.7);
+  T.to(msc, { y: 0, duration: 0.3, ease: 'bounce.out' }, coverDropAt + 0.86);
+  const b1 = coverDropAt + 1.35;
 
-  // Beat 2 — hands swing in from the right, grab the pile, drag it to
-  // center, fan the pages and shuffle them into 1-2-3-4-5.
-  T.to([hl, hr], { opacity: 1, duration: 0.3 }, b1);
-  T.to(hr, { x: pileCx + 150, duration: 0.7, ease: 'power3.out' }, b1);
+  // Beat 2 — the stamped cover lifts off the front and flies away
+  // on its own.
+  const liftAt = b1 + 0.45;
   T.to(
-    hl,
-    { x: pileCx + 240, y: pileCy - 60, duration: 0.7, ease: 'power3.out' },
-    b1 + 0.08,
+    msc,
+    { y: -70, rotation: -7, duration: 0.45, ease: 'power2.out' },
+    liftAt,
   );
-  const dragAt = b1 + 0.85;
-  T.to(st, { x: 0, y: 0, duration: 0.9, ease: 'power2.inOut' }, dragAt);
-  T.to(hr, { x: cx + 150, y: cy, duration: 0.9, ease: 'power2.inOut' }, dragAt);
   T.to(
-    hl,
-    { x: cx + 240, y: cy - 60, duration: 0.9, ease: 'power2.inOut' },
-    dragAt,
-  );
-  const fanAt = dragAt + 1.0;
-  const fanStep = Math.min(46, ((vw * 0.92 - 220) / 2) / 2);
-  chCards.forEach((c, k) => {
-    const spread = (k - 2) * fanStep;
-    T.to(
-      c,
-      { x: spread, rotation: spread * 0.06, duration: 0.5, ease: 'power2.out' },
-      fanAt + k * 0.04,
-    );
-  });
-  const shuffleAt = fanAt + 0.75;
-  T.call(
-    () => {
-      if (coverCard) st.appendChild(coverCard);
-      [...chCards].reverse().forEach((c) => st.appendChild(c));
+    msc,
+    {
+      x: vw * 0.8,
+      y: -vh * 0.25,
+      rotation: 26,
+      opacity: 0,
+      duration: 0.7,
+      ease: 'power2.in',
     },
-    [],
-    shuffleAt,
+    liftAt + 0.45,
   );
-  chCards.forEach((c, k) => {
-    T.to(
-      c,
-      { y: -90, duration: 0.22, ease: 'power2.out' },
-      shuffleAt + k * 0.07,
-    );
-    T.to(
-      c,
-      { y: 0, x: 0, rotation: 0, duration: 0.42, ease: 'power2.inOut' },
-      shuffleAt + k * 0.07 + 0.22,
-    );
-  });
-  T.to(
-    hr,
-    { y: cy + 16, duration: 0.25, yoyo: true, repeat: 3, ease: 'sine.inOut' },
-    shuffleAt,
-  );
-  T.to(
-    hl,
-    { y: cy - 44, duration: 0.25, yoyo: true, repeat: 3, ease: 'sine.inOut' },
-    shuffleAt + 0.1,
-  );
-  const handsOutAt = shuffleAt + 5 * 0.07 + 0.64 + 0.15;
-  T.to(
-    [hl, hr],
-    { x: vw + 240, opacity: 0, duration: 0.55, ease: 'power2.in' },
-    handsOutAt,
-  );
-  const b2 = handsOutAt + 0.6;
-
-  // Beat 3 — one hand plucks the MANUSCRIPT cover and flings it away.
-  T.set(hr, { x: vw + 240, y: cy, opacity: 1 }, b2);
-  T.to(hr, { x: cx + 200, duration: 0.55, ease: 'power3.out' }, b2 + 0.05);
-  const pluckAt = b2 + 0.7;
-  if (coverCard) {
-    T.to(
-      coverCard,
-      { x: 175, rotation: 12, duration: 0.4, ease: 'power2.out' },
-      pluckAt,
-    );
-  }
-  const flingAt = pluckAt + 0.5;
-  T.to(hr, { x: vw + 320, duration: 0.55, ease: 'power2.in' }, flingAt);
-  if (coverCard) {
-    T.to(
-      coverCard,
-      {
-        x: vw * 0.75,
-        rotation: 32,
-        opacity: 0,
-        duration: 0.55,
-        ease: 'power2.in',
-      },
-      flingAt,
-    );
-    T.set(coverCard, { display: 'none' }, flingAt + 0.6);
-  }
-  T.set(hr, { opacity: 0 }, flingAt + 0.6);
-  const b3 = flingAt + 0.65;
+  T.set(msc, { display: 'none' }, liftAt + 1.2);
+  const b2 = liftAt + 1.3;
 
   // Beat 4 — the dark cover drops from above, dead-center, and seals
   // over the pages; the pages tuck inside.
-  const dropAt = b3 + 0.15;
+  const dropAt = b2 + 0.15;
   // Pin the stack dead-center under the falling cover.
   T.set(st, { x: 0, y: 0, xPercent: -50, yPercent: -50 }, dropAt);
   T.set(
@@ -397,30 +311,24 @@ function start() {
   );
   const b5 = titledAt + 0.9;
 
-  // Beat 6a — a hand picks up the finished book; the flat cover
-  // becomes a real 3D object in its grip.
-  T.set(hr, { x: vw + 240, y: cy, opacity: 1 }, b5);
-  T.to(hr, { x: cx + 130, duration: 0.55, ease: 'power3.out' }, b5 + 0.05);
-  const grabAt = b5 + 0.65;
+  // Beat 6a — the flat cover becomes a real 3D book and lifts itself
+  // off the desk.
+  const grabAt = b5 + 0.15;
   T.to(cv, { opacity: 0, duration: 0.25, ease: 'power1.in' }, grabAt);
   T.set(cv, { display: 'none' }, grabAt + 0.3);
   T.set(b3d, { display: 'block' }, grabAt);
   T.to(b3d, { opacity: 1, duration: 0.25, ease: 'power1.in' }, grabAt);
   // Lift off the desk.
-  T.to(
-    [hr, b3d],
-    { y: '-=46', duration: 0.5, ease: 'power2.out' },
-    grabAt + 0.2,
-  );
+  T.to(b3d, { y: '-=46', duration: 0.5, ease: 'power2.out' }, grabAt + 0.2);
   const b6 = grabAt + 0.85;
 
   // Beat 6b — the camera tilts back up: the bookshelf glides in and
-  // takes the frame; the hand holds the book steady through the move.
+  // takes the frame while the book hovers, waiting.
   T.to(cam, { yPercent: 0, duration: 1.35, ease: 'power3.inOut' }, b6);
   const b7 = b6 + 1.35;
 
-  // Beat 6c — the hand carries the book to its slot, turns it so the
-  // spine faces the reader, and files it among the classics. The slot
+  // Beat 6c — the book flies itself to its slot, turns so the spine
+  // faces the reader, and files itself among the classics. The slot
   // is measured live, once the shelf has settled.
   T.call(
     () => {
@@ -436,13 +344,8 @@ function start() {
         s = Math.min(0.75, (r.height - 10) / 340);
       }
       const file = gsap.timeline();
-      // Carry to the slot.
+      // Fly to the slot.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      file.to(
-        hr,
-        { x: `+=${dx}`, y: `+=${dy}`, duration: 1.0, ease: 'power2.inOut' },
-        0,
-      );
       // Turn: the spine swings toward the reader as it seats.
       file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.85);
       file.to(b3d, { scale: s, duration: 0.7, ease: 'power2.inOut' }, 0.85);
@@ -450,17 +353,11 @@ function start() {
       file.to(b3d, { opacity: 0, duration: 0.35, ease: 'power1.in' }, 1.7);
       if (spine)
         file.to(spine, { opacity: 1, duration: 0.35, ease: 'power1.out' }, 1.7);
-      // The hand lets go and leaves.
-      file.to(
-        hr,
-        { x: vw + 260, opacity: 0, duration: 0.5, ease: 'power2.in' },
-        1.95,
-      );
     },
     [],
     b7,
   );
-  const b8 = b7 + 2.75;
+  const b8 = b7 + 2.45;
 
   // Beat 7 — hold on the completed shelf; fade to black; behind it the
   // home page takes the bound shelf; fade back in on it.
@@ -482,46 +379,34 @@ defineExpose({ start });
     <!-- The neat stack forms here. -->
     <div ref="stack" class="bind-stack" aria-hidden="true"></div>
 
-    <!-- Hands: flat silhouettes, working from the right side. -->
-    <div ref="handL" class="bind-hand bind-hand-l" aria-hidden="true">
-      <svg viewBox="0 0 140 90" fill="currentColor" aria-hidden="true">
-        <path
-          d="M8 45 C8 28 20 18 38 18 L84 18 C90 18 94 22 94 28 L94 62 C94 68 90 72 84 72 L38 72 C20 72 8 62 8 45 Z"
-        />
-        <rect x="94" y="24" width="38" height="10" rx="5" />
-        <rect x="94" y="38" width="44" height="10" rx="5" />
-        <rect x="94" y="52" width="36" height="10" rx="5" />
-        <path d="M30 72 C36 84 52 88 64 82 L70 78 L62 70 C52 74 40 72 34 64 Z" />
-      </svg>
-    </div>
-    <div ref="handR" class="bind-hand bind-hand-r" aria-hidden="true">
-      <svg viewBox="0 0 140 90" fill="currentColor" aria-hidden="true">
-        <path
-          d="M132 45 C132 28 120 18 102 18 L56 18 C50 18 46 22 46 28 L46 62 C46 68 50 72 56 72 L102 72 C120 72 132 62 132 45 Z"
-        />
-        <rect x="8" y="24" width="38" height="10" rx="5" />
-        <rect x="2" y="38" width="44" height="10" rx="5" />
-        <rect x="10" y="52" width="36" height="10" rx="5" />
-        <path
-          d="M110 72 C104 84 88 88 76 82 L70 78 L78 70 C88 74 100 72 106 64 Z"
-        />
-      </svg>
+    <!-- The stamped MANUSCRIPT cover: drops in front of the stack,
+         stamp facing the viewer, then flies away on its own. -->
+    <div ref="msCover" class="bind-mscover" aria-hidden="true">
+      <div class="bind-mscover-frame">
+        <p class="bind-mscover-stamp">Manuscript</p>
+        <p class="bind-mscover-sub">Six pages &middot; first draft</p>
+      </div>
     </div>
 
     <!-- The bound book cover. -->
     <div ref="coverEl" class="bind-cover" :class="{ titled }" aria-hidden="true">
-      <div class="bind-cover-inner">
-        <p class="bind-title">{{ titleTyped }}<span class="type-cursor"></span></p>
+      <div class="bind-cover-frame">
+        <span class="bind-mark">G.</span>
+        <p v-if="!titled" class="bind-title bind-title-typing">
+          {{ titleTyped }}<span class="type-cursor"></span>
+        </p>
+        <p v-else class="bind-title">Gray<br />Solutions<em>.</em></p>
         <p class="bind-tag"><em>Websites that tell stories.</em></p>
         <p class="bind-by">Chris Gray</p>
       </div>
     </div>
 
-    <!-- The finished book as a 3D object, picked up by the hand. -->
+    <!-- The finished book as a 3D object: lifts and files itself. -->
     <div ref="book3d" class="bind-book3d" aria-hidden="true">
       <div class="b3d-face b3d-front">
         <div class="b3d-frame">
-          <p class="b3d-title">Gray Solutions</p>
+          <span class="b3d-mark">G.</span>
+          <p class="b3d-title">Gray<br />Solutions<em>.</em></p>
           <p class="b3d-tag"><em>Websites that tell stories.</em></p>
           <p class="b3d-by">Chris Gray</p>
         </div>
@@ -612,28 +497,51 @@ defineExpose({ start });
   color: rgba(74, 52, 32, 0.6);
   user-select: none;
 }
-.bind-hand {
+/* The stamped MANUSCRIPT cover: paper, big stamp, sits in front of
+   the stack facing the viewer, then flies away on its own. */
+.bind-mscover {
   position: absolute;
+  left: 50%;
   top: 50%;
-  width: min(320px, 42vw);
-  color: rgba(12, 8, 5, 0.92);
-  opacity: 0;
-  transform: translateY(-50%);
-  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.5));
-  z-index: 4;
+  width: 220px;
+  height: 300px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--page);
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  z-index: 2;
 }
-.bind-hand-l {
-  left: -4vw;
-  transform: translate(-120%, -50%);
+.bind-mscover-frame {
+  flex: 1;
+  margin: 13px;
+  border: 2px dashed rgba(120, 90, 60, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.2rem 0.8rem;
+  gap: 0.6rem;
 }
-.bind-hand-r {
-  right: -4vw;
-  transform: translate(120%, -50%);
+.bind-mscover-stamp {
+  font-family: var(--serif);
+  font-size: clamp(1.1rem, 5.5vw, 1.5rem);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(120, 70, 40, 0.82);
+  margin: 0;
+  transform: rotate(-4deg);
+  border: 3px double rgba(120, 70, 40, 0.6);
+  padding: 0.35em 0.5em 0.35em 0.65em;
+  max-width: 100%;
+  box-sizing: border-box;
 }
-.bind-hand svg {
-  width: 100%;
-  height: auto;
-  display: block;
+.bind-mscover-sub {
+  font-size: 0.85rem;
+  color: rgba(60, 45, 30, 0.65);
+  margin: 0;
 }
 .bind-cover {
   position: absolute;
@@ -651,37 +559,72 @@ defineExpose({ start });
     0 24px 60px rgba(0, 0, 0, 0.6),
     inset 0 0 40px rgba(0, 0, 0, 0.5);
 }
-.bind-cover-inner {
+/* The finished cover, matching the bound book on the home page:
+   G. mark, Gray Solutions., tagline, byline. */
+.bind-cover-frame {
+  flex: 1;
+  margin: 13px;
+  border: 1px solid rgba(208, 138, 78, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 2rem;
+  padding: 1.2rem 0.8rem;
+  gap: 0.55rem;
+}
+.bind-mark {
+  font-family: var(--serif);
+  font-style: italic;
+  color: #d08a4e;
+  font-size: 1.5rem;
 }
 .bind-title {
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  color: var(--ember);
-  margin: 0 0 0.5rem;
+  font-family: var(--serif);
+  font-weight: 480;
+  font-size: clamp(1.9rem, 8vw, 2.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: #f2ecdf;
   min-height: 2.2em;
 }
-/* The tagline and byline fade in once the title is written — the same
-   words as the finished book on the home page. */
+.bind-title em {
+  font-style: italic;
+  color: #d08a4e;
+  font-weight: 400;
+}
+/* While the title is being written it types on one line; once done it
+   settles into the two-line treatment above. */
+.bind-title-typing {
+  font-size: 1.8rem;
+}
+/* The mark, tagline and byline fade in once the title is written. */
+.bind-mark,
 .bind-tag,
 .bind-by {
   opacity: 0;
   transition: opacity 0.9s ease;
 }
+.bind-cover.titled .bind-mark,
 .bind-cover.titled .bind-tag,
 .bind-cover.titled .bind-by {
   opacity: 1;
 }
 .bind-tag {
-  font-size: 0.85rem;
-  color: rgba(235, 225, 210, 0.75);
-  margin: 0 0 0.35rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: #a7a192;
+  font-size: 0.98rem;
+  margin: 0.35rem 0 0;
 }
 .bind-by {
-  font-size: 0.8rem;
-  color: rgba(235, 225, 210, 0.55);
-  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #6f6a5e;
+  margin: auto 0 0;
 }
 /* The finished book as a 3D object: front, spine, page block. */
 .bind-book3d {
@@ -711,24 +654,51 @@ defineExpose({ start });
   justify-content: center;
 }
 .b3d-frame {
+  flex: 1;
+  margin: 13px;
+  border: 1px solid rgba(208, 138, 78, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 2rem;
+  padding: 1.2rem 0.8rem;
+  gap: 0.55rem;
+}
+.b3d-mark {
+  font-family: var(--serif);
+  font-style: italic;
+  color: #d08a4e;
+  font-size: 1.5rem;
 }
 .b3d-title {
-  font-family: var(--font-display);
-  font-size: 1.8rem;
-  color: var(--ember);
-  margin: 0 0 0.5rem;
+  font-family: var(--serif);
+  font-weight: 480;
+  font-size: clamp(1.9rem, 8vw, 2.5rem);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: #f2ecdf;
+}
+.b3d-title em {
+  font-style: italic;
+  color: #d08a4e;
+  font-weight: 400;
 }
 .b3d-tag {
-  font-size: 0.85rem;
-  color: rgba(235, 225, 210, 0.75);
-  margin: 0 0 0.35rem;
+  font-family: var(--serif);
+  font-style: italic;
+  color: #a7a192;
+  font-size: 0.98rem;
+  margin: 0.35rem 0 0;
 }
 .b3d-by {
-  font-size: 0.8rem;
-  color: rgba(235, 225, 210, 0.55);
-  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #6f6a5e;
+  margin: auto 0 0;
 }
 .b3d-spine {
   top: 0;
