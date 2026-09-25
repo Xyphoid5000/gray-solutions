@@ -13,6 +13,7 @@ const handL = ref<HTMLElement | null>(null);
 const handR = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
+const titled = ref(false);
 const TITLE = 'Gray Solutions';
 
 let tl: gsap.core.Timeline | null = null;
@@ -21,6 +22,7 @@ let tl: gsap.core.Timeline | null = null;
 function finish() {
   const ov = overlay.value;
   titleTyped.value = TITLE;
+  titled.value = true;
   if (ov) gsap.set(ov, { display: 'none', opacity: 0 });
   if (stack.value) stack.value.innerHTML = '';
   gsap.set(coverEl.value, { clearProps: 'all', display: 'none', opacity: 0 });
@@ -63,6 +65,7 @@ function start() {
   gsap.set([hl, hr], { opacity: 0 });
   gsap.set(st, { scaleY: 1 });
   titleTyped.value = '';
+  titled.value = false;
   st.innerHTML = '';
   playing.value = true;
 
@@ -95,6 +98,8 @@ function start() {
       el = p.cloneNode(true) as HTMLElement;
       el.removeAttribute('data-pile-index');
       el.setAttribute('aria-hidden', 'true');
+      // The MANUSCRIPT cover leaves the stack before the reorder.
+      if (isCoverCard(p)) el.classList.add('is-ms-cover');
     }
     st.appendChild(el);
     gsap.set(el, { position: 'absolute', inset: '0' });
@@ -135,15 +140,52 @@ function start() {
   });
   const gatheredAt = 0.4 + (n - 1) * 0.1 + 1.1;
 
-  // Beat 2 — reorder: the pages fan out, hold, then settle in order.
+  // Beat 2 — the MANUSCRIPT cover is pulled out of the stack, crumpled
+  // into a ball, and tossed away before the pages reorder.
+  const coverClone = st.querySelector('.is-ms-cover') as HTMLElement | null;
+  const reorderPages = pages.filter((el) => el !== coverClone);
+  const rn = reorderPages.length;
+  let fanAt = gatheredAt + 0.2;
+  if (coverClone) {
+    const crumpleAt = gatheredAt + 0.25;
+    timeline.to(
+      coverClone,
+      {
+        x: `+=${window.innerWidth * 0.3}`,
+        y: '+=40',
+        rotation: 16,
+        duration: 0.55,
+        ease: 'power2.in',
+      },
+      crumpleAt,
+    );
+    timeline.to(
+      coverClone,
+      {
+        scale: 0.08,
+        rotation: '+=60',
+        borderRadius: '50%',
+        x: `+=${window.innerWidth * 0.15}`,
+        y: '-=70',
+        opacity: 0,
+        duration: 0.65,
+        ease: 'power2.in',
+      },
+      crumpleAt + 0.55,
+    );
+    timeline.set(coverClone, { display: 'none' }, crumpleAt + 1.25);
+    fanAt = crumpleAt + 1.4;
+  }
+
+  // Beat 3 — reorder: the pages fan out, hold, then settle in order.
   // The fan stays inside the viewport on phones.
   const fanStep = Math.min(
     46,
-    (window.innerWidth * 0.92 - 220) / 2 / ((n - 1) / 2),
+    (window.innerWidth * 0.92 - 220) / 2 / ((rn - 1) / 2),
   );
-  const fanAt = gatheredAt + 0.2;
-  pages.forEach((p, i) => {
-    const spread = (i - (n - 1) / 2) * fanStep;
+  reorderPages.forEach((p, k) => {
+    const i = pages.indexOf(p);
+    const spread = (k - (rn - 1) / 2) * fanStep;
     timeline.to(
       p,
       {
@@ -152,21 +194,22 @@ function start() {
         duration: 0.5,
         ease: 'power2.out',
       },
-      fanAt + i * 0.04,
+      fanAt + k * 0.04,
     );
   });
-  const fannedAt = fanAt + (n - 1) * 0.04 + 0.5;
+  const fannedAt = fanAt + (rn - 1) * 0.04 + 0.5;
   const settleAt = fannedAt + 0.8;
-  pages.forEach((p, i) => {
+  reorderPages.forEach((p, k) => {
+    const i = pages.indexOf(p);
     timeline.to(
       p,
       { x: restX[i], y: restY[i], rotation: 0, duration: 0.45, ease: 'power2.inOut' },
-      settleAt + i * 0.05,
+      settleAt + k * 0.05,
     );
   });
-  const settledAt = settleAt + (n - 1) * 0.05 + 0.45;
+  const settledAt = settleAt + (rn - 1) * 0.05 + 0.45;
 
-  // Beat 3 — hands slide in and press the stack.
+  // Beat 4 — hands slide in and press the stack.
   const pressAt = settledAt + 0.25;
   timeline.set([hl, hr], { opacity: 1 }, pressAt);
   timeline.to(hl, { x: 0, duration: 0.7, ease: 'power3.out' }, pressAt);
@@ -180,12 +223,12 @@ function start() {
   timeline.to(hr, { x: '120vw', duration: 0.6, ease: 'power3.in' }, pressAt + 1.55);
   timeline.set([hl, hr], { opacity: 0 }, pressAt + 2.2);
 
-  // Beat 4 — the cover binds around the stack.
+  // Beat 5 — the cover binds around the stack.
   const coverAt = pressAt + 2.3;
   timeline.set(cv, { display: 'flex', opacity: 0, scale: 0.94 }, coverAt);
   timeline.to(cv, { opacity: 1, scale: 1, duration: 0.9, ease: 'power2.out' }, coverAt);
 
-  // Beat 5 — the title is written on.
+  // Beat 6 — the title is written on.
   const titleAt = coverAt + 1.0;
   for (let i = 0; i < TITLE.length; i++) {
     const ch = TITLE[i];
@@ -197,9 +240,17 @@ function start() {
       titleAt + i * 0.09,
     );
   }
-  const heldAt = titleAt + TITLE.length * 0.09 + 1.5;
+  const titledAt = titleAt + TITLE.length * 0.09;
+  timeline.call(
+    () => {
+      titled.value = true;
+    },
+    [],
+    titledAt,
+  );
+  const heldAt = titledAt + 1.5;
 
-  // Beat 6 — the finished book drops back into its spot on the home
+  // Beat 7 — the finished book drops back into its spot on the home
   // page as the overlay fades.
   timeline.to(cv, { y: 70, duration: 0.55, ease: 'bounce.out' }, heldAt);
   timeline.to(ov, { opacity: 0, duration: 0.6 }, heldAt + 0.4);
@@ -253,10 +304,11 @@ defineExpose({ start });
     </div>
 
     <!-- The bound book cover. -->
-    <div ref="coverEl" class="bind-cover" aria-hidden="true">
+    <div ref="coverEl" class="bind-cover" :class="{ titled }" aria-hidden="true">
       <div class="bind-cover-inner">
         <p class="bind-title">{{ titleTyped }}<span class="type-cursor"></span></p>
-        <p class="bind-sub">A Gray Solutions manuscript, bound</p>
+        <p class="bind-tag"><em>Websites that tell stories.</em></p>
+        <p class="bind-by">Chris Gray</p>
       </div>
     </div>
   </div>
@@ -361,7 +413,23 @@ defineExpose({ start });
   margin: 0 0 0.5rem;
   min-height: 2.2em;
 }
-.bind-sub {
+/* The tagline and byline fade in once the title is written — the same
+   words as the finished book on the home page. */
+.bind-tag,
+.bind-by {
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.bind-cover.titled .bind-tag,
+.bind-cover.titled .bind-by {
+  opacity: 1;
+}
+.bind-tag {
+  font-size: 0.85rem;
+  color: rgba(235, 225, 210, 0.75);
+  margin: 0 0 0.35rem;
+}
+.bind-by {
   font-size: 0.8rem;
   color: rgba(235, 225, 210, 0.55);
   margin: 0;
