@@ -1169,6 +1169,18 @@ body.has-book .chapter.book-page {
     0 4px 14px rgba(0, 0, 0, 0.14);
   position: relative;
 }
+@media (max-width: 640px) {
+  /* Mobile tabs are 26px wide — the page edges meet them exactly. */
+  body.has-book .chapter.book-page {
+    margin-inline: 26px;
+  }
+  .tab-rail-left .tab {
+    border-radius: 8px 0 0 8px;
+  }
+  .tab-rail-right .tab {
+    border-radius: 0 8px 8px 0;
+  }
+}
 
 .tab-rails-hidden {
   visibility: hidden;
@@ -1812,14 +1824,14 @@ body.has-book .chapter.book-page {
 }
 /* Left rail: the back of the right tabs — the page flipped over. Outer
    (left) side carries the radius and border, page-facing (right) side is
-   square and borderless. Depth shadow on the page-facing side. */
+   square and borderless. Depth shadow on the tab's outer side. */
 .tab-rail-left .tab {
   border-radius: 10px 0 0 10px;
   border-right: none;
   border-left: 1px solid var(--line);
   box-shadow:
-    calc(var(--depth, 0) * 5px) 3px calc(var(--depth, 0) * 8px + 6px)
-    rgba(0, 0, 0, 0.3);
+    calc(var(--depth, 0) * -4px) 4px calc(var(--depth, 0) * 8px + 6px)
+    rgba(0, 0, 0, 0.35);
 }
 .tab-rail-left .tab:hover {
   transform: translateX(-4px);
@@ -1832,8 +1844,8 @@ body.has-book .chapter.book-page {
   border-left: none;
   border-right: 1px solid var(--line);
   box-shadow:
-    calc(var(--depth, 0) * -5px) 3px calc(var(--depth, 0) * 8px + 6px)
-    rgba(0, 0, 0, 0.3);
+    calc(var(--depth, 0) * 4px) 4px calc(var(--depth, 0) * 8px + 6px)
+    rgba(0, 0, 0, 0.35);
 }
 .tab-rail-right .tab:hover {
   transform: translateX(4px);
@@ -1919,19 +1931,6 @@ body.has-book .chapter.book-page {
 .tab-rail-left {
   right: auto;
   left: 0;
-}
-.tab-rail-left .tab {
-  border-radius: 0 10px 10px 0;
-  border-right: 1px solid var(--line);
-  border-left: none;
-}
-.tab-rail-left .tab:hover {
-  transform: translateX(4px);
-}
-@media (max-width: 640px) {
-  .tab-rail-left .tab {
-    border-radius: 0 8px 8px 0;
-  }
 }
 
 /* ---------- chapter modal ---------- */
