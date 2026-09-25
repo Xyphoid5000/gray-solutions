@@ -9,7 +9,14 @@ gsap.registerPlugin(Flip);
 const emit = defineEmits<{
   (e: 'back-to-cover'): void;
   (e: 'back-to-cover-section', section: 'about' | 'contact'): void;
+  (e: 'finale-contact'): void;
 }>();
+
+/** The Finale binds the manuscript before the contact form. */
+function onChapterContact(i: number) {
+  if (i === chapters.length - 1) emit('finale-contact');
+  else emit('back-to-cover-section', 'contact');
+}
 
 const currentIndex = ref(0);
 /** Indices of chapters sitting in the left pile, in order. */
@@ -284,7 +291,7 @@ function onTouchEnd(e: TouchEvent) {
             :is="ch.component"
             @go="goTo"
             @about="emit('back-to-cover-section', 'about')"
-            @contact="emit('back-to-cover-section', 'contact')"
+            @contact="onChapterContact(i)"
           />
         </div>
         <button

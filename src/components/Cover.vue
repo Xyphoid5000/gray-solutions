@@ -252,12 +252,13 @@ function land(power: number) {
 }
 
 /**
- * How the book must be transformed — squared to camera, centered, and
- * scaled — so its cover exactly fills the viewport, never more.
- * Measures the book flattened (resting 3D tilt would shrink the reading)
- * and restores the resting pose before returning.
+ * How the book must be transformed — squared to camera and settled —
+ * so it lands in the manuscript's page lane: the same centered column
+ * where chapter 1's page lives, desk around it. Measures the book
+ * flattened (resting 3D tilt would shrink the reading) and restores
+ * the resting pose before returning.
  */
-function coverFit() {
+function laneFit() {
   const book = bookRef.value;
   if (!book) return null;
   const rest = {
@@ -270,13 +271,20 @@ function coverFit() {
   gsap.set(book, { x: 0, y: 0, rotationX: 0, rotationY: 0, rotationZ: 0 });
   const r = book.getBoundingClientRect();
   gsap.set(book, rest);
-  const scale =
-    Math.min(window.innerWidth / r.width, window.innerHeight / r.height) *
-    0.985;
+  // The manuscript page lane: desk side lanes clear, page max 640 wide.
+  const narrow = window.matchMedia('(max-width: 640px)').matches;
+  const pl = narrow ? 70 : 120;
+  const pr = narrow ? 44 : 60;
+  const laneW = Math.max(0, window.innerWidth - pl - pr);
+  const targetW = Math.min(640, laneW);
+  const scale = targetW / r.width;
+  const targetH = r.height * scale;
+  const cx = pl + laneW / 2;
+  const top = 72 + 12; // below the fixed nav, where the page begins
   return {
     scale,
-    x: window.innerWidth / 2 - (r.left + r.width / 2),
-    y: window.innerHeight / 2 - (r.top + r.height / 2),
+    x: cx - (r.left + r.width / 2),
+    y: top + targetH / 2 - (r.top + r.height / 2),
   };
 }
 
@@ -294,17 +302,15 @@ function open() {
     emit('open-book');
     return;
   }
-  const fit = coverFit();
-  // Open the book: the desk fades in, the camera shifts up to reveal it,
-  // the book turns to face the camera — then the dive: square to camera
-  // and grow until the cover fills the frame, and the router's normal
-  // page-turn carries us into the book.
+  const fit = laneFit();
+  // Open the book: the desk fades in, the book squares to the camera and
+  // glides into the manuscript's page lane — then the swap lands chapter
+  // 1's page exactly where the cover settled.
   const tl = gsap.timeline({ onComplete: () => emit('open-book') });
   tl.to('.cover-ui, .cover-kicker', { opacity: 0, y: -24, duration: 0.45, ease: 'power2.in' }, 0)
     .to('.cover-desk', { opacity: 1, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.cover-glow', { opacity: 0.2, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.book-shadow', { opacity: 0, scale: 1.5, duration: 0.9, ease: 'power2.in' }, 0)
-    .to('.cover-scene', { y: -56, duration: 1.0, ease: 'power2.inOut' }, 0.15)
     .to(
       book,
       { rotationX: 0, rotationY: 0, duration: 0.9, ease: 'power2.inOut' },
@@ -345,9 +351,9 @@ function playReturn(target: 'contact' | 'about') {
   autoY = AWAY_Y;
   manualY = 0;
   manualX = 0;
-  // Start where open() left off: squared to camera, centered, filling
-  // the frame — then ease back out, turning its back to the reader.
-  const fit = coverFit();
+  // Start where open() left off: squared to camera, settled in the
+  // page lane — then ease back out, turning its back to the reader.
+  const fit = laneFit();
   gsap.set(book, {
     x: fit ? fit.x : 0,
     y: fit ? fit.y : 0,
@@ -360,8 +366,8 @@ function playReturn(target: 'contact' | 'about') {
   gsap.set(['.cover-kicker', '.cover-ui > *'], { opacity: 0, y: 18 });
   gsap.set('.cover-glow', { opacity: 0.25 });
   gsap.set('.book-shadow', { opacity: 0, scale: 1.4 });
-  // Start where open() left off: desk visible, camera shifted up.
-  gsap.set('.cover-scene', { y: -56 });
+  // Start where open() left off: desk visible, book in the page lane.
+  gsap.set('.cover-scene', { y: 0 });
   gsap.set('.cover-desk', { opacity: 1 });
 
   const tl = gsap.timeline();

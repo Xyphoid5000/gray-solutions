@@ -32,14 +32,17 @@ async function start() {
   gsap.to(ov, { opacity: 1, duration: 0.5 });
 
   // Gather: pile pages fly to a neat centered stack.
+  // Clone them — the real pile stays intact if the reader re-opens the book.
   const pilePages = [
     ...document.querySelectorAll('.read-pile .pile-page'),
   ] as HTMLElement[];
   const st = stack.value!;
-  // Move pile pages into the stack (they're already paper).
   pilePages.forEach((p) => {
-    st.appendChild(p);
-    gsap.set(p, { position: 'absolute', inset: '0' });
+    const clone = p.cloneNode(true) as HTMLElement;
+    clone.removeAttribute('data-pile-index');
+    clone.setAttribute('aria-hidden', 'true');
+    st.appendChild(clone);
+    gsap.set(clone, { position: 'absolute', inset: '0' });
   });
   // Add a few blank pages for the current (Finale) page.
   for (let i = 0; i < 3; i++) {

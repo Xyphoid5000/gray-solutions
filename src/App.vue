@@ -11,6 +11,7 @@ import DeskCandle from './components/DeskCandle.vue';
 import DeskPencil from './components/DeskPencil.vue';
 import LostPage from './components/LostPage.vue';
 import { setLenis } from './lib/scroll';
+import { manuscriptBound } from './lib/manuscript';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -30,6 +31,21 @@ function closeBookToSection(section: 'about' | 'contact') {
       document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   });
+}
+/** The binding cinematic: "Start your story" on the Finale binds the
+    manuscript before the contact form. */
+const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
+function onFinaleContact() {
+  if (!manuscriptBound.value && bindCinematic.value) {
+    bindCinematic.value.start();
+    return;
+  }
+  closeBookToSection('contact');
+}
+function onBindDone() {
+  // The book is bound — tell the cover, then go to the contact form.
+  window.dispatchEvent(new CustomEvent('gs:manuscript-bound'));
+  closeBookToSection('contact');
 }
 /** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
 function onNavContact() {
@@ -117,6 +133,7 @@ onUnmounted(() => {
     v-else
     @back-to-cover="closeBook"
     @back-to-cover-section="closeBookToSection"
+    @finale-contact="onFinaleContact"
   >
     <template #desk-props>
       <DeskCandle :lit="candleLit" :blacklight="blacklight" @blowOut="blowOutCandle" />
@@ -124,5 +141,5 @@ onUnmounted(() => {
     </template>
   </BookView>
   <LostPage :visible="blacklight" @close="onLostPageClose" />
-  <BindCinematic />
+  <BindCinematic ref="bindCinematic" @done="onBindDone" />
 </template>
