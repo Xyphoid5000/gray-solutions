@@ -56,7 +56,7 @@ const NONSENSE = [
   position: relative;
   width: min(420px, 92vw);
   max-height: 80svh;
-  overflow: auto;
+  overflow: hidden;
   background: #0d0a18;
   border: 1px solid rgba(150, 110, 255, 0.25);
   box-shadow:
@@ -64,13 +64,24 @@ const NONSENSE = [
     0 18px 50px rgba(0, 0, 0, 0.6);
   padding: 2rem 1.8rem;
   transform: rotate(-1.5deg);
+  display: grid;
+  grid-template-rows: auto 1fr;
 }
 .lost-kicker {
+  grid-row: 1;
   font-size: 0.7rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: rgba(170, 140, 255, 0.4);
   margin: 0 0 1.2rem;
+}
+.lost-nonsense,
+.lost-secret {
+  grid-row: 2;
+  grid-column: 1;
+}
+.lost-nonsense {
+  align-self: start;
 }
 .lost-nonsense p {
   font-family: var(--serif);
@@ -80,16 +91,20 @@ const NONSENSE = [
   margin: 0 0 0.4rem;
 }
 .lost-secret {
-  margin: 1.6rem 0 0;
-  padding-top: 1.2rem;
-  border-top: 1px dashed rgba(150, 110, 255, 0.3);
+  align-self: center;
+  margin: 0;
+  padding: 1.2rem;
+  background: rgba(13, 10, 24, 0.72);
+  border: 1px solid rgba(150, 110, 255, 0.35);
   font-family: var(--serif);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   line-height: 1.65;
-  color: #d9c6ff;
+  text-align: center;
+  color: #e2ccff;
   text-shadow:
-    0 0 12px rgba(170, 110, 255, 0.75),
-    0 0 34px rgba(140, 90, 255, 0.45);
+    0 0 12px rgba(170, 110, 255, 0.9),
+    0 0 34px rgba(140, 90, 255, 0.6);
+  box-shadow: 0 0 44px rgba(130, 90, 255, 0.28);
 }
 .lost-page-enter-active,
 .lost-page-leave-active {
