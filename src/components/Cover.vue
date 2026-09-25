@@ -563,11 +563,6 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
-    <section v-reveal id="about" class="about-section" aria-label="About me">
-      <div class="wrap">
-        <AboutMe />
-      </div>
-    </section>
     <section id="contact" class="cover-contact" aria-label="Contact">
       <div class="wrap">
         <p v-reveal class="contact-kicker">Contact</p>
@@ -582,6 +577,11 @@ onUnmounted(() => {
         <div v-reveal>
           <ContactForm />
         </div>
+      </div>
+    </section>
+    <section v-reveal id="about" class="about-section" aria-label="About me">
+      <div class="wrap">
+        <AboutMe />
       </div>
     </section>
   </div>
