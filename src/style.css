@@ -1136,6 +1136,16 @@ body.has-book .chapter.book-page {
   position: relative;
 }
 
+.tab-rails-hidden {
+  visibility: hidden;
+}
+/* Snapshot of the old tabs, rolling out with the old page on mobile. */
+.tab-rails-clone {
+  position: fixed;
+  inset: 0;
+  z-index: 901;
+  pointer-events: none;
+}
 /* The scroll roll: a paper cylinder that rides the unrolling edge. */
 .scroll-roll {
   position: absolute;
@@ -1728,12 +1738,12 @@ body.has-book .chapter.book-page {
   border-color: var(--ember);
   transform: translateX(-4px);
 }
-/* Left rail: page-facing (right) side is square and borderless, the outer
-   (left) side carries the radius and border. */
+/* Left rail (inverted): the inner (right) side carries the radius and
+   border, the outer (left) side is square and borderless. */
 .tab-rail-left .tab {
-  border-radius: 10px 0 0 10px;
-  border-right: none;
-  border-left: 1px solid var(--line);
+  border-radius: 0 10px 10px 0;
+  border-left: none;
+  border-right: 1px solid var(--line);
 }
 .tab-rail-left .tab:hover {
   transform: translateX(-4px);

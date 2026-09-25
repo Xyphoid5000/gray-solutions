@@ -167,6 +167,8 @@ router.beforeEach((to, from) => {
   turnDir = ti >= fi ? 1 : -1;
   toIdx = ti;
   fromIdx = fi;
+  // fromIdx/toIdx are set, so useScrollRoll() is valid here.
+  snapshotTabsForRoll();
 });
 
 const isMobile = () =>
@@ -180,6 +182,19 @@ const isMobile = () =>
  */
 const useScrollRoll = () =>
   !reducedMotion && isMobile() && fromIdx >= 1 && toIdx >= 1;
+
+/** Snapshot the tab rails before they re-render, so the old tabs can roll
+    out with the old page on mobile. */
+function snapshotTabsForRoll() {
+  if (!useScrollRoll()) return;
+  const rails = document.querySelector('.tab-rails');
+  if (!rails || document.querySelector('.tab-rails-clone')) return;
+  const clone = rails.cloneNode(true) as HTMLElement;
+  clone.classList.add('tab-rails-clone');
+  clone.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(clone);
+  rails.classList.add('tab-rails-hidden');
+}
 
 function beforeEnter(el: Element) {
   const page = el as HTMLElement;
@@ -224,28 +239,49 @@ function enter(el: Element, done: () => void) {
   if (useScrollRoll()) {
     // The new scroll unrolls down from the top, the roll leading the way.
     // Slight delay so the old scroll is mostly up before this drops.
+    // The new tabs unroll with it.
     const roll = document.createElement('div');
     roll.className = 'scroll-roll';
     page.appendChild(roll);
+    const rails = document.querySelector('.tab-rails') as HTMLElement | null;
+    if (rails) {
+      rails.classList.remove('tab-rails-hidden');
+      gsap.set(rails, { clipPath: 'inset(100% 0% 0% 0%)' });
+    }
     const tl = gsap.timeline({
-      delay: 0.4,
+      delay: 0.7,
       onComplete: () => {
         roll.remove();
+        document
+          .querySelectorAll('.tab-rails-clone')
+          .forEach((c) => c.remove());
         gsap.set(page, { clearProps: 'all' });
+        if (rails) gsap.set(rails, { clearProps: 'clipPath' });
         done();
       },
     });
     tl.to(
       page,
-      { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.7, ease: 'power2.inOut' },
+      { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.1, ease: 'power2.inOut' },
       0,
     );
     tl.fromTo(
       roll,
       { top: '0%' },
-      { top: '100%', duration: 0.7, ease: 'power2.inOut' },
+      { top: '100%', duration: 1.1, ease: 'power2.inOut' },
       0,
     );
+    if (rails) {
+      tl.to(
+        rails,
+        {
+          clipPath: 'inset(0% 0% 0% 0%)',
+          duration: 1.1,
+          ease: 'power2.inOut',
+        },
+        0,
+      );
+    }
     return;
   }
   if (reducedMotion || turnDir >= 0) {
@@ -274,6 +310,7 @@ function leave(el: Element, done: () => void) {
   }
   if (useScrollRoll()) {
     // The old scroll rolls up off the desk, the roll riding its tail.
+    // The old tabs (snapshotted clone) roll up with it.
     const roll = document.createElement('div');
     roll.className = 'scroll-roll';
     page.appendChild(roll);
@@ -286,18 +323,38 @@ function leave(el: Element, done: () => void) {
       zIndex: 2,
       clipPath: 'inset(0% 0% 0% 0%)',
     });
-    const tl = gsap.timeline({ onComplete: done });
+    const clone = document.querySelector(
+      '.tab-rails-clone',
+    ) as HTMLElement | null;
+    if (clone) gsap.set(clone, { clipPath: 'inset(0% 0% 0% 0%)' });
+    const tl = gsap.timeline({
+      onComplete: () => {
+        // The enter timeline removes the clone once the new tabs land.
+        done();
+      },
+    });
     tl.to(
       page,
-      { clipPath: 'inset(0% 0% 100% 0%)', duration: 0.6, ease: 'power2.in' },
+      { clipPath: 'inset(0% 0% 100% 0%)', duration: 1.0, ease: 'power2.in' },
       0,
     );
     tl.fromTo(
       roll,
       { top: '100%' },
-      { top: '0%', duration: 0.6, ease: 'power2.in' },
+      { top: '0%', duration: 1.0, ease: 'power2.in' },
       0,
     );
+    if (clone) {
+      tl.to(
+        clone,
+        {
+          clipPath: 'inset(0% 0% 100% 0%)',
+          duration: 1.0,
+          ease: 'power2.in',
+        },
+        0,
+      );
+    }
     return;
   }
   if (turnDir >= 0) {
@@ -337,6 +394,12 @@ function cancelTurn(el: Element) {
   (el as HTMLElement)
     .querySelectorAll('.scroll-roll')
     .forEach((r) => r.remove());
+  document.querySelectorAll('.tab-rails-clone').forEach((c) => c.remove());
+  const rails = document.querySelector('.tab-rails');
+  if (rails) {
+    rails.classList.remove('tab-rails-hidden');
+    gsap.set(rails as HTMLElement, { clearProps: 'clipPath' });
+  }
   gsap.set(el as HTMLElement, { clearProps: 'all' });
 }
 
