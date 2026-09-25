@@ -6,14 +6,15 @@ import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
 import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
+import { manuscriptBound, markManuscriptBound } from '../lib/manuscript';
 
 const router = useRouter();
 
 /** The manuscript becomes a book once the reader finishes and binds it.
     Resets on refresh — every visit starts with the manuscript. */
-const isBound = ref(false);
+const isBound = manuscriptBound;
 function markBound() {
-  isBound.value = true;
+  markManuscriptBound();
 }
 // The binding cinematic sets this; listen for it.
 window.addEventListener('gs:manuscript-bound', markBound);
