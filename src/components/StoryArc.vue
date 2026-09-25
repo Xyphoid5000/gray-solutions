@@ -49,7 +49,9 @@ onMounted(() => {
 
   if (!isDesktop) {
     // Mobile: the vertical spine fills with light as the reader scrolls
-    // through the acts, and each stop lights in turn.
+    // through the acts, and each stop lights in turn. The end is kept
+    // high (80%) so the last act can actually light — there isn't enough
+    // page below the spine to reach a lower end position.
     const spine = document.querySelector<HTMLElement>('.arc-spine');
     if (!spine) {
       litCount.value = acts.length;
@@ -60,7 +62,7 @@ onMounted(() => {
     spineSt = ScrollTrigger.create({
       trigger: spine,
       start: 'top 78%',
-      end: 'bottom 45%',
+      end: 'bottom 80%',
       scrub: 0.5,
       onUpdate: (self) => {
         const p = self.progress;
