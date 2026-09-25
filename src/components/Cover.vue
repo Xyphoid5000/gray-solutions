@@ -286,26 +286,32 @@ function open() {
     return;
   }
   const fit = coverFit();
-  // Dive into the front cover: square the book to camera and grow it
-  // until the cover fills the frame — then the router's normal
+  // Open the book: the desk fades in, the camera shifts up to reveal it,
+  // the book turns to face the camera — then the dive: square to camera
+  // and grow until the cover fills the frame, and the router's normal
   // page-turn carries us into the book.
   const tl = gsap.timeline({ onComplete: () => router.push('/premise') });
   tl.to('.cover-ui, .cover-kicker', { opacity: 0, y: -24, duration: 0.45, ease: 'power2.in' }, 0)
+    .to('.cover-desk', { opacity: 1, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.cover-glow', { opacity: 0.2, duration: 0.9, ease: 'power1.inOut' }, 0)
     .to('.book-shadow', { opacity: 0, scale: 1.5, duration: 0.9, ease: 'power2.in' }, 0)
+    .to('.cover-scene', { y: -56, duration: 1.0, ease: 'power2.inOut' }, 0.15)
+    .to(
+      book,
+      { rotationX: 0, rotationY: 0, duration: 0.9, ease: 'power2.inOut' },
+      0.35,
+    )
     .to(
       book,
       {
         x: fit ? fit.x : 0,
         y: fit ? fit.y : 0,
         scale: fit ? fit.scale : 1,
-        rotationX: 0,
-        rotationY: 0,
         rotationZ: 0,
         duration: 1.3,
         ease: 'power2.inOut',
       },
-      0.1,
+      1.0,
     );
 }
 
@@ -345,6 +351,9 @@ function playReturn(target: 'contact' | 'about') {
   gsap.set(['.cover-kicker', '.cover-ui > *'], { opacity: 0, y: 18 });
   gsap.set('.cover-glow', { opacity: 0.25 });
   gsap.set('.book-shadow', { opacity: 0, scale: 1.4 });
+  // Start where open() left off: desk visible, camera shifted up.
+  gsap.set('.cover-scene', { y: -56 });
+  gsap.set('.cover-desk', { opacity: 1 });
 
   const tl = gsap.timeline();
   tl.to(
@@ -360,6 +369,10 @@ function playReturn(target: 'contact' | 'about') {
       },
       0.25,
     )
+    // Reverse of the open: the book turns away, the camera settles back
+    // down, and the desk fades out.
+    .to('.cover-scene', { y: 0, duration: 1.4, ease: 'power2.inOut' }, 0.6)
+    .to('.cover-desk', { opacity: 0, duration: 1.0, ease: 'power1.inOut' }, 1.0)
     .to('.cover-glow', { opacity: 1, duration: 1.4, ease: 'power1.inOut' }, 0.5)
     .to(
       '.book-shadow',
@@ -484,6 +497,7 @@ onUnmounted(() => {
 <template>
   <div class="cover-page">
     <section class="cover" aria-label="Cover">
+      <div class="cover-desk" aria-hidden="true"></div>
       <div class="cover-glow" aria-hidden="true"></div>
       <div class="cover-scene">
         <p class="cover-kicker">A portfolio &middot; by Chris Gray</p>

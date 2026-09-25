@@ -14,18 +14,26 @@ interface RailTab {
   active: boolean;
   /** 1-based grid row — every page owns its row on either rail. */
   row: number;
+  /** Distance from the current page — drives the depth shadow. */
+  depth: number;
 }
 
 const currentIndex = computed(() =>
   chapters.findIndex((c) => c.path === route.path),
 );
 const rowOf = (ch: ChapterMeta) => chapters.indexOf(ch) + 1;
+const currentRow = computed(() => currentIndex.value + 1);
 
 /** Pages behind the reader — backward navigation. */
 const leftTabs = computed<RailTab[]>(() =>
   chapters
     .slice(0, currentIndex.value)
-    .map((ch) => ({ ch, active: false, row: rowOf(ch) })),
+    .map((ch) => ({
+      ch,
+      active: false,
+      row: rowOf(ch),
+      depth: currentRow.value - rowOf(ch),
+    })),
 );
 /**
  * The current page first and highlighted, then the pages ahead —
@@ -34,9 +42,15 @@ const leftTabs = computed<RailTab[]>(() =>
 const rightTabs = computed<RailTab[]>(() => {
   const tabs: RailTab[] = [];
   const current = chapters[currentIndex.value];
-  if (current) tabs.push({ ch: current, active: true, row: rowOf(current) });
+  if (current)
+    tabs.push({ ch: current, active: true, row: rowOf(current), depth: 0 });
   for (const ch of chapters.slice(currentIndex.value + 1)) {
-    tabs.push({ ch, active: false, row: rowOf(ch) });
+    tabs.push({
+      ch,
+      active: false,
+      row: rowOf(ch),
+      depth: rowOf(ch) - currentRow.value,
+    });
   }
   return tabs;
 });
@@ -69,7 +83,7 @@ function tabLabel(ch: ChapterMeta): string {
         v-for="t in leftTabs"
         :key="t.ch.path"
         class="tab"
-        :style="{ gridRow: t.row }"
+        :style="{ gridRow: t.row, '--depth': t.depth }"
         :aria-label="tabLabel(t.ch)"
         :title="t.ch.label"
         @click="emit('select', t.ch)"
@@ -102,7 +116,7 @@ function tabLabel(ch: ChapterMeta): string {
         :key="t.ch.path"
         class="tab"
         :class="{ active: t.active }"
-        :style="{ gridRow: t.row }"
+        :style="{ gridRow: t.row, '--depth': t.depth }"
         :aria-label="
           t.active ? `${tabLabel(t.ch)} (current page)` : tabLabel(t.ch)
         "
@@ -133,7 +147,7 @@ function tabLabel(ch: ChapterMeta): string {
       </button>
       <button
         class="tab tab-contact"
-        :style="{ gridRow: contactRow }"
+        :style="{ gridRow: contactRow, '--depth': contactRow - currentRow }"
         aria-label="Contact — open the contact form"
         title="Contact"
         @click="emit('contact')"

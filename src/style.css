@@ -1123,7 +1123,29 @@ a {
 /* The book: chapter pages are paper slabs on a darker desk, with the
    edges aligned to the tabs' inner sides. */
 body.has-book {
-  background: var(--desk);
+  background-color: var(--desk);
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 9px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.05) 0 2px,
+      transparent 2px 17px
+    ),
+    repeating-linear-gradient(
+      93deg,
+      rgba(0, 0, 0, 0.03) 0 1px,
+      transparent 1px 29px
+    ),
+    linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.06) 100%
+    );
 }
 body.has-book .chapter.book-page {
   background: var(--page);
@@ -1366,6 +1388,36 @@ body.has-book .chapter.book-page {
   min-height: 100svh;
   overflow: clip;
   padding: calc(var(--nav-h) + 1rem) 0 6rem;
+}
+/* The desk fades in behind the book during the open/close cinematic. */
+.cover-desk {
+  position: absolute;
+  inset: 0;
+  background-color: var(--desk);
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 9px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.05) 0 2px,
+      transparent 2px 17px
+    ),
+    repeating-linear-gradient(
+      93deg,
+      rgba(0, 0, 0, 0.03) 0 1px,
+      transparent 1px 29px
+    ),
+    linear-gradient(
+      105deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.06) 100%
+    );
+  opacity: 0;
+  pointer-events: none;
 }
 .cover-glow {
   position: absolute;
@@ -1739,11 +1791,15 @@ body.has-book .chapter.book-page {
   transform: translateX(-4px);
 }
 /* Left rail (inverted): the inner (right) side carries the radius and
-   border, the outer (left) side is square and borderless. */
+   border, the outer (left) side is square and borderless.
+   Depth shadow on the page-facing side grows with distance from current. */
 .tab-rail-left .tab {
   border-radius: 0 10px 10px 0;
   border-left: none;
   border-right: 1px solid var(--line);
+  box-shadow:
+    calc(var(--depth, 0) * 5px) 3px calc(var(--depth, 0) * 8px + 6px)
+    rgba(0, 0, 0, 0.3);
 }
 .tab-rail-left .tab:hover {
   transform: translateX(-4px);
@@ -1755,6 +1811,9 @@ body.has-book .chapter.book-page {
   border-radius: 0 10px 10px 0;
   border-left: none;
   border-right: 1px solid var(--line);
+  box-shadow:
+    calc(var(--depth, 0) * -5px) 3px calc(var(--depth, 0) * 8px + 6px)
+    rgba(0, 0, 0, 0.3);
 }
 .tab-rail-right .tab:hover {
   transform: translateX(4px);
