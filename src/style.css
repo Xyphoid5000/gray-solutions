@@ -967,6 +967,9 @@ a {
   color: var(--ember);
 }
 /* The Finale types itself live: one continuous page, no separations. */
+.finale {
+  justify-content: flex-start;
+}
 .finale .typed-text {
   white-space: pre-wrap;
 }
