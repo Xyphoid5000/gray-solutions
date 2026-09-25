@@ -1227,8 +1227,8 @@ body.has-book .chapter.book-page {
 /* The read pile: finished manuscript pages, in the left desk margin. */
 .read-pile {
   position: fixed;
-  left: 14px;
-  bottom: 18px;
+  left: 20px;
+  top: 22%;
   width: 104px;
   height: 140px;
   z-index: 800;
@@ -2412,8 +2412,8 @@ html[data-theme='dark'] body.has-book .chapter {
     ),
     linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
   outline: none;
-  /* Clearance so the page never slides under the bottom-left pile. */
-  padding-bottom: 230px;
+  /* Left lane: desk space where the pile and candle live. */
+  padding-left: 180px;
 }
 .page-stack {
   position: relative;
@@ -2500,7 +2500,7 @@ html[data-theme='dark'] .page-tab {
 }
 @media (max-width: 640px) {
   .manuscript-desk {
-    padding-left: 0;
+    padding-left: 104px;
   }
   .page-wrap {
     width: calc(100% - 40px);
@@ -2513,7 +2513,7 @@ html[data-theme='dark'] .page-tab {
   }
   .read-pile {
     left: 10px;
-    bottom: 12px;
+    top: 20%;
     width: 84px;
     height: 112px;
   }

@@ -48,9 +48,9 @@ const emit = defineEmits<{
 <style scoped>
 .desk-candle {
   position: fixed;
-  /* On the desk, to the right of the manuscript page. */
-  right: 78px;
-  top: 32%;
+  /* On the desk, in the left lane with the pile. */
+  left: 66px;
+  top: 52%;
   width: 44px;
   height: 66px;
   z-index: 850;
@@ -63,8 +63,8 @@ const emit = defineEmits<{
 }
 @media (max-width: 640px) {
   .desk-candle {
-    right: 40px;
-    top: 88px;
+    left: 30px;
+    top: 48%;
     width: 36px;
     height: 54px;
   }
