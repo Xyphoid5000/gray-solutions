@@ -27,6 +27,9 @@ const cameraMoving = ref(false);
  * bookshelf behind the cinematic; hides the manuscript stack so the
  * filing reads clean. */
 const shelfReveal = ref(false);
+/** Bumped when the binding finishes so the home page's bound book
+ * drops in after the fade. */
+const boundBookDrop = ref(0);
 
 function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
@@ -153,8 +156,9 @@ function onFinaleContact() {
 }
 function onBindDone() {
   // The book is bound — the home page already shows it after the
-  // blackout; glide to the contact form once the reveal lands.
+  // blackout; drop the 3D book in, then glide to the contact form.
   if (!manuscriptBound.value) markManuscriptBound();
+  boundBookDrop.value++;
   closeBookToSection('contact', 1400);
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
@@ -379,7 +383,7 @@ onUnmounted(() => {
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
-    <Cover @open-book="openBook" />
+    <Cover @open-book="openBook" :book-drop-key="boundBookDrop" />
   </div>
   <div v-if="bookMounted" class="view view-book">
   <BookView

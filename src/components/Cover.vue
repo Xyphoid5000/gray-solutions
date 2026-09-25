@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
@@ -9,6 +9,7 @@ import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
 
 const emit = defineEmits(['open-book']);
+const props = defineProps<{ bookDropKey?: number }>();
 
 /** The manuscript becomes a book once the reader finishes and binds it.
     Resets on refresh — every visit starts with the manuscript.
@@ -19,6 +20,23 @@ const stageRef = ref<HTMLElement | null>(null);
 const bookRef = ref<HTMLElement | null>(null);
 const shadowRef = ref<HTMLElement | null>(null);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
+
+/** After the binding's fade, the finished 3D book drops onto the desk. */
+watch(
+  () => props.bookDropKey,
+  (key) => {
+    if (!key || !isBound.value) return;
+    const book = bookRef.value;
+    if (!book) return;
+    gsap.fromTo(
+      book,
+      { y: -window.innerHeight * 0.6, opacity: 0, rotation: -8 },
+      { y: 0, opacity: 1, rotation: 0, duration: 0.7, ease: 'power2.in' },
+    );
+    gsap.to(book, { y: -18, duration: 0.16, ease: 'power2.out', delay: 0.7 });
+    gsap.to(book, { y: 0, duration: 0.32, ease: 'bounce.out', delay: 0.86 });
+  },
+);
 
 let introTl: gsap.core.Timeline | null = null;
 let raf = 0;

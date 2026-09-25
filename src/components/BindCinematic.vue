@@ -120,11 +120,11 @@ function start() {
     display: 'flex',
     opacity: 0,
     x: 0,
-    y: -(vh * 0.6),
+    y: 0,
     xPercent: -50,
     yPercent: -50,
     scale: 1,
-    rotation: -5,
+    rotation: 0,
   });
   gsap.set(st, {
     display: 'block',
@@ -235,18 +235,12 @@ function start() {
   });
   const b2 = shuffleAt + 5 * 0.07 + 0.64 + 0.15;
 
-  // Beat 3 — the stamped MANUSCRIPT cover drops onto the top of the
-  // neat stack, stamp facing up; then it's thrown off to the side,
-  // leaving chapter 1 on top.
-  const msDropAt = b2 + 0.2;
-  T.to(
-    msc,
-    { opacity: 1, y: 0, rotation: 0, duration: 0.7, ease: 'power2.out' },
-    msDropAt,
-  );
-  T.to(msc, { y: -14, duration: 0.16, ease: 'power2.out' }, msDropAt + 0.7);
-  T.to(msc, { y: 0, duration: 0.3, ease: 'bounce.out' }, msDropAt + 0.86);
-  const throwAt = msDropAt + 1.35;
+  // Beat 3 — the stamped MANUSCRIPT cover starts on top of the neat
+  // stack (it fades in where it sits — no fly-in); then it's thrown
+  // off to the side, leaving chapter 1 on top.
+  const msAt = b2 + 0.2;
+  T.to(msc, { opacity: 1, duration: 0.45, ease: 'power1.out' }, msAt);
+  const throwAt = msAt + 1.1;
   T.to(
     msc,
     {
@@ -327,15 +321,19 @@ function start() {
   const b5 = titledAt + 0.9;
 
   // Beat 6a — the flat cover becomes a real 3D book and lifts itself
-  // off the desk.
+  // off the desk. The book turns to show its thickness — the 3D
+  // moment reads clearly.
   const grabAt = b5 + 0.15;
   T.to(cv, { opacity: 0, duration: 0.25, ease: 'power1.in' }, grabAt);
   T.set(cv, { display: 'none' }, grabAt + 0.3);
   T.set(b3d, { display: 'block' }, grabAt);
   T.to(b3d, { opacity: 1, duration: 0.25, ease: 'power1.in' }, grabAt);
+  // Turn to show it's a real object with thickness.
+  T.to(b3d, { rotationY: -38, duration: 0.55, ease: 'power2.out' }, grabAt + 0.25);
+  T.to(b3d, { rotationY: -18, duration: 0.45, ease: 'power2.inOut' }, grabAt + 0.8);
   // Lift off the desk.
   T.to(b3d, { y: '-=46', duration: 0.5, ease: 'power2.out' }, grabAt + 0.2);
-  const b6 = grabAt + 0.85;
+  const b6 = grabAt + 1.3;
 
   // Beat 6b — the dark backdrop dissolves, revealing the home page's
   // real bookshelf behind the cinematic while the book hovers, waiting.
