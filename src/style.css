@@ -1547,6 +1547,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
     box-shadow: 0 0 12px rgba(208, 138, 78, 0.6);
     transform-origin: top center;
     transform: scaleY(0);
+    transition: transform 0.45s ease;
   }
   .arc-stop {
     position: relative;

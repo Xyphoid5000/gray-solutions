@@ -36,7 +36,7 @@ const acts = [
 const litCount = ref(0);
 const spineProgress = ref(0);
 let st: ScrollTrigger | undefined;
-let spineSt: ScrollTrigger | undefined;
+let spineTriggers: ScrollTrigger[] = [];
 
 onMounted(() => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -48,43 +48,45 @@ onMounted(() => {
   const isDesktop = window.matchMedia('(min-width: 641px)').matches;
 
   if (!isDesktop) {
-    // Mobile: the vertical spine fills with light as the reader scrolls
-    // through the acts, and each stop lights in turn. The end is the
-    // maximum scroll — the arc always completes at the bottom of the
-    // page, whatever the viewport or the padding below the spine.
-    const spine = document.querySelector<HTMLElement>('.arc-spine');
-    if (!spine) {
+    // Mobile: each stop lights as it scrolls into view, and the glowing
+    // line fills to match. Per-stop triggers — no single trigger's total
+    // scroll range to miscompute, so the last act always lights at the
+    // bottom whatever the viewport or the padding below the spine.
+    const stopEls = [
+      ...document.querySelectorAll<HTMLElement>('.arc-stop'),
+    ];
+    if (!stopEls.length) {
       litCount.value = acts.length;
       spineProgress.value = 1;
       return;
     }
     gsap.set('.arc-stop', { opacity: 0.25 });
-    spineSt = ScrollTrigger.create({
-      trigger: spine,
-      start: 'top 78%',
-      end: 'max',
-      scrub: 0.5,
-      onUpdate: (self) => {
-        const p = self.progress;
-        spineProgress.value = p;
-        const lit = Math.min(acts.length, Math.floor(p * acts.length + 0.2));
-        if (lit !== litCount.value) {
-          litCount.value = lit;
-          gsap.set('.arc-stop', {
-            opacity: (i: number) => (i < lit ? 1 : 0.25),
-          });
-          // Pop the newly lit stop.
-          const stops = document.querySelectorAll('.arc-stop');
-          const el = stops[lit - 1] as HTMLElement | undefined;
-          if (el) {
-            gsap.fromTo(
-              el.querySelector('.arc-dot'),
-              { scale: 1.9 },
-              { scale: 1, duration: 0.5, ease: 'back.out(2.5)' },
-            );
-          }
-        }
-      },
+    const lightUpTo = (n: number) => {
+      if (n === litCount.value && spineProgress.value === n / acts.length)
+        return;
+      litCount.value = n;
+      spineProgress.value = n / acts.length;
+      gsap.set('.arc-stop', {
+        opacity: (i: number) => (i < n ? 1 : 0.25),
+      });
+      // Pop the newly lit stop.
+      const el = stopEls[n - 1] as HTMLElement | undefined;
+      if (el) {
+        gsap.fromTo(
+          el.querySelector('.arc-dot'),
+          { scale: 1.9 },
+          { scale: 1, duration: 0.5, ease: 'back.out(2.5)' },
+        );
+      }
+    };
+    stopEls.forEach((el, i) => {
+      const trigger = ScrollTrigger.create({
+        trigger: el,
+        start: 'top 72%',
+        onEnter: () => lightUpTo(i + 1),
+        onLeaveBack: () => lightUpTo(i),
+      });
+      spineTriggers.push(trigger);
     });
     return;
   }
@@ -148,8 +150,8 @@ onMounted(() => {
 onUnmounted(() => {
   st?.kill();
   st = undefined;
-  spineSt?.kill();
-  spineSt = undefined;
+  spineTriggers.forEach((t) => t.kill());
+  spineTriggers = [];
 });
 </script>
 
