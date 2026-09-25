@@ -19,7 +19,7 @@ const pile = ref<number[]>([]);
 const pileSet = computed(() => new Set(pile.value));
 
 function pageEl(i: number): HTMLElement | null {
-  return document.querySelector(`.page-stack [data-page-index="${i}"] .page-paper`);
+  return document.querySelector(`.manuscript-desk [data-page-index="${i}"] .page-paper`);
 }
 
 function pileCardEl(i: number): HTMLElement | null {
@@ -185,11 +185,10 @@ function onTouchEnd(e: TouchEvent) {
 
     <!-- The stack: each page is a transparent wrap, paper inside with a
          right margin, tab attached in that margin. -->
-    <div class="page-stack">
-      <div
-        v-for="(ch, i) in chapters"
-        :key="ch.num"
-        class="page-wrap"
+    <div
+      v-for="(ch, i) in chapters"
+      :key="ch.num"
+      class="page-wrap"
         :data-page-index="i"
         :class="{
           'is-current': i === currentIndex,
@@ -217,7 +216,6 @@ function onTouchEnd(e: TouchEvent) {
           {{ ch.num }}
         </button>
       </div>
-    </div>
 
     <!-- The chapter modal: preview, then turn to the page. -->
     <ChapterModal

@@ -2415,9 +2415,6 @@ html[data-theme='dark'] body.has-book .chapter {
   /* Left lane: desk space where the pile and candle live. */
   padding-left: 180px;
 }
-.page-stack {
-  position: relative;
-}
 /* Each page: a transparent wrap. No stacking context here so tabs
    can rise above the papers of pages above them. */
 .page-wrap {
