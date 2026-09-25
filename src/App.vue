@@ -267,15 +267,27 @@ function addToPile(chapterIndex: number) {
   const pile = document.querySelector('.read-pile');
   if (!page || !pile) return;
   if (pile.querySelector(`[data-pile-index="${chapterIndex}"]`)) return;
+  // Grab the tab BEFORE the rail re-renders it away.
+  const tab = document.querySelector(
+    `.tab-rail .tab[data-tab-ch="${chapterIndex}"]`,
+  ) as HTMLElement | null;
+  const tabState = tab ? Flip.getState(tab) : null;
   const state = Flip.getState(page);
   const clone = page.cloneNode(true) as HTMLElement;
   clone.setAttribute('data-pile-index', String(chapterIndex));
-  // The tab sticks to its page: 1-based chapter number.
-  clone.setAttribute('data-tab', String(chapterIndex));
   clone.classList.add('pile-page');
   clone.setAttribute('aria-hidden', 'true');
   const toss = pileToss(chapterIndex);
   pile.appendChild(clone);
+  // The tab travels with its page: clone it onto the pile card and Flip it
+  // from the rail to the pile, so it never just disappears.
+  let tabClone: HTMLElement | null = null;
+  if (tab && tabState) {
+    tabClone = tab.cloneNode(true) as HTMLElement;
+    tabClone.classList.add('pile-tab');
+    tabClone.setAttribute('aria-hidden', 'true');
+    clone.appendChild(tabClone);
+  }
   pileIndices.value.add(chapterIndex);
   // The clone lands in the pile slot; Flip animates it from the page.
   gsap.set(clone, {
@@ -288,6 +300,13 @@ function addToPile(chapterIndex: number) {
     duration: 0.85,
     ease: 'power2.inOut',
   });
+  if (tabClone && tabState) {
+    Flip.from(tabState, {
+      targets: tabClone,
+      duration: 0.85,
+      ease: 'power2.inOut',
+    });
+  }
 }
 
 function removeFromPile(chapterIndex: number) {

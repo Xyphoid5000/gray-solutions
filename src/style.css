@@ -1234,23 +1234,17 @@ body.has-book .chapter.book-page {
   /* The toss (rotation/offset) is set inline per page. */
 }
 /* The tab sticks to its page in the pile. */
-.read-pile .pile-page::after {
-  content: attr(data-tab);
+.read-pile .pile-page {
+  overflow: visible;
+}
+.read-pile .pile-page .pile-tab {
   position: absolute;
   right: -14px;
   top: 10px;
   width: 28px;
   height: 40px;
-  display: grid;
-  place-items: center;
-  background: var(--page);
-  border: 1px solid var(--line-soft);
-  border-left: none;
-  border-radius: 0 6px 6px 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--ink);
-  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+  margin: 0;
+  pointer-events: none;
 }
 @media (max-width: 640px) {
   .read-pile {
@@ -1259,12 +1253,11 @@ body.has-book .chapter.book-page {
     width: 72px;
     height: 100px;
   }
-  .read-pile .pile-page::after {
+  .read-pile .pile-page .pile-tab {
     right: -10px;
     top: 8px;
     width: 20px;
     height: 30px;
-    font-size: 0.7rem;
   }
 }
 
@@ -2244,7 +2237,7 @@ html[data-blacklight='on'] body::after {
 /* Manuscript stack: a flat loose pile of paper, slightly messy. */
 .manuscript-stack {
   position: relative;
-  width: min(64vw, 290px);
+  width: min(52vw, 220px);
   aspect-ratio: 5 / 7;
   margin-bottom: 12px;
 }

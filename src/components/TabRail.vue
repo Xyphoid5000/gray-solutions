@@ -16,6 +16,7 @@ const props = defineProps<{
 
 interface RailTab {
   ch: ChapterMeta;
+  chIndex: number;
   active: boolean;
   /** 1-based grid row — every page owns its row. */
   row: number;
@@ -39,6 +40,7 @@ const allTabs = computed<RailTab[]>(() => {
     if (props.piled.has(i)) return;
     tabs.push({
       ch,
+      chIndex: i,
       active: i === currentIndex.value,
       row: rowOf(ch),
       depth: Math.abs(i - currentIndex.value),
@@ -70,9 +72,10 @@ function tabLabel(ch: ChapterMeta): string {
   <div class="tab-rails" aria-hidden="false">
     <nav class="tab-rail tab-rail-right" aria-label="Pages">
       <button
-        v-for="t in allTabs"
+        v-for="(t, idx) in allTabs"
         :key="t.ch.path"
         class="tab"
+        :data-tab-ch="t.chIndex"
         :class="{ active: t.active }"
         :style="{ gridRow: t.row, '--depth': t.depth }"
         :aria-label="
