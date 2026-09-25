@@ -227,7 +227,8 @@ router.beforeEach((to, from) => {
   }
   // Manuscript pile: finished pages get tossed left.
   // The cover (index 0) never goes in the pile.
-  if (!reducedMotion && fi >= 0 && ti >= 0) {
+  // (Reduced motion still piles the pages — it just skips the Flip.)
+  if (fi >= 0 && ti >= 0) {
     if (ti > fi) {
       for (let i = Math.max(fi, 1); i < ti; i++) addToPile(i);
     } else if (ti < fi) {
@@ -235,7 +236,7 @@ router.beforeEach((to, from) => {
     }
   }
   // Leaving the chapters entirely — clear the pile.
-  if (!reducedMotion && fi >= 0 && ti < 0) {
+  if (fi >= 0 && ti < 0) {
     clearPile();
   }
 });
@@ -289,23 +290,26 @@ function addToPile(chapterIndex: number) {
     clone.appendChild(tabClone);
   }
   pileIndices.value.add(chapterIndex);
-  // The clone lands in the pile slot; Flip animates it from the page.
+  // The clone lands in the pile slot; Flip animates it from the page
+  // (unless the reader prefers reduced motion — then it just appears).
   gsap.set(clone, {
     rotation: toss.rotation,
     x: toss.x,
     y: toss.y,
   });
-  Flip.from(state, {
-    targets: clone,
-    duration: 0.85,
-    ease: 'power2.inOut',
-  });
-  if (tabClone && tabState) {
-    Flip.from(tabState, {
-      targets: tabClone,
+  if (!reducedMotion) {
+    Flip.from(state, {
+      targets: clone,
       duration: 0.85,
       ease: 'power2.inOut',
     });
+    if (tabClone && tabState) {
+      Flip.from(tabState, {
+        targets: tabClone,
+        duration: 0.85,
+        ease: 'power2.inOut',
+      });
+    }
   }
 }
 
