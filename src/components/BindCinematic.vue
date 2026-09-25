@@ -66,23 +66,39 @@ function start() {
   st.innerHTML = '';
   playing.value = true;
 
-  // Gather: clone the pile pages (the real pile stays intact).
+  // Gather: clone the pile pages (the real pile stays intact), shuffled
+  // into reading order — chapter 1 back on top — before the cover binds.
+  // Bottom to top: the manuscript cover, blank pages standing in for the
+  // page being finished now, then chapters with chapter 1 on top.
   const pilePages = [
     ...document.querySelectorAll('.read-pile .pile-page'),
   ] as HTMLElement[];
-  pilePages.forEach((p) => {
-    const clone = p.cloneNode(true) as HTMLElement;
-    clone.removeAttribute('data-pile-index');
-    clone.setAttribute('aria-hidden', 'true');
-    st.appendChild(clone);
-    gsap.set(clone, { position: 'absolute', inset: '0' });
-  });
-  // A few blank pages stand in for the page being finished now.
+  const isCoverCard = (el: HTMLElement) => el.dataset.pileIndex === undefined;
+  const blanks: HTMLElement[] = [];
   for (let i = 0; i < 3; i++) {
     const blank = document.createElement('div');
     blank.className = 'bind-page';
-    st.appendChild(blank);
+    blanks.push(blank);
   }
+  const ordered: HTMLElement[] = [
+    ...pilePages.filter(isCoverCard),
+    ...blanks,
+    ...pilePages
+      .filter((el) => !isCoverCard(el))
+      .sort((a, b) => Number(b.dataset.pileIndex) - Number(a.dataset.pileIndex)),
+  ];
+  ordered.forEach((p) => {
+    let el: HTMLElement;
+    if (p.classList.contains('bind-page')) {
+      el = p;
+    } else {
+      el = p.cloneNode(true) as HTMLElement;
+      el.removeAttribute('data-pile-index');
+      el.setAttribute('aria-hidden', 'true');
+    }
+    st.appendChild(el);
+    gsap.set(el, { position: 'absolute', inset: '0' });
+  });
 
   const pages = [...st.children] as HTMLElement[];
   const n = pages.length;

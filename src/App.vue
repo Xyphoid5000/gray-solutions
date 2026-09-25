@@ -32,6 +32,13 @@ function closeBookToSection(section: 'about' | 'contact', after = 100) {
     }, after);
   });
 }
+/** Scrolling down past the bottom of a chapter closes the book and
+    continues down the main page to the contact section. */
+function onExitDown() {
+  blacklight.value = false;
+  updateCandle();
+  closeBookToSection('contact');
+}
 /** Any road to Contact runs through the binding — once per visit.
     "Start your story" on the Finale binds the manuscript before the
     contact form; so does the header's CONTACT ME while the book is
@@ -142,6 +149,7 @@ onUnmounted(() => {
     @back-to-cover="closeBook"
     @back-to-cover-section="closeBookToSection"
     @finale-contact="onFinaleContact"
+    @exit-down="onExitDown"
   >
     <template #desk-props>
       <DeskCandle :lit="candleLit" :blacklight="blacklight" @blowOut="blowOutCandle" />

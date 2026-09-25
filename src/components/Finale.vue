@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { manuscriptBound } from '../lib/manuscript';
+
+const props = defineProps<{ active?: boolean }>();
 
 const emit = defineEmits<{
   about: [];
@@ -43,14 +46,31 @@ const activeField = ref(0);
 const typingDone = ref(false);
 let typeTimer: number | null = null;
 
-onMounted(() => {
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) {
-    kickerText.value = KICKER;
-    titleText.value = TITLE;
-    subText.value = SUB;
-    bodyText.value = BODY;
-    typingDone.value = true;
+/** Show the finished page whole — used in the bound book, where the
+    story is already written, and for reduced motion. */
+function showFullText() {
+  kickerText.value = KICKER;
+  titleText.value = TITLE;
+  subText.value = SUB;
+  bodyText.value = BODY;
+  activeField.value = -1;
+  typingDone.value = true;
+}
+
+/** The manuscript being finished live — types out only while the book
+    is still a manuscript. In the bound book the page just sits there,
+    already written. */
+function startTyping() {
+  if (typeTimer) window.clearTimeout(typeTimer);
+  typeTimer = null;
+  kickerText.value = '';
+  titleText.value = '';
+  subText.value = '';
+  bodyText.value = '';
+  activeField.value = 0;
+  typingDone.value = false;
+  if (manuscriptBound.value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    showFullText();
     return;
   }
   const steps = [
@@ -84,6 +104,23 @@ onMounted(() => {
   };
   // Let the page settle before the first keystroke.
   typeTimer = window.setTimeout(type, 600);
+}
+
+// The page only types when it becomes the open page — never while it
+// sits buried in the stack, and never in the bound book.
+watch(
+  () => props.active,
+  (isActive) => {
+    if (isActive) startTyping();
+    else if (typeTimer) {
+      window.clearTimeout(typeTimer);
+      typeTimer = null;
+    }
+  },
+);
+
+onMounted(() => {
+  if (props.active) startTyping();
 });
 
 onUnmounted(() => {
@@ -102,7 +139,7 @@ onUnmounted(() => {
         <span class="k-num">&#10022;</span>
         <span class="typed-text">{{ kickerText }}</span
         ><span
-          v-if="activeField === 0 && !typingDone"
+          v-if="active && activeField === 0 && !typingDone"
           class="type-cursor"
           aria-hidden="true"
         ></span>
@@ -110,7 +147,7 @@ onUnmounted(() => {
       <h2 class="h-display">
         <span class="typed-text">{{ titleText }}</span
         ><span
-          v-if="activeField === 1 && !typingDone"
+          v-if="active && activeField === 1 && !typingDone"
           class="type-cursor"
           aria-hidden="true"
         ></span>
@@ -124,7 +161,7 @@ onUnmounted(() => {
         <h3>
           <span class="typed-text">{{ subText }}</span
           ><span
-            v-if="activeField === 2 && !typingDone"
+            v-if="active && activeField === 2 && !typingDone"
             class="type-cursor"
             aria-hidden="true"
           ></span>
@@ -132,7 +169,7 @@ onUnmounted(() => {
         <p>
           <span class="typed-text">{{ bodyText }}</span
           ><span
-            v-if="activeField === 3"
+            v-if="active && activeField === 3"
             class="type-cursor"
             :class="{ done: typingDone }"
             aria-hidden="true"
