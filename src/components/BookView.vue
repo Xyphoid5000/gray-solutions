@@ -201,6 +201,10 @@ function pickFromScatter(i: number) {
   pileOpen.value = false;
   goTo(i);
 }
+function pickCoverFromScatter() {
+  pileOpen.value = false;
+  emit('back-to-cover');
+}
 
 function pileCardStyle(i: number): Record<string, string> {
   const toss = pileToss(i);
@@ -211,15 +215,21 @@ function pileCardStyle(i: number): Record<string, string> {
   };
 }
 
-/** Swipe to turn pages. */
+/** Swipe to turn pages — but never hijack the proof strip's own scrolling. */
 let touchX: number | null = null;
+let touchOnStrip = false;
 function onTouchStart(e: TouchEvent) {
+  const t = e.target as HTMLElement | null;
+  touchOnStrip = !!t?.closest('.proof-strip');
   touchX = e.touches[0].clientX;
 }
 function onTouchEnd(e: TouchEvent) {
   if (touchX === null) return;
   const dx = e.changedTouches[0].clientX - touchX;
+  const onStrip = touchOnStrip;
   touchX = null;
+  touchOnStrip = false;
+  if (onStrip) return;
   if (Math.abs(dx) < 48) return;
   if (dx < 0) next();
   else prev();
@@ -239,6 +249,16 @@ function onTouchEnd(e: TouchEvent) {
 
     <!-- Left lane: the read pile, a messy stack. Click to scatter / restack. -->
     <div class="read-pile" aria-label="Finished pages" @click="togglePile">
+      <!-- The manuscript cover: finished the moment the book opens. -->
+      <button
+        type="button"
+        class="pile-page pile-cover"
+        :style="pileCardStyle(-1)"
+        aria-label="Open finished pages"
+        tabindex="-1"
+      >
+        <span class="pile-stamp" aria-hidden="true">Manuscript</span>
+      </button>
       <button
         v-for="i in pile"
         :key="i"
@@ -257,6 +277,16 @@ function onTouchEnd(e: TouchEvent) {
     <!-- Pile scatter: finished pages float over the open page. -->
     <div v-if="pileOpen" class="pile-scatter" aria-label="Finished pages">
       <div class="pile-scatter-grid">
+        <button
+          type="button"
+          class="pile-scatter-card"
+          :style="{ '--sc-rot': scatterRot(pile.length) + 'deg', '--sc-delay': (pile.length * 0.7) + 's' }"
+          aria-label="Back to the manuscript cover"
+          @click="pickCoverFromScatter"
+        >
+          <span class="pile-stamp" aria-hidden="true">Manuscript</span>
+          <span class="pile-grid-label" aria-hidden="true">Manuscript cover</span>
+        </button>
         <button
           v-for="(i, pos) in pile"
           :key="i"

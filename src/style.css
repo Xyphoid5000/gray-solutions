@@ -1353,6 +1353,23 @@ html[data-theme='dark'] .read-pile .pile-page {
 html[data-theme='dark'] .pile-num {
   color: rgba(60, 45, 30, 0.35);
 }
+/* The cover card wears its manuscript stamp where chapters wear numerals. */
+.pile-stamp {
+  font-family: var(--serif);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: rgba(120, 70, 40, 0.85);
+  border: 2px double rgba(120, 70, 40, 0.55);
+  padding: 0.32em 0.4em 0.32em 0.52em;
+  transform: rotate(-6deg);
+  user-select: none;
+}
+html[data-theme='dark'] .pile-stamp {
+  color: rgba(120, 70, 40, 0.9);
+}
 /* The tab sticks to its page in the pile. */
 .read-pile .pile-page {
   overflow: visible;
@@ -2593,7 +2610,7 @@ html[data-theme='dark'] .page-paper {
     font-size: 1.12rem;
   }
   .page-paper .proof-strip .proof-panel {
-    width: min(82vw, 420px);
+    width: 100%;
   }
   .page-paper .arc-svg-wrap {
     margin-bottom: 2rem;
