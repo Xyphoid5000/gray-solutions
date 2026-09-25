@@ -38,6 +38,29 @@ const stopSway = () => {
   sway = null;
 };
 
+/** Violent swing for the blacklight entrance: thrash side to side,
+    then settle back into the gentle sway. */
+const shakeViolently = () => {
+  if (!root.value) return;
+  stopSway();
+  gsap.killTweensOf(root.value);
+  gsap.fromTo(
+    root.value,
+    { rotation: 0 },
+    {
+      rotation: 22,
+      duration: 0.08,
+      yoyo: true,
+      repeat: 9,
+      ease: 'sine.inOut',
+      onComplete: () => {
+        gsap.set(root.value, { rotation: 0 });
+        startSway();
+      },
+    },
+  );
+};
+
 const applyPull = (dy: number) => {
   pull = Math.max(0, Math.min(PULL_MAX, dy));
   // Measure the real line height (it shrinks on mobile) so the knob
@@ -131,6 +154,7 @@ onMounted(() => {
   window.addEventListener('pointermove', onPointerMove, { passive: true });
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
+  window.addEventListener('gs:shake-cord', shakeViolently);
 });
 
 onUnmounted(() => {
@@ -139,6 +163,7 @@ onUnmounted(() => {
   window.removeEventListener('pointermove', onPointerMove);
   window.removeEventListener('pointerup', onPointerUp);
   window.removeEventListener('pointercancel', onPointerUp);
+  window.removeEventListener('gs:shake-cord', shakeViolently);
 });
 </script>
 

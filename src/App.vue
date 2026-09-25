@@ -191,9 +191,11 @@ function blowOutCandle() {
   candleLit.value = false;
   pitchBlack.value = true;
   later(() => {
-    // The black lifts and the page shivers as it does.
+    // The black lifts and the page shivers as it does — the cord
+    // swings wildly too.
     pitchBlack.value = false;
     document.documentElement.classList.add('page-shake');
+    window.dispatchEvent(new CustomEvent('gs:shake-cord'));
   }, 2200);
   later(() => {
     blacklight.value = true;
