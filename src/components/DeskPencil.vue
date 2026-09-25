@@ -1,0 +1,71 @@
+<script setup lang="ts">
+/** A pencil on the desk — the writer's tool, next to the manuscript. */
+</script>
+
+<template>
+  <div class="desk-pencil" aria-hidden="true">
+    <svg viewBox="0 0 120 16" aria-hidden="true">
+      <!-- body -->
+      <rect x="18" y="3" width="84" height="10" rx="2" class="p-body" />
+      <!-- paint stripes -->
+      <rect x="18" y="5" width="84" height="2" class="p-stripe" />
+      <rect x="18" y="9" width="84" height="2" class="p-stripe" />
+      <!-- ferrule -->
+      <rect x="8" y="3" width="10" height="10" class="p-ferrule" />
+      <!-- eraser -->
+      <rect x="0" y="4" width="8" height="8" rx="2" class="p-eraser" />
+      <!-- wood -->
+      <polygon points="102,3 118,8 102,13" class="p-wood" />
+      <!-- lead -->
+      <polygon points="112,6.5 118,8 112,9.5" class="p-lead" />
+    </svg>
+  </div>
+</template>
+
+<style scoped>
+.desk-pencil {
+  position: fixed;
+  z-index: 840;
+  width: 110px;
+  pointer-events: none;
+  opacity: 0.9;
+  transform: rotate(-14deg);
+  /* Desktop: on the desk, right of the page, below the candle. */
+  right: 72px;
+  top: 58%;
+}
+.desk-pencil svg {
+  width: 100%;
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.25));
+}
+.p-body {
+  fill: #d9a441;
+}
+.p-stripe {
+  fill: #b9832f;
+  opacity: 0.6;
+}
+.p-ferrule {
+  fill: #9aa0a8;
+}
+.p-eraser {
+  fill: #d98a94;
+}
+.p-wood {
+  fill: #e3c49a;
+}
+.p-lead {
+  fill: #3a3a3a;
+}
+@media (max-width: 640px) {
+  .desk-pencil {
+    width: 84px;
+    right: 44px;
+    top: auto;
+    bottom: 110px;
+    transform: rotate(-18deg);
+  }
+}
+</style>

@@ -11,6 +11,7 @@ import TabRail from './components/TabRail.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import ChapterModal from './components/ChapterModal.vue';
 import DeskCandle from './components/DeskCandle.vue';
+import DeskPencil from './components/DeskPencil.vue';
 import LostPage from './components/LostPage.vue';
 import { neighbor, chapters, type ChapterMeta, isChapter } from './router';
 import { returnToSection } from './lib/ui';
@@ -27,6 +28,12 @@ const pageFlipId = computed(() => {
   const i = chapters.findIndex((c) => c.path === route.path);
   return i >= 0 ? `pile-${i}` : undefined;
 });
+
+/** The desk props (candle, pencil) only appear when the book is open —
+    i.e. on a chapter route, not the cover or about. */
+const isChapterRoute = computed(() =>
+  chapters.some((c) => c.path === route.path),
+);
 
 /** Blacklight: the candle is blown out, the lost page surfaces. */
 const blacklight = ref(false);
@@ -630,7 +637,13 @@ onUnmounted(() => {
     @contact="goToContact"
   />
   <BindCinematic ref="bindCinematic" @done="onBindDone" />
-  <DeskCandle :lit="candleLit" :blacklight="blacklight" @blowOut="blowOutCandle" />
+  <DeskCandle
+    v-if="isChapterRoute"
+    :lit="candleLit"
+    :blacklight="blacklight"
+    @blowOut="blowOutCandle"
+  />
+  <DeskPencil v-if="isChapterRoute" />
   <LostPage :visible="blacklight" />
   <Transition name="modal" @after-leave="onModalAfterLeave">
     <ChapterModal
