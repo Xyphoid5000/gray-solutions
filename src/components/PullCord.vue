@@ -16,16 +16,10 @@ let pull = 0;
 let sway: gsap.core.Tween | null = null;
 let releaseTimer: ReturnType<typeof setTimeout> | null = null;
 
-const isLight = () => document.documentElement.dataset.theme === 'light';
-
-const setTheme = (light: boolean) => {
-  const root = document.documentElement;
-  // Fade the palette over half a second instead of snapping it.
-  root.classList.add('theme-fade');
-  root.dataset.theme = light ? 'light' : 'dark';
-  // If the lights come back on, the blacklight is over.
-  if (light) window.dispatchEvent(new CustomEvent('gs:lights-on'));
-  setTimeout(() => root.classList.remove('theme-fade'), 650);
+/** The cord only reports the yank — App decides what the yank means
+    (plain toggle, match-lighting ritual, or smoke) and sets the theme. */
+const reportYank = () => {
+  window.dispatchEvent(new CustomEvent('gs:cord-pulled'));
 };
 
 const startSway = () => {
@@ -56,7 +50,7 @@ const applyPull = (dy: number) => {
 const release = () => {
   if (!dragging && pull === 0) return;
   dragging = false;
-  const yanked = pull >= PULL_TRIGGER;
+  const pulledFar = pull >= PULL_TRIGGER;
   // The cord snaps back…
   gsap.to(line.value, { scaleY: 1, duration: 0.32, ease: 'power3.out' });
   gsap.to(knob.value, { y: 0, duration: 0.32, ease: 'power3.out' });
@@ -65,7 +59,7 @@ const release = () => {
   stopSway();
   gsap.fromTo(
     root.value,
-    { rotation: yanked ? 10 : 5 },
+    { rotation: pulledFar ? 10 : 5 },
     {
       rotation: 0,
       duration: 2.4,
@@ -73,7 +67,7 @@ const release = () => {
       onComplete: startSway,
     },
   );
-  if (yanked) setTheme(!isLight());
+  if (pulledFar) reportYank();
 };
 
 const onPointerDown = (e: PointerEvent) => {

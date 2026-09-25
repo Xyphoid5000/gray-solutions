@@ -2433,8 +2433,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 }
 
 /* Blacklight: UV tint over everything. */
-html[data-blacklight='on'] body::after {
-  content: '';
+html[data-blacklight='on'] body::after {  content: '';
   position: fixed;
   inset: 0;
   z-index: 1400;
@@ -2447,6 +2446,46 @@ html[data-blacklight='on'] body::after {
       rgba(20, 8, 50, 0.42) 100%
     );
   mix-blend-mode: screen;
+}
+/* Light rituals: a beat of true darkness between the cord pull and
+   the match. Blocks input while the ritual plays. */
+.pitch-black {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+.pitch-black.on {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Blacklight entrance: the page shivers before the UV washes in. */
+@keyframes desk-shake {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  15% {
+    transform: translate(-7px, 3px) rotate(-0.5deg);
+  }
+  30% {
+    transform: translate(6px, -4px) rotate(0.4deg);
+  }
+  45% {
+    transform: translate(-5px, -3px) rotate(-0.35deg);
+  }
+  60% {
+    transform: translate(5px, 4px) rotate(0.3deg);
+  }
+  75% {
+    transform: translate(-3px, 2px) rotate(-0.2deg);
+  }
+}
+html.page-shake .manuscript-desk {
+  animation: desk-shake 0.7s linear;
 }
 
 /* Manuscript stack: a flat loose pile of paper, slightly messy. */

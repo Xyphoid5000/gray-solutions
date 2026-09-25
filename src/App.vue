@@ -9,6 +9,7 @@ import BookView from './components/BookView.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import DeskCandle from './components/DeskCandle.vue';
 import DeskPencil from './components/DeskPencil.vue';
+import MatchHand from './components/MatchHand.vue';
 import LostPage from './components/LostPage.vue';
 import { setLenis } from './lib/scroll';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
@@ -82,15 +83,122 @@ const blacklight = ref(false);
 const isDark = () => document.documentElement.dataset.theme === 'dark';
 const candleLit = ref(false);
 
+/** Light rituals: pitch-black beat, match hand, smoke wisp, page shake. */
+const pitchBlack = ref(false);
+const matchVisible = ref(false);
+const matchAtWick = ref(false);
+const matchXY = ref({ x: 0, y: 0 });
+const smoking = ref(false);
+const ritualRunning = ref(false);
+let ritualTimers: ReturnType<typeof setTimeout>[] = [];
+const reducedMotion = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function later(fn: () => void, ms: number) {
+  ritualTimers.push(setTimeout(fn, ms));
+}
+function clearRitual() {
+  ritualTimers.forEach(clearTimeout);
+  ritualTimers = [];
+}
+
+/** Plain theme switch, with the half-second palette crossfade. */
+function setThemePlain(light: boolean) {
+  const root = document.documentElement;
+  root.classList.add('theme-fade');
+  root.dataset.theme = light ? 'light' : 'dark';
+  // If the lights come back on, the blacklight is over.
+  if (light) window.dispatchEvent(new CustomEvent('gs:lights-on'));
+  setTimeout(() => root.classList.remove('theme-fade'), 650);
+}
+
+/** Lights off: a beat of true darkness, then a hand brings a match
+    to the wick and the candle catches. */
+function matchSequence() {
+  const candle = document.querySelector('.desk-candle');
+  if (!candle) {
+    setThemePlain(false);
+    return;
+  }
+  ritualRunning.value = true;
+  // The match tip must land on the wick, wherever the candle sits.
+  const r = candle.getBoundingClientRect();
+  matchXY.value = { x: r.left + r.width * 0.5, y: r.top + r.height * 0.38 };
+  pitchBlack.value = true;
+  later(() => {
+    matchVisible.value = true;
+    later(() => {
+      matchAtWick.value = true;
+    }, 60);
+  }, 900);
+  later(() => {
+    // Ignition: the room is already dark underneath; the flame is
+    // burning before the black lifts.
+    setThemePlain(false);
+    matchAtWick.value = false;
+  }, 2300);
+  later(() => {
+    pitchBlack.value = false;
+  }, 2500);
+  later(() => {
+    matchVisible.value = false;
+    ritualRunning.value = false;
+  }, 3600);
+}
+
+/** Lights on: the room brightens and a thin wisp curls off the wick. */
+function smokeSequence() {
+  ritualRunning.value = true;
+  setThemePlain(true);
+  smoking.value = true;
+  later(() => {
+    smoking.value = false;
+    ritualRunning.value = false;
+  }, 2600);
+}
+
+/** The cord was yanked — decide what the yank means. */
+function onCordPulled() {
+  if (ritualRunning.value) return;
+  const goingDark = !isDark();
+  if (goingDark && showBook.value && !reducedMotion()) {
+    matchSequence();
+    return;
+  }
+  if (!goingDark && showBook.value && candleLit.value && !reducedMotion()) {
+    smokeSequence();
+    return;
+  }
+  setThemePlain(!goingDark);
+}
+
 function updateCandle() {
   candleLit.value = isDark() && !blacklight.value;
   document.documentElement.dataset.blacklight = blacklight.value ? 'on' : 'off';
 }
 
+/** Blow out the candle for blacklight: the flame dies, the dark holds
+    a beat longer than usual, the page shivers — then the UV washes in. */
 function blowOutCandle() {
-  if (!candleLit.value) return;
-  blacklight.value = true;
-  updateCandle();
+  if (!candleLit.value || ritualRunning.value) return;
+  if (reducedMotion()) {
+    blacklight.value = true;
+    updateCandle();
+    return;
+  }
+  ritualRunning.value = true;
+  candleLit.value = false;
+  later(() => {
+    document.documentElement.classList.add('page-shake');
+  }, 2000);
+  later(() => {
+    blacklight.value = true;
+    updateCandle();
+  }, 2700);
+  later(() => {
+    document.documentElement.classList.remove('page-shake');
+    ritualRunning.value = false;
+  }, 2900);
 }
 
 function onLightsOn() {
@@ -115,6 +223,7 @@ onMounted(() => {
     attributeFilter: ['data-theme'],
   });
   window.addEventListener('gs:lights-on', onLightsOn);
+  window.addEventListener('gs:cord-pulled', onCordPulled);
 
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     lenis = new Lenis({ duration: 1.25, smoothWheel: true });
@@ -134,6 +243,9 @@ onMounted(() => {
 onUnmounted(() => {
   themeObs?.disconnect();
   window.removeEventListener('gs:lights-on', onLightsOn);
+  window.removeEventListener('gs:cord-pulled', onCordPulled);
+  clearRitual();
+  document.documentElement.classList.remove('page-shake');
   lenis?.destroy();
   lenis = null;
   setLenis(null);
@@ -152,10 +264,23 @@ onUnmounted(() => {
     @exit-down="onExitDown"
   >
     <template #desk-props>
-      <DeskCandle :lit="candleLit" :blacklight="blacklight" @blowOut="blowOutCandle" />
+      <DeskCandle
+        :lit="candleLit"
+        :blacklight="blacklight"
+        :smoking="smoking"
+        @blowOut="blowOutCandle"
+      />
       <DeskPencil />
     </template>
   </BookView>
   <LostPage :visible="blacklight" @close="onLostPageClose" />
   <BindCinematic ref="bindCinematic" @done="onBindDone" />
+  <!-- Light rituals: true darkness between the cord pull and the flame. -->
+  <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
+  <MatchHand
+    v-if="matchVisible"
+    :x="matchXY.x"
+    :y="matchXY.y"
+    :at-wick="matchAtWick"
+  />
 </template>

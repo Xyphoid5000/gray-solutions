@@ -6,6 +6,8 @@
 defineProps<{
   lit: boolean;
   blacklight: boolean;
+  /** True for a couple of seconds after the flame is snuffed. */
+  smoking: boolean;
 }>();
 const emit = defineEmits<{
   blowOut: [];
@@ -39,6 +41,11 @@ const emit = defineEmits<{
       </g>
       <!-- melted wax drip -->
       <path d="M20 44 q-3 8 1 14 q2 4 4 1 l-1 -15 z" class="drip" />
+      <!-- smoke after the flame is snuffed -->
+      <g v-if="smoking" class="smoke">
+        <path d="M30 30 C 26 22, 34 18, 30 10 C 27 4, 32 -1, 30 -8" class="smoke-wisp s1" />
+        <path d="M30 30 C 34 24, 27 20, 31 12" class="smoke-wisp s2" />
+      </g>
     </svg>
     <!-- warm glow when lit -->
     <span v-if="lit" class="candle-glow" aria-hidden="true"></span>
@@ -136,6 +143,35 @@ const emit = defineEmits<{
   }
   to {
     opacity: 1;
+  }
+}
+/* A thin wisp curling off the wick after the flame is snuffed. */
+.smoke-wisp {
+  fill: none;
+  stroke: rgba(130, 130, 140, 0.55);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  opacity: 0;
+  animation: smoke-rise 2.4s ease-out forwards;
+}
+.smoke-wisp.s2 {
+  animation-delay: 0.35s;
+  stroke-width: 2;
+}
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 6px);
+  }
+  25% {
+    opacity: 0.7;
+  }
+  60% {
+    transform: translate(-4px, -12px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(3px, -26px);
   }
 }
 /* Blacklight: the candle sits cold under UV. */
