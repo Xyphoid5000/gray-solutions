@@ -28,6 +28,7 @@ function pileCardEl(i: number): HTMLElement | null {
 
 async function goTo(target: number) {
   if (target === currentIndex.value) return;
+  pileOpen.value = false;
   target = Math.max(0, Math.min(chapters.length - 1, target));
 
   if (target > currentIndex.value) {
@@ -115,15 +116,83 @@ function goFromModal(i: number) {
   goTo(i);
 }
 
-/** The pile is a messy stack. Clicking it opens the overlay with clear pages. */
+/** The pile is a messy stack. Clicking it scatters its pages over the open page. */
 const pileOpen = ref(false);
-function openPile() {
-  pileOpen.value = true;
+const SCATTER_ROTS = [-9, 7, -5, 8, -7, 5, -6, 9];
+function scatterRot(pos: number): number {
+  return SCATTER_ROTS[pos % SCATTER_ROTS.length];
 }
-function closePile() {
-  pileOpen.value = false;
+function pileCenter(): { x: number; y: number } | null {
+  const el = document.querySelector('.read-pile');
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
-function pickFromOverlay(i: number) {
+function scatterCards(): HTMLElement[] {
+  return Array.from(document.querySelectorAll('.pile-scatter-card'));
+}
+const reduceMotion = () =>
+  matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** Pages fly out of the pile and land scattered over the open page. */
+function scatterOut() {
+  if (reduceMotion()) return;
+  const c = pileCenter();
+  scatterCards().forEach((card, idx) => {
+    const r = card.getBoundingClientRect();
+    const dx = c ? c.x - (r.left + r.width / 2) : 0;
+    const dy = c ? c.y - (r.top + r.height / 2) : 0;
+    gsap.from(card, {
+      x: dx,
+      y: dy,
+      scale: 0.4,
+      rotation: 0,
+      duration: 0.6,
+      delay: idx * 0.08,
+      ease: 'back.out(1.4)',
+      clearProps: 'transform',
+    });
+  });
+}
+/** Pages fly back into the pile. */
+function scatterBack(): Promise<void> {
+  const cards = scatterCards();
+  const c = pileCenter();
+  if (!cards.length || reduceMotion() || !c) {
+    pileOpen.value = false;
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    let done = 0;
+    cards.forEach((card, idx) => {
+      const r = card.getBoundingClientRect();
+      gsap.to(card, {
+        x: c.x - (r.left + r.width / 2),
+        y: c.y - (r.top + r.height / 2),
+        scale: 0.4,
+        rotation: 0,
+        duration: 0.35,
+        delay: idx * 0.05,
+        ease: 'power2.in',
+        onComplete: () => {
+          if (++done === cards.length) {
+            pileOpen.value = false;
+            resolve();
+          }
+        },
+      });
+    });
+  });
+}
+async function togglePile() {
+  if (pileOpen.value) {
+    await scatterBack();
+  } else {
+    pileOpen.value = true;
+    await nextTick();
+    scatterOut();
+  }
+}
+function pickFromScatter(i: number) {
   pileOpen.value = false;
   openModal(i);
 }
@@ -163,8 +232,8 @@ function onTouchEnd(e: TouchEvent) {
     <!-- Desk props: candle, pencil, pull-cord live here (App provides them). -->
     <slot name="desk-props" />
 
-    <!-- Left lane: the read pile, a messy stack. Click to open the overlay. -->
-    <div class="read-pile" aria-label="Finished pages" @click="openPile">
+    <!-- Left lane: the read pile, a messy stack. Click to scatter / restack. -->
+    <div class="read-pile" aria-label="Finished pages" @click="togglePile">
       <button
         v-for="i in pile"
         :key="i"
@@ -180,44 +249,24 @@ function onTouchEnd(e: TouchEvent) {
       </button>
     </div>
 
-    <!-- Pile overlay: clear full pages, flex-wrap. Click one for its modal. -->
-    <Transition name="pile-overlay">
-      <div
-        v-if="pileOpen"
-        class="pile-overlay-backdrop"
-        @click.self="closePile"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Finished pages"
-      >
-        <div class="pile-overlay">
-          <button
-            type="button"
-            class="pile-overlay-close"
-            @click="closePile"
-            aria-label="Close finished pages"
-          >
-            <span aria-hidden="true">&times;</span>
-          </button>
-          <p class="pile-overlay-kicker">Finished pages</p>
-          <h3 class="pile-overlay-title">The pile</h3>
-          <div class="pile-grid">
-            <button
-              v-for="i in pile"
-              :key="i"
-              type="button"
-              class="pile-grid-card"
-              :aria-label="`Preview ${chapters[i].label}`"
-              @click="pickFromOverlay(i)"
-            >
-              <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
-              <span class="pile-grid-label" aria-hidden="true">{{ chapters[i].label }}</span>
-              <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>
-            </button>
-          </div>
-        </div>
+    <!-- Pile scatter: finished pages float over the open page. -->
+    <div v-if="pileOpen" class="pile-scatter" aria-label="Finished pages">
+      <div class="pile-scatter-grid">
+        <button
+          v-for="(i, pos) in pile"
+          :key="i"
+          type="button"
+          class="pile-scatter-card"
+          :style="{ '--sc-rot': scatterRot(pos) + 'deg', '--sc-delay': (pos * 0.7) + 's' }"
+          :aria-label="`Preview ${chapters[i].label}`"
+          @click="pickFromScatter(i)"
+        >
+          <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
+          <span class="pile-grid-label" aria-hidden="true">{{ chapters[i].label }}</span>
+          <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>
+        </button>
       </div>
-    </Transition>
+    </div>
 
     <!-- The stack: each page is a transparent wrap, paper inside with a
          right margin, tab attached in that margin. -->
