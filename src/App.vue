@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -21,6 +21,12 @@ gsap.registerPlugin(ScrollTrigger, Flip);
 const router = useRouter();
 const route = useRoute();
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
+
+/** Flip ID for the current page — matches its pile card when tossed. */
+const pageFlipId = computed(() => {
+  const i = chapters.findIndex((c) => c.path === route.path);
+  return i >= 0 ? `pile-${i}` : undefined;
+});
 
 /** Blacklight: the candle is blown out, the lost page surfaces. */
 const blacklight = ref(false);
@@ -245,7 +251,7 @@ function pileToss(index: number): { rotation: number; x: number; y: number } {
 
 function addToPile(chapterIndex: number) {
   const page = document.querySelector(
-    '.book-viewport .chapter.book-page',
+    '.book-viewport .book-page',
   ) as HTMLElement | null;
   const pile = document.querySelector('.read-pile');
   if (!page || !pile) return;
@@ -610,6 +616,7 @@ onUnmounted(() => {
           :is="Component"
           :key="route.path"
           class="book-page"
+          :data-flip-id="pageFlipId"
           @about="goToAbout"
           @contact="goToContact"
         />

@@ -1200,8 +1200,10 @@ body.has-book .chapter.book-page {
   position: relative;
 }
 @media (max-width: 640px) {
-  /* Mobile tabs are 26px wide — the page edges meet them exactly. */
+  /* Mobile tabs are 26px wide — the page edges meet them exactly.
+     No negative left margin on mobile; it clips the text. */
   body.has-book .chapter.book-page {
+    margin-left: 0;
     margin-right: 26px;
   }
   .tab-rail-right .tab {
@@ -1835,7 +1837,7 @@ body.has-book .chapter.book-page {
   inset: 0;
   z-index: 900;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: flex-start;
   padding-top: calc(var(--nav-h) + 1.25rem);
   pointer-events: none;
