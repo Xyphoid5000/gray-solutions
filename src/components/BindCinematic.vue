@@ -362,16 +362,21 @@ function start() {
         s = Math.min(0.75, (r.height - 10) / 340);
       }
       const file = gsap.timeline();
-      // Fly to the slot.
+      // Fly to the front of the slot.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      // Turn fully sideways and seat into the slot, like it used to.
-      file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.85);
-      file.to(b3d, { scale: s, duration: 0.7, ease: 'power2.inOut' }, 0.85);
-      // Push it back into the shelf — up and a touch smaller, seated.
+      // One motion: turn sideways WHILE pushing back into the shelf.
+      // It recedes (smaller, up into the slot) as it turns, so the
+      // push reads without a hand doing it.
       file.to(
         b3d,
-        { y: dy - 14, scale: s * 0.93, duration: 0.45, ease: 'power2.in' },
-        1.55,
+        {
+          rotationY: 90,
+          scale: s * 0.8,
+          y: dy - 24,
+          duration: 0.9,
+          ease: 'power2.inOut',
+        },
+        0.9,
       );
       // It stays as the 3D model in the slot — no flat swap.
     },
