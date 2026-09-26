@@ -16,6 +16,7 @@ const backdrop = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const book3d = ref<HTMLElement | null>(null);
+const flatSpine = ref<HTMLElement | null>(null);
 const msCover = ref<HTMLElement | null>(null);
 const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
@@ -362,29 +363,29 @@ function start() {
         s = Math.min(0.75, (r.height - 10) / 340);
       }
       const file = gsap.timeline();
-      // Fly to the front of the slot.
+      const spine = flatSpine.value!;
+      gsap.set(spine, { display: 'none', opacity: 0, x: 0, y: 0, scale: 1 });
+      // Fly to the front of the slot as the 3D book.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      // One motion: turn sideways WHILE seating into the shelf. It ends
-      // flush in the slot — centered, scaled to the shelf, in line with
-      // the neighboring books.
+      // Turn fully sideways.
+      file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.9);
+      // After the turn: go 2D again — crossfade to the flat spine at the
+      // same spot, then scale it down to fit the gap.
+      file.to(b3d, { opacity: 0, duration: 0.25, ease: 'power1.in' }, 1.6);
+      file.set(b3d, { display: 'none' }, 1.9);
+      file.set(spine, { display: 'flex', x: dx, y: dy }, 1.6);
+      file.to(spine, { opacity: 1, duration: 0.25, ease: 'power1.out' }, 1.6);
       file.to(
-        b3d,
-        {
-          rotationY: 90,
-          scale: s,
-          x: dx,
-          y: dy,
-          duration: 0.9,
-          ease: 'power2.inOut',
-        },
-        0.9,
+        spine,
+        { scale: s, duration: 0.6, ease: 'power2.inOut' },
+        1.85,
       );
-      // It stays as the 3D model in the slot — no flat swap.
+      // The flat spine seats into the gap, in line with the other books.
     },
     [],
     b7,
   );
-  const b8 = b7 + 2.0;
+  const b8 = b7 + 2.7;
 
   // Beat 7 — hold on the completed shelf; fade to black; behind it the
   // home page takes the bound shelf; fade back in on it.
@@ -443,6 +444,12 @@ defineExpose({ start });
       </div>
       <div class="b3d-face b3d-spine"><span>Gray Solutions</span></div>
       <div class="b3d-face b3d-pages"></div>
+    </div>
+
+    <!-- Flat spine: after the 3D turn, the book goes 2D again and
+         scales to fit the shelf gap. -->
+    <div ref="flatSpine" class="bind-flat-spine" aria-hidden="true">
+      <span>Gray Solutions</span>
     </div>
 
     <!-- Fade-to-black veil for the final beat. -->
@@ -761,6 +768,30 @@ defineExpose({ start });
     #d3c096 0 2px,
     #a68f63 2px 3px
   );
+}
+/* Flat spine: the 2D book that seats into the shelf gap. */
+.bind-flat-spine {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 340px;
+  transform: translate(-50%, -50%);
+  display: none;
+  opacity: 0;
+  z-index: 3;
+  background: linear-gradient(145deg, #1a120b 0%, #0f0a06 100%);
+  border: 1px solid rgba(208, 138, 78, 0.35);
+  align-items: center;
+  justify-content: center;
+}
+.bind-flat-spine span {
+  writing-mode: vertical-rl;
+  font-family: var(--serif);
+  color: #d08a4e;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
 }
 /* Fade-to-black veil for the final beat. */
 .bind-veil {
