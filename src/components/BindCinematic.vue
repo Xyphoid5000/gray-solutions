@@ -364,9 +364,8 @@ function start() {
       const file = gsap.timeline();
       // Fly to the slot.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      // Turn: the spine swings toward the reader as it seats, angled
-      // just enough to read as a 3D object on the shelf.
-      file.to(b3d, { rotationY: 62, duration: 0.7, ease: 'power2.inOut' }, 0.85);
+      // Turn fully sideways and seat into the slot, like it used to.
+      file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.85);
       file.to(b3d, { scale: s, duration: 0.7, ease: 'power2.inOut' }, 0.85);
       // It stays as the 3D model in the slot — no flat swap.
     },
