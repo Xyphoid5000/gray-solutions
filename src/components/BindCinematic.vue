@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { gsap } from 'gsap';
+import { chapters } from '../lib/chapters';
 
 const emit = defineEmits<{
   done: [];
@@ -147,27 +148,23 @@ function start() {
   // real — App tossed the open page into the pile before start().
   // The stamped MANUSCRIPT cover is its own element (msCover) and sits
   // in front of the stack, facing the viewer.
-  const pilePages = [
-    ...document.querySelectorAll('.read-pile .pile-page'),
-  ] as HTMLElement[];
-  const pageFor = (i: number) =>
-    pilePages.find((el) => el.dataset.pileIndex === String(i));
+  // Build the five chapter cards from the chapter data — always the real
+  // five, never blanks, even if the pile is empty (e.g. Contact was hit
+  // right after opening the book).
   const chCards: HTMLElement[] = [];
   for (let i = 0; i < 5; i++) {
-    const src = pageFor(i);
-    let card: HTMLElement;
-    if (src) {
-      card = src.cloneNode(true) as HTMLElement;
-      card.removeAttribute('data-pile-index');
-      card.setAttribute('aria-hidden', 'true');
-    } else {
-      card = document.createElement('div');
-      card.className = 'bind-page bind-blank';
-      const num = document.createElement('span');
-      num.className = 'bind-num';
-      num.textContent = String(i + 1);
-      card.appendChild(num);
-    }
+    const ch = chapters[i];
+    const card = document.createElement('div');
+    card.className = 'bind-page';
+    card.setAttribute('aria-hidden', 'true');
+    const num = document.createElement('span');
+    num.className = 'bind-num';
+    num.textContent = String(ch.num);
+    card.appendChild(num);
+    const label = document.createElement('span');
+    label.className = 'bind-label';
+    label.textContent = ch.label;
+    card.appendChild(label);
     chCards.push(card);
   }
   chCards.forEach((c) => st.appendChild(c));
@@ -529,9 +526,14 @@ defineExpose({ start });
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 /* Numbered stand-ins for pages not in the pile. */
-.bind-blank {
-  display: grid;
-  place-items: center;
+.bind-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 1rem;
+  text-align: center;
 }
 .bind-num {
   font-family: var(--serif);
@@ -539,6 +541,13 @@ defineExpose({ start });
   font-weight: 600;
   color: rgba(74, 52, 32, 0.6);
   user-select: none;
+}
+.bind-label {
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  color: rgba(74, 52, 32, 0.75);
+  user-select: none;
+  line-height: 1.3;
 }
 /* The stamped MANUSCRIPT cover: paper, big stamp, sits in front of
    the stack facing the viewer, then flies away on its own. */
