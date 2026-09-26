@@ -21,7 +21,7 @@ export const vReveal: Directive<HTMLElement, number | undefined> = {
       el.classList.add('reveal-visible');
       return;
     }
-    gsap.to(el, {
+    const tween = gsap.to(el, {
       opacity: 1,
       y: 0,
       duration: 0.9,
@@ -33,5 +33,13 @@ export const vReveal: Directive<HTMLElement, number | undefined> = {
         el.classList.add('reveal-visible');
       },
     });
+    // Stash the trigger so route changes can kill it — pages mount and
+    // unmount as the book turns, and orphaned triggers would pile up.
+    (el as HTMLElement & { _revealST?: { kill(): void } })._revealST =
+      tween.scrollTrigger ?? undefined;
+  },
+  unmounted(el) {
+    const st = (el as HTMLElement & { _revealST?: { kill(): void } })._revealST;
+    st?.kill();
   },
 };
