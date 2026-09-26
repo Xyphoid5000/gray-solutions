@@ -41,12 +41,14 @@ const bottomRight: ShelfBook[] = [
   { title: 'The Odyssey', color: '#4a4a1f', h: 226, w: 44 },
 ];
 
-/** Backdrop mode: one long shelf of books, no slot, no titles. */
 const backdropBooks: ShelfBook[] = [
   ...topShelf,
   ...bottomLeft,
   ...bottomRight,
 ];
+/** Backdrop mode: trimmed shelf (outermost books removed so the row
+    fits) with the binding slot in the middle. */
+const backdropTrimmed = backdropBooks.slice(1, -1);
 </script>
 
 <template>
@@ -65,7 +67,7 @@ const backdropBooks: ShelfBook[] = [
         <div class="bs-shelf">
           <div class="bs-books">
             <div
-              v-for="b in backdropBooks.slice(0, Math.ceil(backdropBooks.length / 2))"
+              v-for="b in backdropTrimmed.slice(0, Math.ceil(backdropTrimmed.length / 2))"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
@@ -76,7 +78,7 @@ const backdropBooks: ShelfBook[] = [
               <div class="bs-ours"><span>Gray Solutions</span></div>
             </div>
             <div
-              v-for="b in backdropBooks.slice(Math.ceil(backdropBooks.length / 2))"
+              v-for="b in backdropTrimmed.slice(Math.ceil(backdropTrimmed.length / 2))"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
