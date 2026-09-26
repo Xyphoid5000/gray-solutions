@@ -364,7 +364,15 @@ function start() {
       }
       const file = gsap.timeline();
       const spine = flatSpine.value!;
-      gsap.set(spine, { display: 'none', opacity: 0, x: 0, y: 0, scale: 1 });
+      gsap.set(spine, {
+        display: 'none',
+        opacity: 0,
+        x: 0,
+        y: 0,
+        xPercent: -50,
+        yPercent: -50,
+        scale: 1,
+      });
       // Fly to the front of the slot as the 3D book.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
       // Turn fully sideways.
@@ -776,7 +784,6 @@ defineExpose({ start });
   top: 50%;
   width: 44px;
   height: 340px;
-  transform: translate(-50%, -50%);
   display: none;
   opacity: 0;
   z-index: 3;
