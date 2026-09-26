@@ -364,15 +364,16 @@ function start() {
       const file = gsap.timeline();
       // Fly to the front of the slot.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      // One motion: turn sideways WHILE pushing back into the shelf.
-      // It recedes (smaller, up into the slot) as it turns, so the
-      // push reads without a hand doing it.
+      // One motion: turn sideways WHILE seating into the shelf. It ends
+      // flush in the slot — centered, scaled to the shelf, in line with
+      // the neighboring books.
       file.to(
         b3d,
         {
           rotationY: 90,
-          scale: s * 0.8,
-          y: dy - 24,
+          scale: s,
+          x: dx,
+          y: dy,
           duration: 0.9,
           ease: 'power2.inOut',
         },
