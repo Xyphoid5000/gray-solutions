@@ -69,7 +69,9 @@ const backdropBooks: ShelfBook[] = [
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
-            ></div>
+            >
+              <span>{{ b.title }}</span>
+            </div>
             <div class="bs-slot" data-bind-slot>
               <div class="bs-ours"><span>Gray Solutions</span></div>
             </div>
@@ -78,7 +80,9 @@ const backdropBooks: ShelfBook[] = [
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
-            ></div>
+            >
+              <span>{{ b.title }}</span>
+            </div>
           </div>
           <div class="bs-plank"></div>
         </div>

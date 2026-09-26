@@ -431,6 +431,10 @@ onUnmounted(() => {
   opacity: 0;
   pointer-events: none;
 }
+/* During the shelf filing: no blur on the bookshelf, titles visible. */
+.view-home.shelf-reveal .bs-blur-veil {
+  display: none;
+}
 /* While the camera tilts, both views are fixed full-screen stages. */
 .camera-moving .view {
   position: fixed;
