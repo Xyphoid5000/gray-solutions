@@ -367,6 +367,12 @@ function start() {
       // Turn fully sideways and seat into the slot, like it used to.
       file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.85);
       file.to(b3d, { scale: s, duration: 0.7, ease: 'power2.inOut' }, 0.85);
+      // Push it back into the shelf — up and a touch smaller, seated.
+      file.to(
+        b3d,
+        { y: dy - 14, scale: s * 0.93, duration: 0.45, ease: 'power2.in' },
+        1.55,
+      );
       // It stays as the 3D model in the slot — no flat swap.
     },
     [],
