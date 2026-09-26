@@ -120,11 +120,11 @@ function start() {
   });
   gsap.set(msc, {
     display: 'flex',
-    opacity: 0,
+    opacity: 1,
     x: 0,
     y: 0,
-    xPercent: -50,
-    yPercent: -50,
+    xPercent: 0,
+    yPercent: 0,
     scale: 1,
     rotation: 0,
   });
@@ -148,9 +148,9 @@ function start() {
   // real — App tossed the open page into the pile before start().
   // The stamped MANUSCRIPT cover is its own element (msCover) and sits
   // in front of the stack, facing the viewer.
-  // Build the five chapter cards from the chapter data — always the real
-  // five, never blanks, even if the pile is empty (e.g. Contact was hit
-  // right after opening the book).
+  // Build six pages: the five chapters plus the stamped MANUSCRIPT page.
+  // All six fan and shuffle together; the manuscript ends on top, then
+  // gets thrown, leaving chapter 1 for the binding.
   const chCards: HTMLElement[] = [];
   for (let i = 0; i < 5; i++) {
     const ch = chapters[i];
@@ -167,7 +167,14 @@ function start() {
     card.appendChild(label);
     chCards.push(card);
   }
-  chCards.forEach((c) => st.appendChild(c));
+  // The manuscript stamped page is the sixth card.
+  const mscCard = msCover.value!;
+  mscCard.classList.add('bind-page');
+  chCards.push(mscCard);
+  // Initial stack: manuscript at the bottom, chapters 1-5 on top.
+  // Page 5 (chCards[4]) drops in from above; the shuffle will bring
+  // the manuscript to the top.
+  [chCards[5], ...chCards.slice(0, 5)].forEach((c) => st.appendChild(c));
   const allCards = [...st.children] as HTMLElement[];
   allCards.forEach((c) =>
     gsap.set(c, {
@@ -204,7 +211,7 @@ function start() {
   const fanAt = b1 + 0.3;
   const fanStep = Math.min(46, ((vw * 0.92 - 220) / 2) / 2);
   chCards.forEach((c, k) => {
-    const spread = (k - 2) * fanStep;
+    const spread = (k - 2.5) * fanStep;
     T.to(
       c,
       { x: spread, rotation: spread * 0.06, duration: 0.5, ease: 'power2.out' },
@@ -214,7 +221,10 @@ function start() {
   const shuffleAt = fanAt + 0.75;
   T.call(
     () => {
-      [...chCards].reverse().forEach((c) => st.appendChild(c));
+      // Final order bottom->top: 5,4,3,2,1, manuscript on top.
+      [...chCards.slice(0, 5).reverse(), chCards[5]].forEach((c) =>
+        st.appendChild(c),
+      );
     },
     [],
     shuffleAt,
@@ -231,14 +241,11 @@ function start() {
       shuffleAt + k * 0.07 + 0.22,
     );
   });
-  const b2 = shuffleAt + 5 * 0.07 + 0.64 + 0.15;
+  const b2 = shuffleAt + 6 * 0.07 + 0.64 + 0.15;
 
-  // Beat 3 — the stamped MANUSCRIPT cover starts on top of the neat
-  // stack (it fades in where it sits — no fly-in); then it's thrown
+  // Beat 3 — the manuscript (6th card, on top after the shuffle) is thrown
   // off to the side, leaving chapter 1 on top.
-  const msAt = b2 + 0.2;
-  T.to(msc, { opacity: 1, duration: 0.45, ease: 'power1.out' }, msAt);
-  const throwAt = msAt + 1.1;
+  const throwAt = b2 + 0.2;
   T.to(
     msc,
     {
@@ -286,7 +293,7 @@ function start() {
     dropAt + 1.19,
   );
   const tuckAt = dropAt + 1.05;
-  chCards.forEach((c, k) => {
+  chCards.slice(0, 5).forEach((c, k) => {
     T.to(
       c,
       { y: -30, scale: 0.78, opacity: 0, duration: 0.4, ease: 'power2.in' },
