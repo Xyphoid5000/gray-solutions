@@ -156,10 +156,11 @@ function onFinaleContact() {
 }
 function onBindDone() {
   // The book is bound — the home page already shows it after the
-  // blackout; drop the 3D book in, then glide to the contact form.
+  // blackout; drop the 3D book in, let it land and breathe, then glide
+  // to the contact form.
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
-  closeBookToSection('contact', 1400);
+  closeBookToSection('contact', 2600);
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
     the fade back in lands on the home page with the bound book. */
