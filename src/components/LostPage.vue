@@ -2,7 +2,7 @@
 /**
  * The lost page: a manuscript sheet that only surfaces under blacklight.
  * The visible text is dim nonsense; the real message is written in
- * UV ink — invisible until the candle goes out.
+ * UV ink — invisible until the LEDs die.
  */
 defineProps<{
   visible: boolean;

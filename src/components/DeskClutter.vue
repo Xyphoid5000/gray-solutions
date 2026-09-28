@@ -1,16 +1,26 @@
 <script setup lang="ts">
 /**
- * Desk clutter: the lived-in bits around the pile and candle —
- * a coffee mug, headphones, a flash drive, a candy bowl by the
- * candle, and a framed photo of an orange cat. Pure dressing:
- * pointer-events none, tucked to the desk edges, clear of the
- * pile, the page lanes, and the candle's tap target.
+ * Desk clutter: the lived-in bits around the pile and the remote —
+ * a big coffee mug, headphones, a flash drive, a candy bowl, a cell
+ * phone, crumpled paper balls, and sticky notes. Pure dressing:
+ * pointer-events none, crowded onto the desk edges like a real desk,
+ * clear of the pile's tap target, the remote, and the pull cord.
  */
 </script>
 
 <template>
   <div class="desk-clutter" aria-hidden="true">
-    <!-- Coffee mug, upper left lane -->
+    <!-- Flash drive, half-tucked under the mug -->
+    <div class="clutter clutter-flash">
+      <svg viewBox="0 0 44 18">
+        <rect x="2" y="5" width="12" height="8" rx="1" class="flash-metal" />
+        <line x1="5" y1="5" x2="5" y2="13" class="flash-seam" />
+        <line x1="9" y1="5" x2="9" y2="13" class="flash-seam" />
+        <rect x="13" y="2" width="29" height="14" rx="3" class="flash-body" />
+        <rect x="17" y="6" width="8" height="3" rx="1.5" class="flash-led" />
+      </svg>
+    </div>
+    <!-- Coffee mug, big diner-style, upper left lane -->
     <div class="clutter clutter-mug">
       <svg viewBox="0 0 48 60">
         <g class="steam">
@@ -23,14 +33,13 @@
         <rect x="11" y="25" width="5" height="18" rx="2.5" class="mug-shine" />
       </svg>
     </div>
-    <!-- Flash drive, lying flat under the mug -->
-    <div class="clutter clutter-flash">
-      <svg viewBox="0 0 44 18">
-        <rect x="2" y="5" width="12" height="8" rx="1" class="flash-metal" />
-        <line x1="5" y1="5" x2="5" y2="13" class="flash-seam" />
-        <line x1="9" y1="5" x2="9" y2="13" class="flash-seam" />
-        <rect x="13" y="2" width="29" height="14" rx="3" class="flash-body" />
-        <rect x="17" y="6" width="8" height="3" rx="1.5" class="flash-led" />
+    <!-- Sticky note, left lane -->
+    <div class="clutter clutter-sticky1">
+      <svg viewBox="0 0 36 36">
+        <rect x="2" y="2" width="32" height="32" rx="1.5" class="sticky-paper s-yellow" />
+        <path d="M34 26 L26 34 L34 34 Z" class="sticky-curl" />
+        <line x1="8" y1="12" x2="28" y2="12" class="sticky-line" />
+        <line x1="8" y1="18" x2="24" y2="18" class="sticky-line" />
       </svg>
     </div>
     <!-- Headphones, resting lower left lane -->
@@ -43,7 +52,7 @@
         <rect x="53.5" y="37" width="10" height="11" rx="4" class="phones-pad" />
       </svg>
     </div>
-    <!-- Candy bowl, clustered around the candle -->
+    <!-- Candy bowl, clustered by the remote -->
     <div class="clutter clutter-bowl">
       <svg viewBox="0 0 60 46">
         <g class="candy c1"><path d="M14 16 l-6 -4 l1 7 z" /><circle cx="18" cy="15" r="6" /><path d="M22 14 l6 -4 l-1 7 z" /></g>
@@ -54,23 +63,45 @@
         <ellipse cx="30" cy="22" rx="24" ry="6" class="bowl-rim" />
       </svg>
     </div>
-    <!-- Framed photo of an orange cat, upper right lane -->
-    <div class="clutter clutter-cat">
-      <svg viewBox="0 0 56 66">
-        <rect x="2" y="2" width="52" height="62" rx="3" class="frame-wood" />
-        <rect x="8" y="8" width="40" height="50" class="frame-mat" />
-        <path d="M18 26 L14 12 L27 20 Z" class="cat-ear" />
-        <path d="M38 26 L42 12 L29 20 Z" class="cat-ear" />
-        <path d="M19 23 L17 15 L24 20 Z" class="cat-inner-ear" />
-        <path d="M37 23 L39 15 L32 20 Z" class="cat-inner-ear" />
-        <circle cx="28" cy="36" r="13" class="cat-face" />
-        <circle cx="23" cy="34" r="1.8" class="cat-eye" />
-        <circle cx="33" cy="34" r="1.8" class="cat-eye" />
-        <path d="M26.5 39 L29.5 39 L28 41 Z" class="cat-nose" />
-        <line x1="10" y1="37" x2="20" y2="38.5" class="whisker" />
-        <line x1="10" y1="42" x2="20" y2="41" class="whisker" />
-        <line x1="46" y1="37" x2="36" y2="38.5" class="whisker" />
-        <line x1="46" y1="42" x2="36" y2="41" class="whisker" />
+    <!-- Crumpled paper balls -->
+    <div class="clutter clutter-ball1">
+      <svg viewBox="0 0 30 30">
+        <path d="M15 3 L22 6 L26 13 L24 21 L16 27 L8 25 L3 18 L5 9 Z" class="ball-paper" />
+        <path d="M15 3 L13 12 L22 6 M13 12 L5 9 M13 12 L16 27 M13 12 L24 21 M8 25 L13 12" class="ball-facet" />
+      </svg>
+    </div>
+    <div class="clutter clutter-ball2">
+      <svg viewBox="0 0 30 30">
+        <path d="M15 3 L22 6 L26 13 L24 21 L16 27 L8 25 L3 18 L5 9 Z" class="ball-paper" />
+        <path d="M15 3 L13 12 L22 6 M13 12 L5 9 M13 12 L16 27 M13 12 L24 21 M8 25 L13 12" class="ball-facet" />
+      </svg>
+    </div>
+    <div class="clutter clutter-ball3">
+      <svg viewBox="0 0 30 30">
+        <path d="M15 3 L22 6 L26 13 L24 21 L16 27 L8 25 L3 18 L5 9 Z" class="ball-paper" />
+        <path d="M15 3 L13 12 L22 6 M13 12 L5 9 M13 12 L16 27 M13 12 L24 21 M8 25 L13 12" class="ball-facet" />
+      </svg>
+    </div>
+    <!-- Cell phone, lying top-right. Static for now — interactive later. -->
+    <div class="clutter clutter-phone">
+      <svg viewBox="0 0 60 112">
+        <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
+        <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
+        <rect x="7" y="12" width="46" height="88" rx="4" class="phone-sheen" />
+        <polygon points="14,12 30,12 18,100 7,100" class="phone-shine" />
+        <rect x="23" y="15" width="14" height="4" rx="2" class="phone-island" />
+        <rect x="58" y="30" width="3" height="14" rx="1.5" class="phone-button" />
+        <circle cx="47" cy="24" r="3.2" class="phone-notif" />
+      </svg>
+    </div>
+    <!-- Sticky note, right side -->
+    <div class="clutter clutter-sticky2">
+      <svg viewBox="0 0 36 36">
+        <rect x="2" y="2" width="32" height="32" rx="1.5" class="sticky-paper s-pink" />
+        <path d="M34 26 L26 34 L34 34 Z" class="sticky-curl" />
+        <line x1="8" y1="12" x2="28" y2="12" class="sticky-line" />
+        <line x1="8" y1="18" x2="24" y2="18" class="sticky-line" />
+        <line x1="8" y1="24" x2="20" y2="24" class="sticky-line" />
       </svg>
     </div>
   </div>
@@ -93,35 +124,61 @@
   overflow: visible;
 }
 
-/* ---- placement: same lane math as the candle ---- */
+/* ---- placement: same lane math as the remote ---- */
 .clutter-mug {
-  left: calc(44px - var(--desk-pl));
+  left: calc(28px - var(--desk-pl));
   top: 6svh;
-  width: 46px;
+  width: 72px;
 }
 .clutter-flash {
-  left: calc(58px - var(--desk-pl));
-  top: 15svh;
-  width: 40px;
-  transform: rotate(18deg);
+  left: calc(20px - var(--desk-pl));
+  top: 11svh;
+  width: 56px;
+  transform: rotate(24deg);
+}
+.clutter-sticky1 {
+  left: calc(60px - var(--desk-pl));
+  top: 39svh;
+  width: 44px;
+  transform: rotate(-8deg);
 }
 .clutter-phones {
-  left: calc(22px - var(--desk-pl));
-  top: 73svh;
-  width: 68px;
+  left: calc(8px - var(--desk-pl));
+  top: 80svh;
+  width: 100px;
   transform: rotate(-8deg);
 }
 .clutter-bowl {
-  left: calc(58px - var(--desk-pl));
-  top: 61svh;
-  width: 58px;
+  left: calc(60px - var(--desk-pl));
+  top: 66svh;
+  width: 92px;
 }
-.clutter-cat {
-  right: calc(6px - var(--desk-pr));
-  /* Below the last chapter tab, clear of the pull cord's swing. */
-  top: 392px;
-  width: 54px;
-  transform: rotate(-6deg);
+.clutter-ball2 {
+  left: calc(16px - var(--desk-pl));
+  top: 76svh;
+  width: 30px;
+  transform: rotate(14deg);
+}
+.clutter-ball3 {
+  display: none;
+}
+.clutter-phone {
+  right: calc(0px - var(--desk-pr));
+  top: 620px;
+  width: 80px;
+  transform: rotate(-10deg);
+}
+.clutter-ball1 {
+  right: calc(24px - var(--desk-pr));
+  top: 420px;
+  width: 30px;
+  transform: rotate(-20deg);
+}
+.clutter-sticky2 {
+  right: calc(80px - var(--desk-pr));
+  top: 330px;
+  width: 38px;
+  transform: rotate(7deg);
 }
 
 /* ---- mug ---- */
@@ -210,31 +267,68 @@
   stroke-width: 1.5;
 }
 
-/* ---- cat photo ---- */
-.frame-wood {
-  fill: #6b4a2f;
-  stroke: rgba(35, 20, 10, 0.55);
-  stroke-width: 1.5;
+/* ---- crumpled paper balls ---- */
+.ball-paper {
+  fill: #ddd6c2;
+  stroke: #aaa28a;
+  stroke-width: 1.2;
 }
-.frame-mat {
-  fill: #f4ead8;
-}
-.cat-face, .cat-ear {
-  fill: #e8933c;
-}
-.cat-inner-ear {
-  fill: #f7c489;
-}
-.cat-eye {
-  fill: #2a2018;
-}
-.cat-nose {
-  fill: #b4563a;
-}
-.whisker {
-  stroke: rgba(90, 60, 35, 0.7);
+.ball-facet {
+  fill: none;
+  stroke: #b8b09a;
   stroke-width: 1;
   stroke-linecap: round;
+}
+
+/* ---- sticky notes ---- */
+.sticky-paper {
+  stroke: rgba(60, 45, 10, 0.3);
+  stroke-width: 1;
+}
+.s-yellow { fill: #f5df6b; }
+.s-pink { fill: #f2a7c3; }
+.sticky-curl {
+  fill: rgba(0, 0, 0, 0.12);
+}
+.sticky-line {
+  stroke: rgba(90, 70, 30, 0.4);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* ---- cell phone ---- */
+.phone-body {
+  fill: #15171b;
+  stroke: rgba(0, 0, 0, 0.6);
+  stroke-width: 1.5;
+}
+.phone-screen {
+  fill: #232c38;
+}
+.phone-sheen {
+  fill: var(--led, #2f6bff);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+.phone-shine {
+  fill: rgba(255, 255, 255, 0.07);
+}
+.phone-island {
+  fill: #07090b;
+}
+.phone-button {
+  fill: #2b3038;
+}
+.phone-notif {
+  fill: #5aa9ff;
+  animation: notif-pulse 2.8s ease-in-out infinite;
+}
+@keyframes notif-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+html[data-theme='dark'] .phone-sheen {
+  opacity: 0.3;
 }
 
 /* ---- dim with the room ---- */
@@ -247,34 +341,62 @@ html[data-blacklight='on'] .clutter {
 
 @media (max-width: 640px) {
   .clutter-mug {
-    left: calc(44px - var(--desk-pl));
-    top: 5svh;
-    width: 34px;
+    left: calc(28px - var(--desk-pl));
+    top: 7svh;
+    width: 54px;
   }
   .clutter-flash {
-    left: calc(34px - var(--desk-pl));
-    top: 12svh;
-    width: 30px;
+    left: calc(20px - var(--desk-pl));
+    top: 11svh;
+    width: 46px;
+  }
+  .clutter-sticky1 {
+    left: calc(56px - var(--desk-pl));
+    top: 27svh;
+    width: 34px;
   }
   .clutter-phones {
-    left: calc(8px - var(--desk-pl));
-    top: 75svh;
-    width: 50px;
+    left: calc(2px - var(--desk-pl));
+    top: 80svh;
+    width: 84px;
   }
   .clutter-bowl {
-    left: calc(24px - var(--desk-pl));
-    top: 59svh;
-    width: 44px;
+    left: calc(20px - var(--desk-pl));
+    top: 60svh;
+    width: 72px;
   }
-  .clutter-cat {
+  .clutter-ball2 {
+    left: calc(14px - var(--desk-pl));
+    top: 76svh;
+    width: 24px;
+  }
+  .clutter-ball3 {
+    display: block;
+    left: calc(30px - var(--desk-pl));
+    top: 89svh;
+    width: 22px;
+    transform: rotate(28deg);
+  }
+  .clutter-phone {
     right: calc(4px - var(--desk-pr));
-    top: 384px;
-    width: 40px;
+    top: 545px;
+    width: 60px;
+  }
+  .clutter-ball1 {
+    right: calc(8px - var(--desk-pr));
+    top: 430px;
+    width: 24px;
+  }
+  .clutter-sticky2 {
+    right: calc(50px - var(--desk-pr));
+    top: 340px;
+    width: 30px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .steam path {
+  .steam path,
+  .phone-notif {
     animation: none;
   }
 }

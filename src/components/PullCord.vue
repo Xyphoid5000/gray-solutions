@@ -17,7 +17,7 @@ let sway: gsap.core.Tween | null = null;
 let releaseTimer: ReturnType<typeof setTimeout> | null = null;
 
 /** The cord only reports the yank — App decides what the yank means
-    (plain toggle, match-lighting ritual, or smoke) and sets the theme. */
+    (plain toggle or a light ritual) and sets the theme. */
 const reportYank = () => {
   window.dispatchEvent(new CustomEvent('gs:cord-pulled'));
 };
@@ -142,7 +142,7 @@ const onClick = (e: MouseEvent) => {
 };
 
 onMounted(() => {
-  // The page always opens in light mode — the candle is unlit until
+  // The page always opens in light mode — the LEDs stay off until
   // the reader pulls the cord.
   document.documentElement.dataset.theme = 'light';
   try {

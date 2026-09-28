@@ -7,10 +7,10 @@ import SiteNav from './components/SiteNav.vue';
 import Cover from './components/Cover.vue';
 import BookView from './components/BookView.vue';
 import BindCinematic from './components/BindCinematic.vue';
-import DeskCandle from './components/DeskCandle.vue';
+import RemoteControl from './components/RemoteControl.vue';
 import DeskClutter from './components/DeskClutter.vue';
 import DeskPencil from './components/DeskPencil.vue';
-import MatchHand from './components/MatchHand.vue';
+import RemoteHand from './components/RemoteHand.vue';
 import LostPage from './components/LostPage.vue';
 import { setLenis } from './lib/scroll';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
@@ -200,17 +200,23 @@ function onNavHome() {
   });
 }
 
-/** Blacklight: the candle is blown out, the lost page surfaces. */
+/** Blacklight: the LEDs die, the lost page surfaces under UV. */
 const blacklight = ref(false);
 const isDark = () => document.documentElement.dataset.theme === 'dark';
-const candleLit = ref(false);
+/** The LED strip is lit: dark mode and not blacklight. */
+const ledOn = ref(false);
+/** Current LED color — blue is Chris's. Drives the wash via --led. */
+const ledColor = ref('#2f6bff');
+/** The remote sits on the desk only while the lights are out. */
+const remotePlaced = ref(false);
 
-/** Light rituals: pitch-black beat, match hand, smoke wisp, page shake. */
+/** Light rituals: pitch-black beat, remote hand, page shake. */
 const pitchBlack = ref(false);
-const matchVisible = ref(false);
-const matchAtWick = ref(false);
-const matchXY = ref({ x: 0, y: 0 });
-const smoking = ref(false);
+const handMounted = ref(false);
+const handArrived = ref(false);
+const handHolding = ref(false);
+const handPress = ref(false);
+const handXY = ref({ x: 60, y: 400 });
 const ritualRunning = ref(false);
 let ritualTimers: ReturnType<typeof setTimeout>[] = [];
 const reducedMotion = () =>
@@ -224,6 +230,15 @@ function clearRitual() {
   ritualTimers = [];
 }
 
+/** Where the remote lives on the desk — the hand aims for its center.
+    The remote keeps its layout box while parked, so it's measurable. */
+function measureRemoteSpot() {
+  const el = document.querySelector('.remote-control');
+  if (!el) return { x: 60, y: window.innerHeight * 0.52 };
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
 /** Plain theme switch, with the half-second palette crossfade. */
 function setThemePlain(light: boolean) {
   const root = document.documentElement;
@@ -234,49 +249,78 @@ function setThemePlain(light: boolean) {
   setTimeout(() => root.classList.remove('theme-fade'), 650);
 }
 
-/** Lights off: a beat of true darkness, then a hand brings a match
-    to the wick and the candle catches. */
-function matchSequence() {
-  const candle = document.querySelector('.desk-candle');
-  if (!candle) {
-    setThemePlain(false);
-    return;
-  }
+/** Lights off: a beat of true darkness, then a hand slides in with
+    the LED remote, thumbs the power button — blue blooms — and leaves
+    the remote on the desk. */
+function deliverRemoteSequence() {
   ritualRunning.value = true;
-  // The match tip must land on the wick, wherever the candle sits.
-  const r = candle.getBoundingClientRect();
-  matchXY.value = { x: r.left + r.width * 0.5, y: r.top + r.height * 0.38 };
+  setThemePlain(false);
   pitchBlack.value = true;
+  handXY.value = measureRemoteSpot();
   later(() => {
-    matchVisible.value = true;
+    handHolding.value = true;
+    handPress.value = false;
+    handArrived.value = false;
+    handMounted.value = true;
     later(() => {
-      matchAtWick.value = true;
+      handArrived.value = true;
     }, 60);
   }, 900);
   later(() => {
-    // Ignition: the room is already dark underneath; the flame is
-    // burning before the black lifts.
-    setThemePlain(false);
-    matchAtWick.value = false;
-  }, 2300);
-  later(() => {
+    // The thumb hits power: LEDs bloom as the black lifts.
+    handPress.value = true;
+    ledOn.value = true;
     pitchBlack.value = false;
+    updateLights();
+  }, 2100);
+  later(() => {
+    // The swap hides in the bloom: the placed remote appears exactly
+    // where the gripped one was, and the hand leaves empty.
+    remotePlaced.value = true;
+    handHolding.value = false;
+    handPress.value = false;
+    updateLights();
+  }, 2350);
+  later(() => {
+    handArrived.value = false;
   }, 2500);
   later(() => {
-    matchVisible.value = false;
+    handMounted.value = false;
     ritualRunning.value = false;
-  }, 3600);
+    updateLights();
+  }, 3400);
 }
 
-/** Lights on: the room brightens and a thin wisp curls off the wick. */
-function smokeSequence() {
+/** Lights on: the hand returns, grabs the remote, and takes it away
+    as the room brightens. */
+function collectRemoteSequence() {
   ritualRunning.value = true;
-  setThemePlain(true);
-  smoking.value = true;
+  handXY.value = measureRemoteSpot();
+  handHolding.value = false;
+  handPress.value = false;
+  handArrived.value = false;
+  handMounted.value = true;
   later(() => {
-    smoking.value = false;
+    handArrived.value = true;
+  }, 60);
+  later(() => {
+    // Grab: the placed remote vanishes into the fist.
+    remotePlaced.value = false;
+    handHolding.value = true;
+  }, 900);
+  later(() => {
+    // The lights come up as the hand leaves with the remote.
+    setThemePlain(true);
+    ledOn.value = false;
+    updateLights();
+    handArrived.value = false;
+  }, 1200);
+  later(() => {
+    handMounted.value = false;
+    handHolding.value = false;
     ritualRunning.value = false;
-  }, 2600);
+    updateLights();
+  }, 2100);
 }
 
 /** The cord was yanked — decide what the yank means. */
@@ -284,33 +328,41 @@ function onCordPulled() {
   if (ritualRunning.value) return;
   const goingDark = !isDark();
   if (goingDark && showBook.value && !reducedMotion()) {
-    matchSequence();
+    deliverRemoteSequence();
     return;
   }
-  if (!goingDark && showBook.value && candleLit.value && !reducedMotion()) {
-    smokeSequence();
+  if (!goingDark && showBook.value && remotePlaced.value && !reducedMotion()) {
+    collectRemoteSequence();
     return;
   }
+  // Reduced motion (or the cord pulled off the desk): no hand, the
+  // remote just fades in or out with the lights.
+  if (showBook.value && reducedMotion()) remotePlaced.value = goingDark;
   setThemePlain(!goingDark);
+  updateLights();
 }
 
-function updateCandle() {
-  candleLit.value = isDark() && !blacklight.value;
+function updateLights() {
   document.documentElement.dataset.blacklight = blacklight.value ? 'on' : 'off';
+  document.documentElement.style.setProperty('--led', ledColor.value);
+  if (!ritualRunning.value) {
+    ledOn.value = isDark() && !blacklight.value;
+  }
 }
 
-/** Blow out the candle for blacklight: the flame dies, the same beat
-    of darkness falls but holds longer, the black lifts as the page
-    shivers — then the UV washes in. */
-function blowOutCandle() {
-  if (!candleLit.value || ritualRunning.value) return;
+/** Power on the remote: the LEDs die, the same beat of darkness falls
+    but holds longer, the black lifts as the page shivers — then the
+    UV washes in. */
+function uvSequence() {
+  if (!ledOn.value || ritualRunning.value) return;
   if (reducedMotion()) {
     blacklight.value = true;
-    updateCandle();
+    updateLights();
     return;
   }
   ritualRunning.value = true;
-  candleLit.value = false;
+  ledOn.value = false;
+  updateLights();
   pitchBlack.value = true;
   later(() => {
     // The black lifts and the page shivers as it does — the cord
@@ -321,31 +373,61 @@ function blowOutCandle() {
   }, 2200);
   later(() => {
     blacklight.value = true;
-    updateCandle();
+    updateLights();
   }, 3000);
   later(() => {
     document.documentElement.classList.remove('page-shake');
     ritualRunning.value = false;
+    updateLights();
   }, 3200);
+}
+
+/** Power again under UV: back to the LEDs, last color remembered. */
+function exitUV() {
+  if (ritualRunning.value || !blacklight.value) return;
+  if (reducedMotion()) {
+    blacklight.value = false;
+    updateLights();
+    return;
+  }
+  ritualRunning.value = true;
+  pitchBlack.value = true;
+  later(() => {
+    blacklight.value = false;
+    pitchBlack.value = false;
+    ritualRunning.value = false;
+    updateLights();
+  }, 900);
+}
+
+function onRemotePower() {
+  if (ritualRunning.value) return;
+  if (blacklight.value) exitUV();
+  else uvSequence();
+}
+
+function onLedColor(hex: string) {
+  ledColor.value = hex;
+  updateLights();
 }
 
 function onLightsOn() {
   blacklight.value = false;
-  updateCandle();
+  updateLights();
 }
 
 function onLostPageClose() {
-  // Closing the lost page exits blacklight and relights the candle.
+  // Closing the lost page exits blacklight and the LEDs come back.
   blacklight.value = false;
-  updateCandle();
+  updateLights();
 }
 
 let themeObs: MutationObserver | null = null;
 let lenis: Lenis | null = null;
 
 onMounted(() => {
-  updateCandle();
-  themeObs = new MutationObserver(updateCandle);
+  updateLights();
+  themeObs = new MutationObserver(updateLights);
   themeObs.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ['data-theme'],
@@ -395,11 +477,13 @@ onUnmounted(() => {
     @finale-contact="onFinaleContact"
   >
     <template #desk-props>
-      <DeskCandle
-        :lit="candleLit"
+      <RemoteControl
+        :led-on="ledOn"
         :blacklight="blacklight"
-        :smoking="smoking"
-        @blowOut="blowOutCandle"
+        :color="ledColor"
+        :placed="remotePlaced"
+        @power="onRemotePower"
+        @set-color="onLedColor"
       />
       <DeskPencil />
       <DeskClutter />
@@ -413,15 +497,17 @@ onUnmounted(() => {
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
   />
-  <!-- Light rituals: true darkness between the cord pull and the flame. -->
+  <!-- Light rituals: true darkness between the cord pull and the LEDs. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
-  <!-- Candlelight vignette: a warm pool around the flame when lit. -->
-  <div class="candle-vignette" :class="{ on: candleLit }" aria-hidden="true"></div>
-  <MatchHand
-    v-if="matchVisible"
-    :x="matchXY.x"
-    :y="matchXY.y"
-    :at-wick="matchAtWick"
+  <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
+  <div class="led-wash" :class="{ on: ledOn }" aria-hidden="true"></div>
+  <RemoteHand
+    v-if="handMounted"
+    :x="handXY.x"
+    :y="handXY.y"
+    :arrived="handArrived"
+    :holding="handHolding"
+    :press="handPress"
   />
   </div>
 </template>
