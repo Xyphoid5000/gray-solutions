@@ -14,11 +14,15 @@ const emit = defineEmits<{
 
 const NONSENSE = [
   'the margin notes ate the index and the index forgave them,',
+  'it took three tries to teach this ink to glow in the dark,',
   'a paperclip dreamed of being a staple and woke up tired,',
+  'one page of the manuscript wandered off and never came back,',
   'chapter twelve is hiding in the gutter between pages nine and ten,',
   'the ink ran out halfway through a very important —',
+  'seven spare remotes are sleeping in the desk drawer, just in case,',
   'do not fold, spindle, or interrogate this paragraph,',
   'the footnotes filed a complaint with the header and won,',
+  'two left thumbs are why the drawings look the way they do,',
   'somewhere a semicolon is holding this whole sentence together;',
   'the draft you are looking for was never written, only intended,',
 ];
@@ -48,12 +52,8 @@ const NONSENSE = [
           Ah — you found my lost page. I love tucking little extras into
           corners for people who poke around. I do the same for my
           clients&rsquo; sites, by the way. And since you&rsquo;re clearly
-          the curious type: the phone on my desk is locked, and the way in
-          is hiding in the sentences below. It took me three tries to get
-          this blacklight ink right. There is one page in the manuscript I
-          never meant to lose. I keep seven spare remotes in the desk
-          drawer, because of course I do. And I&rsquo;ve got two left
-          thumbs, which is why the hand looks the way it does.
+          the curious type: the phone on my desk is locked &mdash; and the
+          way in is hiding in plain sight.
         </p>
       </div>
     </aside>

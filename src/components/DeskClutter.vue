@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * Desk clutter: the lived-in bits around the pile and the remote —
- * a big coffee mug, headphones, a flash drive, a candy bowl, crumpled
- * paper balls, and sticky notes. Pure dressing: pointer-events none,
+ * a big coffee mug, headphones, a flash drive, a candy bowl, and crumpled
+ * paper balls. Pure dressing: pointer-events none,
  * crowded onto the desk edges like a real desk, clear of the pile's
  * tap target, the remote, and the pull cord. The mug sits mid-left,
  * well below the pull cord and the manuscript card.
@@ -42,15 +42,7 @@
         <rect x="13" y="28" width="6" height="24" rx="3" class="mug-shine" />
       </svg>
     </div>
-    <!-- Sticky note, upper left lane -->
-    <div class="clutter clutter-sticky1">
-      <svg viewBox="0 0 36 36">
-        <rect x="2" y="2" width="32" height="32" rx="1.5" class="sticky-paper s-yellow" />
-        <path d="M34 26 L26 34 L34 34 Z" class="sticky-curl" />
-        <line x1="8" y1="12" x2="28" y2="12" class="sticky-line" />
-        <line x1="8" y1="18" x2="24" y2="18" class="sticky-line" />
-      </svg>
-    </div>
+    <!-- Sticky notes live on the pages now (PageStickies.vue). -->
     <!-- Headphones, resting lower left lane -->
     <div class="clutter clutter-phones">
       <svg viewBox="0 0 68 54">
@@ -104,16 +96,6 @@
       </svg>
     </div>
     <!-- Cell phone lives in DeskPhone.vue now — it's tappable. -->
-    <!-- Sticky note, right side -->
-    <div class="clutter clutter-sticky2">
-      <svg viewBox="0 0 36 36">
-        <rect x="2" y="2" width="32" height="32" rx="1.5" class="sticky-paper s-pink" />
-        <path d="M34 26 L26 34 L34 34 Z" class="sticky-curl" />
-        <line x1="8" y1="12" x2="28" y2="12" class="sticky-line" />
-        <line x1="8" y1="18" x2="24" y2="18" class="sticky-line" />
-        <line x1="8" y1="24" x2="20" y2="24" class="sticky-line" />
-      </svg>
-    </div>
   </div>
 </template>
 
@@ -136,12 +118,6 @@
 }
 
 /* ---- placement: same lane math as the remote ---- */
-.clutter-sticky1 {
-  left: calc(70px - var(--desk-pl));
-  top: 8svh;
-  width: 64px;
-  transform: rotate(-8deg);
-}
 .clutter-mug {
   left: calc(30px - var(--desk-pl));
   top: 30svh;
@@ -179,12 +155,8 @@
   width: 44px;
   transform: rotate(-20deg);
 }
-.clutter-sticky2 {
-  right: calc(80px - var(--desk-pr));
-  top: 330px;
-  width: 56px;
-  transform: rotate(7deg);
-}
+
+/* ---- sticky notes live on the pages now (PageStickies.vue) ---- */
 
 /* ---- mug ---- */
 .steam path {
@@ -288,21 +260,7 @@
   stroke-linecap: round;
 }
 
-/* ---- sticky notes ---- */
-.sticky-paper {
-  stroke: rgba(60, 45, 10, 0.3);
-  stroke-width: 1;
-}
-.s-yellow { fill: #f5df6b; }
-.s-pink { fill: #f2a7c3; }
-.sticky-curl {
-  fill: rgba(0, 0, 0, 0.12);
-}
-.sticky-line {
-  stroke: rgba(90, 70, 30, 0.4);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
+/* ---- sticky notes live on the pages now (PageStickies.vue) ---- */
 
 /* ---- dim with the room ---- */
 html[data-theme='dark'] .clutter {
@@ -314,11 +272,6 @@ html[data-blacklight='on'] .clutter {
 }
 
 @media (max-width: 640px) {
-  .clutter-sticky1 {
-    left: calc(50px - var(--desk-pl));
-    top: 8svh;
-    width: 50px;
-  }
   .clutter-mug {
     left: calc(8px - var(--desk-pl));
     top: 33svh;
@@ -355,11 +308,6 @@ html[data-blacklight='on'] .clutter {
     right: calc(8px - var(--desk-pr));
     top: 430px;
     width: 32px;
-  }
-  .clutter-sticky2 {
-    right: calc(50px - var(--desk-pr));
-    top: 340px;
-    width: 42px;
   }
 }
 
