@@ -8,6 +8,7 @@ import Cover from './components/Cover.vue';
 import BookView from './components/BookView.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import DeskCandle from './components/DeskCandle.vue';
+import DeskClutter from './components/DeskClutter.vue';
 import DeskPencil from './components/DeskPencil.vue';
 import MatchHand from './components/MatchHand.vue';
 import LostPage from './components/LostPage.vue';
@@ -401,6 +402,7 @@ onUnmounted(() => {
         @blowOut="blowOutCandle"
       />
       <DeskPencil />
+      <DeskClutter />
     </template>
   </BookView>
   </div>
@@ -413,6 +415,8 @@ onUnmounted(() => {
   />
   <!-- Light rituals: true darkness between the cord pull and the flame. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
+  <!-- Candlelight vignette: a warm pool around the flame when lit. -->
+  <div class="candle-vignette" :class="{ on: candleLit }" aria-hidden="true"></div>
   <MatchHand
     v-if="matchVisible"
     :x="matchXY.x"

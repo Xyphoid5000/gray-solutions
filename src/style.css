@@ -2479,8 +2479,54 @@ html[data-blacklight='on'] body::after {  content: '';
   transition: opacity 0.45s ease;
 }
 .pitch-black.on {
-  opacity: 0.9;
+  opacity: 0.97;
   pointer-events: auto;
+}
+/* Candlelight vignette: when the candle is lit, the desk and the page
+   nearest the flame sit in a warm pool that falls off with distance —
+   brighter by the candle, dimmer further away. Screen blend so it
+   lifts the artwork instead of covering it. */
+.candle-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle 58vmin at 38px 52svh,
+    rgba(255, 178, 88, 0.36) 0%,
+    rgba(255, 150, 60, 0.18) 40%,
+    transparent 70%
+  );
+}
+.candle-vignette.on {
+  opacity: 1;
+  animation: vignette-breathe 3.6s ease-in-out infinite alternate;
+}
+@keyframes vignette-breathe {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 640px) {
+  .candle-vignette {
+    background: radial-gradient(
+      circle 50vmin at 17px 48svh,
+      rgba(255, 178, 88, 0.36) 0%,
+      rgba(255, 150, 60, 0.18) 40%,
+      transparent 70%
+    );
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .candle-vignette.on {
+    animation: none;
+  }
 }
 /* Blacklight entrance: the page shivers before the UV washes in. */
 @keyframes desk-shake {
