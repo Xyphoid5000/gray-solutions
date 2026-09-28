@@ -47,7 +47,13 @@ const NONSENSE = [
         <p class="lost-secret">
           Ah — you found my lost page. I love tucking little extras into
           corners for people who poke around. I do the same for my
-          clients&rsquo; sites, by the way.
+          clients&rsquo; sites, by the way. And since you&rsquo;re clearly
+          the curious type: the phone on my desk is locked, and the way in
+          is hiding in the sentences below. It took me three tries to get
+          this blacklight ink right. There is one page in the manuscript I
+          never meant to lose. I keep seven spare remotes in the desk
+          drawer, because of course I do. And I&rsquo;ve got two left
+          thumbs, which is why the hand looks the way it does.
         </p>
       </div>
     </aside>

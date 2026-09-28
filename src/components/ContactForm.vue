@@ -13,6 +13,7 @@ function submitContactForm(event: SubmitEvent) {
   const phone = String(formData.get('phone') ?? '').trim();
   const site = String(formData.get('site-url') ?? '').trim();
   const comments = String(formData.get('comments') ?? '').trim();
+  const discount = String(formData.get('discount-code') ?? '').trim();
 
   const subject = `Website inquiry from ${name}`;
   const body = [
@@ -20,6 +21,7 @@ function submitContactForm(event: SubmitEvent) {
     `Email: ${email}`,
     `Phone: ${phone || '—'}`,
     `Existing site: ${hasSite.value === 'yes' ? `Yes — ${site}` : 'No'}`,
+    `Discount code: ${discount || '—'}`,
     '',
     comments,
   ].join('\n');
@@ -74,6 +76,10 @@ function submitContactForm(event: SubmitEvent) {
         required
         placeholder="What does your business do, who is it for, and what should your website accomplish?"
       ></textarea>
+    </label>
+    <label class="field">
+      <span>Discount code <em>(if you found one)</em></span>
+      <input name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" />
     </label>
     <div class="contact-submit">
       <button class="btn btn-solid" type="submit">

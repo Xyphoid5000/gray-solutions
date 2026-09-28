@@ -9,6 +9,7 @@ import BookView from './components/BookView.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import RemoteControl from './components/RemoteControl.vue';
 import DeskClutter from './components/DeskClutter.vue';
+import DeskPhone from './components/DeskPhone.vue';
 import DeskPencil from './components/DeskPencil.vue';
 import RemoteHand from './components/RemoteHand.vue';
 import LostPage from './components/LostPage.vue';
@@ -44,6 +45,7 @@ async function openBook() {
     bookMounted.value = true;
     homeMounted.value = false;
     window.scrollTo(0, 0);
+    enterBookLighting();
     return;
   }
   cameraMoving.value = true;
@@ -77,12 +79,14 @@ async function openBook() {
   homeMounted.value = false;
   cameraMoving.value = false;
   noScroll(false);
+  enterBookLighting();
 }
 
 /** Tilt up: the desk slides away below, the shelf glides back in. */
 async function tiltUp() {
   if (!showBook.value || cameraMoving.value) return;
   if (reducedMotion()) {
+    clearLedScene();
     closeBook();
     window.scrollTo(0, 0);
     return;
@@ -116,11 +120,13 @@ async function tiltUp() {
   bookMounted.value = false;
   cameraMoving.value = false;
   noScroll(false);
+  clearLedScene();
 }
 
 /** Instant close — used under the binding's blackout, where the swap
     is invisible. */
 function closeBook() {
+  clearLedScene();
   showBook.value = false;
   bookMounted.value = false;
   homeMounted.value = true;
@@ -327,17 +333,25 @@ function collectRemoteSequence() {
 function onCordPulled() {
   if (ritualRunning.value) return;
   const goingDark = !isDark();
-  if (goingDark && showBook.value && !reducedMotion()) {
-    deliverRemoteSequence();
+  if (showBook.value) {
+    if (goingDark && !reducedMotion()) {
+      deliverRemoteSequence();
+      return;
+    }
+    if (!goingDark && remotePlaced.value && !reducedMotion()) {
+      collectRemoteSequence();
+      return;
+    }
+    // Reduced motion (or plain state): no hand, the remote just
+    // fades in or out with the lights.
+    if (reducedMotion()) remotePlaced.value = goingDark;
+    setThemePlain(!goingDark);
+    updateLights();
     return;
   }
-  if (!goingDark && showBook.value && remotePlaced.value && !reducedMotion()) {
-    collectRemoteSequence();
-    return;
-  }
-  // Reduced motion (or the cord pulled off the desk): no hand, the
-  // remote just fades in or out with the lights.
-  if (showBook.value && reducedMotion()) remotePlaced.value = goingDark;
+  // On the cover the cord is a plain light switch: regular dark mode,
+  // no LED scene.
+  remotePlaced.value = false;
   setThemePlain(!goingDark);
   updateLights();
 }
@@ -346,8 +360,37 @@ function updateLights() {
   document.documentElement.dataset.blacklight = blacklight.value ? 'on' : 'off';
   document.documentElement.style.setProperty('--led', ledColor.value);
   if (!ritualRunning.value) {
-    ledOn.value = isDark() && !blacklight.value;
+    // The LED scene lives in the book only — the cover keeps the
+    // plain dark theme.
+    ledOn.value = isDark() && !blacklight.value && showBook.value;
   }
+}
+
+/** Leaving the book: the LED scene stays behind. Plain theme, no
+    remote, no wash, no hand. */
+function clearLedScene() {
+  clearRitual();
+  ritualRunning.value = false;
+  pitchBlack.value = false;
+  handMounted.value = false;
+  handArrived.value = false;
+  handHolding.value = false;
+  handPress.value = false;
+  remotePlaced.value = false;
+  document.documentElement.classList.remove('page-shake');
+  updateLights();
+}
+
+/** Entering the book while it's dark: the hand delivers the remote
+    and it lights up blue, the same as pulling the cord in the light. */
+function enterBookLighting() {
+  if (!isDark() || blacklight.value) return;
+  if (reducedMotion()) {
+    remotePlaced.value = true;
+    updateLights();
+    return;
+  }
+  deliverRemoteSequence();
 }
 
 /** Power on the remote: the LEDs die, the same beat of darkness falls
@@ -487,6 +530,7 @@ onUnmounted(() => {
       />
       <DeskPencil />
       <DeskClutter />
+      <DeskPhone />
     </template>
   </BookView>
   </div>

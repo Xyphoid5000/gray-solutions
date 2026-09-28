@@ -82,18 +82,7 @@
         <path d="M15 3 L13 12 L22 6 M13 12 L5 9 M13 12 L16 27 M13 12 L24 21 M8 25 L13 12" class="ball-facet" />
       </svg>
     </div>
-    <!-- Cell phone, lying top-right. Static for now — interactive later. -->
-    <div class="clutter clutter-phone">
-      <svg viewBox="0 0 60 112">
-        <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
-        <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
-        <rect x="7" y="12" width="46" height="88" rx="4" class="phone-sheen" />
-        <polygon points="14,12 30,12 18,100 7,100" class="phone-shine" />
-        <rect x="23" y="15" width="14" height="4" rx="2" class="phone-island" />
-        <rect x="58" y="30" width="3" height="14" rx="1.5" class="phone-button" />
-        <circle cx="47" cy="24" r="3.2" class="phone-notif" />
-      </svg>
-    </div>
+    <!-- Cell phone lives in DeskPhone.vue now — it's tappable. -->
     <!-- Sticky note, right side -->
     <div class="clutter clutter-sticky2">
       <svg viewBox="0 0 36 36">
@@ -161,12 +150,6 @@
 }
 .clutter-ball3 {
   display: none;
-}
-.clutter-phone {
-  right: calc(0px - var(--desk-pr));
-  top: 620px;
-  width: 80px;
-  transform: rotate(-10deg);
 }
 .clutter-ball1 {
   right: calc(24px - var(--desk-pr));
@@ -296,41 +279,6 @@
   stroke-linecap: round;
 }
 
-/* ---- cell phone ---- */
-.phone-body {
-  fill: #15171b;
-  stroke: rgba(0, 0, 0, 0.6);
-  stroke-width: 1.5;
-}
-.phone-screen {
-  fill: #232c38;
-}
-.phone-sheen {
-  fill: var(--led, #2f6bff);
-  opacity: 0;
-  transition: opacity 0.8s ease;
-}
-.phone-shine {
-  fill: rgba(255, 255, 255, 0.07);
-}
-.phone-island {
-  fill: #07090b;
-}
-.phone-button {
-  fill: #2b3038;
-}
-.phone-notif {
-  fill: #5aa9ff;
-  animation: notif-pulse 2.8s ease-in-out infinite;
-}
-@keyframes notif-pulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
-}
-html[data-theme='dark'] .phone-sheen {
-  opacity: 0.3;
-}
-
 /* ---- dim with the room ---- */
 html[data-theme='dark'] .clutter {
   opacity: 0.78;
@@ -377,12 +325,7 @@ html[data-blacklight='on'] .clutter {
     width: 22px;
     transform: rotate(28deg);
   }
-  .clutter-phone {
-    right: calc(4px - var(--desk-pr));
-    top: 545px;
-    width: 60px;
-  }
-  .clutter-ball1 {
+    .clutter-ball1 {
     right: calc(8px - var(--desk-pr));
     top: 430px;
     width: 24px;
@@ -395,8 +338,7 @@ html[data-blacklight='on'] .clutter {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .steam path,
-  .phone-notif {
+  .steam path {
     animation: none;
   }
 }
