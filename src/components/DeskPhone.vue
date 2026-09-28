@@ -304,7 +304,6 @@ onUnmounted(() => {
           <p v-if="pinError" class="pin-hint">
             Wrong code. {{ MAX_ATTEMPTS - pinAttempts }} tries left.
           </p>
-          <p v-else class="pin-hint">The UV ink knows the way in.</p>
           <div class="pin-pad">
             <button v-for="n in 9" :key="n" type="button" @click="pressDigit(String(n))">
               {{ n }}
