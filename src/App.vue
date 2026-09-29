@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -12,7 +12,8 @@ import DeskClutter from './components/DeskClutter.vue';
 import FirstDraft from './components/FirstDraft.vue';
 import DeskPhone from './components/DeskPhone.vue';
 import DeskPencil from './components/DeskPencil.vue';
-import RemoteHand from './components/RemoteHand.vue';
+import DeskCandle from './components/DeskCandle.vue';
+import MatchHand from './components/MatchHand.vue';
 import { setLenis } from './lib/scroll';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
@@ -45,7 +46,7 @@ async function openBook() {
     bookMounted.value = true;
     homeMounted.value = false;
     window.scrollTo(0, 0);
-    enterBookLighting();
+    updateLights();
     return;
   }
   cameraMoving.value = true;
@@ -79,7 +80,7 @@ async function openBook() {
   homeMounted.value = false;
   cameraMoving.value = false;
   noScroll(false);
-  enterBookLighting();
+  updateLights();
 }
 
 /** Tilt up: the desk slides away below, the shelf glides back in. */
@@ -217,15 +218,16 @@ const ledOn = ref(false);
 const ledAccent = ref(false);
 /** Current LED color — blue is Chris's. Drives the wash via --led. */
 const ledColor = ref('#2f6bff');
-/** Light rituals: pitch-black beat, rescue hand, page shake. */
+/** The desk candle: lit only when nothing else is. Persists on the desk. */
+const candleLit = ref(false);
+const candleSmoking = ref(false);
+/** Breeze gust sweeping the desk (pages flutter, candle blows out). */
+const breezeOn = ref(false);
+/** Light rituals: pitch-black beat, match hand, breeze. */
 const pitchBlack = ref(false);
-const handMounted = ref(false);
-const handArrived = ref(false);
-const handHolding = ref(false);
-const handPress = ref(false);
-const handYank = ref(false);
-const handYankPull = ref(false);
-const handXY = ref({ x: 60, y: 400 });
+const matchMounted = ref(false);
+const matchAtWick = ref(false);
+const matchXY = ref({ x: 60, y: 400 });
 const ritualRunning = ref(false);
 let ritualTimers: ReturnType<typeof setTimeout>[] = [];
 const reducedMotion = () =>
@@ -251,243 +253,160 @@ function setThemePlain(light: boolean) {
   setTimeout(() => root.classList.remove('theme-fade'), 650);
 }
 
-/** Cord pulled (lights out): a beat of pitch black, then the hand
-    reaches in and thumbs the remote's power — the LEDs bloom. The
-    remote lives on the desk now; the hand just works it. */
-function ledEntrySequence() {
+/** No light source left in the book: a beat of pitch black, then a
+    hand slides in with a lit match, touches it to the candle's wick,
+    and leaves. The candle stays lit until it's blown out or the
+    main light comes back on. */
+function candleLightingRitual() {
   ritualRunning.value = true;
   setThemePlain(false);
-  ledOn.value = false;
   pitchBlack.value = true;
   updateLights();
-  handXY.value = measureRemoteSpot();
+  matchXY.value = measureWickSpot();
   later(() => {
-    handHolding.value = false;
-    handYank.value = false;
-    handYankPull.value = false;
-    handPress.value = false;
-    handArrived.value = false;
-    handMounted.value = true;
+    matchMounted.value = true;
     later(() => {
-      handArrived.value = true;
+      matchAtWick.value = true;
     }, 60);
   }, 900);
   later(() => {
-    // The thumb hits power: LEDs bloom as the black lifts.
-    handPress.value = true;
-    ledOn.value = true;
+    // The match touches the wick: the candle catches, black lifts.
+    candleLit.value = true;
     pitchBlack.value = false;
     updateLights();
   }, 2100);
   later(() => {
-    handArrived.value = false;
-    handPress.value = false;
+    matchAtWick.value = false;
+  }, 2500);
+  later(() => {
+    matchMounted.value = false;
+    ritualRunning.value = false;
+    updateLights();
+  }, 3100);
+}
+
+/** Measure the candle wick's spot for the match hand. */
+function measureWickSpot() {
+  const el = document.querySelector('.desk-candle');
+  if (!el) return { x: 60, y: window.innerHeight * 0.5 };
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height * 0.33 };
+}
+
+/** The main light comes back on while the candle burns: a breeze
+    sweeps the desk, ruffles the pages, and blows the candle out. */
+function breezeRitual() {
+  ritualRunning.value = true;
+  breezeOn.value = true;
+  updateLights();
+  later(() => {
+    // The gust reaches the candle: the flame gutters out.
+    candleLit.value = false;
+    candleSmoking.value = true;
+    updateLights();
+  }, 1300);
+  later(() => {
+    breezeOn.value = false;
+    ritualRunning.value = false;
+    updateLights();
   }, 2400);
   later(() => {
-    handMounted.value = false;
-    ritualRunning.value = false;
-    updateLights();
-  }, 3000);
+    candleSmoking.value = false;
+  }, 4400);
 }
 
-/** Measure the remote's spot for the hand. */
-function measureRemoteSpot() {
-  const el = document.querySelector('.remote-control');
-  if (!el) return { x: 60, y: window.innerHeight * 0.52 };
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-}
-
-/** Pitch black: the LEDs are off and it's dark. A hand reaches in,
-    grabs the cord, yanks it, and the regular light comes back on. */
-function pitchBlackRescueSequence() {
-  ritualRunning.value = true;
-  pitchBlack.value = true;
+/** Tapping the lit candle blows it out. It stays out — only the hand
+    (or the breeze) changes that. */
+function onCandleBlowOut() {
+  if (ritualRunning.value || !candleLit.value) return;
+  candleLit.value = false;
+  candleSmoking.value = true;
   updateLights();
-  handXY.value = measureCordSpot();
-  later(() => {
-    handHolding.value = false;
-    handYank.value = true;
-    handYankPull.value = false;
-    handPress.value = false;
-    handArrived.value = false;
-    handMounted.value = true;
-    later(() => {
-      handArrived.value = true;
-    }, 60);
-  }, 900);
-  later(() => {
-    // The yank: fist pulls down, regular light on, black lifts.
-    handYankPull.value = true;
-    setThemePlain(true);
-    ledOn.value = false;
-    pitchBlack.value = false;
-    updateLights();
-  }, 2100);
-  later(() => {
-    // Release: the cord swings from the yank.
-    handYankPull.value = false;
-    window.dispatchEvent(new CustomEvent('gs:shake-cord'));
-  }, 2450);
-  later(() => {
-    handArrived.value = false;
-    handYank.value = false;
-  }, 2700);
-  later(() => {
-    handMounted.value = false;
-    ritualRunning.value = false;
-    updateLights();
-  }, 3200);
-}
-
-/** Measure the pull-cord knob's spot for the rescue hand. */
-function measureCordSpot() {
-  const el = document.querySelector('.cord-knob');
-  if (!el) return { x: 60, y: 120 };
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  setTimeout(() => {
+    candleSmoking.value = false;
+  }, 2600);
 }
 
 /** The cord was yanked — decide what the yank means. */
 function onCordPulled() {
   if (ritualRunning.value) return;
   const goingDark = !isDark();
-  if (goingDark && showBook.value) {
-    // In the book: pitch black, then the hand thumbs the remote's
-    // power and the LEDs bloom.
-    if (!reducedMotion()) {
-      ledEntrySequence();
-      return;
-    }
-    setThemePlain(false);
-    ledOn.value = true;
+  if (!showBook.value) {
+    // Main view: the cord is just a light switch. No candle out there.
+    setThemePlain(!goingDark);
     updateLights();
     return;
   }
-  // On the cover the cord is a plain light switch: regular dark mode,
-  // no LED scene. Lights on is always a plain switch back.
   if (goingDark) {
+    // Lights out in the book. The LEDs stay exactly as they are —
+    // if that leaves no light source, the watcher lights the candle.
     setThemePlain(false);
-    ledOn.value = true;
+  } else if (candleLit.value) {
+    // Lights on while the candle burns: the breeze blows it out.
+    setThemePlain(true);
+    if (!reducedMotion()) {
+      breezeRitual();
+      return;
+    }
+    candleLit.value = false;
+    candleSmoking.value = true;
+    setTimeout(() => {
+      candleSmoking.value = false;
+    }, 2600);
   } else {
     setThemePlain(true);
-    ledOn.value = false;
   }
   updateLights();
 }
 
+/** Active light sources. The one rule: if this is ever empty while
+    the book is open, the hand comes in and lights the candle. */
+const lightSources = ref<string[]>(['main']);
+
+function refreshSources() {
+  const s: string[] = [];
+  if (!isDark()) s.push('main');
+  if (showBook.value && ledOn.value) s.push('led');
+  if (showBook.value && candleLit.value) s.push('candle');
+  lightSources.value = s;
+}
+
+watch(lightSources, (s) => {
+  if (s.length === 0 && showBook.value && !ritualRunning.value) {
+    candleLightingRitual();
+  }
+});
+
 function updateLights() {
   document.documentElement.style.setProperty('--led', ledColor.value);
-  if (!ritualRunning.value) {
-    // The LED scene lives in the book only — the cover keeps the
-    // plain dark theme.
-    ledOn.value = isDark() && showBook.value;
-  }
+  // The LEDs only exist in the desk view — leaving the book kills them.
+  if (!showBook.value) ledOn.value = false;
+  // Faded accent wash while the main light is up; full scene in the dark.
+  ledAccent.value = ledOn.value && !isDark();
   document.documentElement.dataset.led = ledOn.value && !ledAccent.value ? 'on' : 'off';
+  refreshSources();
 }
 
 /** Leaving the book: the LED scene stays behind. Plain theme, no
-    remote, no wash, no hand. */
+    wash, no hand. The candle stays as it is on the desk. */
 function clearLedScene() {
   clearRitual();
   ritualRunning.value = false;
   pitchBlack.value = false;
-  handMounted.value = false;
-  handArrived.value = false;
-  handHolding.value = false;
-  handPress.value = false;
-  handYank.value = false;
-  handYankPull.value = false;
-  ledAccent.value = false;
+  matchMounted.value = false;
+  matchAtWick.value = false;
+  breezeOn.value = false;
+  candleSmoking.value = false;
   document.documentElement.classList.remove('page-shake');
-  updateLights();
-}
-
-/** Entering the book while it's dark: the LEDs are on, remote
-    already on the desk. */
-function enterBookLighting() {
-  if (!isDark()) return;
-  ledOn.value = true;
   updateLights();
 }
 
 function onRemotePower() {
   if (ritualRunning.value) return;
-  // Tapping again during the accent beat just turns the LEDs back off.
-  if (ledAccent.value) {
-    clearRitual();
-    ledOn.value = false;
-    ledAccent.value = false;
-    ritualRunning.value = false;
-    updateLights();
-    return;
-  }
-  const turningOff = ledOn.value;
+  // The remote only toggles the LEDs — nothing else. If switching them
+  // off leaves no light source, the watcher lights the candle.
   ledOn.value = !ledOn.value;
-  // Killing the LEDs in the dark leaves pitch black — the hand
-  // reaches in and yanks the cord for the regular light.
-  if (turningOff && isDark() && !reducedMotion()) {
-    pitchBlackRescueSequence();
-    return;
-  }
-  if (turningOff && isDark()) {
-    // Reduced motion: no hand, just turn the lights back on.
-    setThemePlain(true);
-    ledOn.value = false;
-  }
-  // Turning the LEDs on while the main light is up: accent mode first
-  // (a hint of color, room stays bright), then the hand kills the main
-  // light and the full LED scene takes over.
-  if (!turningOff && !isDark() && !reducedMotion()) {
-    ledAccentSequence();
-    return;
-  }
   updateLights();
-}
-
-/** The LEDs come on as an accent while the main light is up — just a
-    hint of color. A beat later a hand reaches in, pulls the cord, and
-    the full LED scene takes over. */
-function ledAccentSequence() {
-  ritualRunning.value = true;
-  ledOn.value = true;
-  ledAccent.value = true;
-  updateLights();
-  // Beat: let the hint of color land before the hand comes in.
-  later(() => {
-    handXY.value = measureCordSpot();
-    handHolding.value = false;
-    handYank.value = true;
-    handYankPull.value = false;
-    handPress.value = false;
-    handArrived.value = false;
-    handMounted.value = true;
-    later(() => {
-      handArrived.value = true;
-    }, 60);
-  }, 1500);
-  later(() => {
-    // The yank: main light off, full LED scene.
-    handYankPull.value = true;
-    setThemePlain(false);
-    ledOn.value = true;
-    ledAccent.value = false;
-    updateLights();
-  }, 2700);
-  later(() => {
-    // Release: the cord swings from the yank.
-    handYankPull.value = false;
-    window.dispatchEvent(new CustomEvent('gs:shake-cord'));
-  }, 3050);
-  later(() => {
-    handArrived.value = false;
-    handYank.value = false;
-  }, 3300);
-  later(() => {
-    handMounted.value = false;
-    ritualRunning.value = false;
-    updateLights();
-  }, 3800);
 }
 
 function onLedColor(hex: string) {
@@ -540,7 +459,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-root" :class="{ 'camera-moving': cameraMoving }">
+  <div class="app-root" :class="{ 'camera-moving': cameraMoving, breezing: breezeOn }">
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
@@ -560,6 +479,11 @@ onUnmounted(() => {
         @power="onRemotePower"
         @set-color="onLedColor"
       />
+      <DeskCandle
+        :lit="candleLit"
+        :smoking="candleSmoking"
+        @blow-out="onCandleBlowOut"
+      />
       <DeskPencil />
       <DeskClutter />
       <FirstDraft />
@@ -573,19 +497,19 @@ onUnmounted(() => {
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
   />
-  <!-- Light rituals: true darkness between the cord pull and the LEDs. -->
+  <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
   <div class="led-wash" :class="{ on: ledOn, accent: ledAccent }" aria-hidden="true"></div>
-  <RemoteHand
-    v-if="handMounted"
-    :x="handXY.x"
-    :y="handXY.y"
-    :arrived="handArrived"
-    :holding="handHolding"
-    :press="handPress"
-    :yank="handYank"
-    :class="{ 'yank-pull': handYankPull }"
+  <!-- Candlelight: warm wash while the candle burns. -->
+  <div class="candle-wash" :class="{ on: candleLit }" aria-hidden="true"></div>
+  <!-- Breeze gust sweeping the desk, left to right. -->
+  <div class="breeze" :class="{ on: breezeOn }" aria-hidden="true"></div>
+  <MatchHand
+    v-if="matchMounted"
+    :x="matchXY.x"
+    :y="matchXY.y"
+    :at-wick="matchAtWick"
   />
   </div>
 </template>

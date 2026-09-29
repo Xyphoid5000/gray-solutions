@@ -2925,3 +2925,137 @@ html[data-theme='dark'] .page-tab {
     height: 112px;
   }
 }
+
+/* Candlelight wash: while the candle burns, a warm pool of light sits
+   over the desk, strongest near the flame (left lane), flickering
+   gently. Screen-friendly warm gradient. */
+.candle-wash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  background:
+    radial-gradient(
+      ellipse 60vmin 55vmin at 18% 62%,
+      rgba(255, 166, 66, 0.22) 0%,
+      rgba(255, 150, 50, 0.1) 40%,
+      transparent 70%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 55%,
+      rgba(255, 140, 40, 0.06) 100%
+    );
+}
+.candle-wash.on {
+  opacity: 1;
+  animation: candle-breathe 3.1s ease-in-out infinite alternate;
+}
+@keyframes candle-breathe {
+  from {
+    opacity: 0.88;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* Breeze gust: a translucent streak sweeping left to right across the
+   desk when the main light comes back on. */
+.breeze {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  pointer-events: none;
+  opacity: 0;
+  overflow: hidden;
+}
+.breeze.on {
+  opacity: 1;
+}
+.breeze.on::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  left: 0;
+  width: 34vw;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.16) 35%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.16) 65%,
+    transparent
+  );
+  transform: skewX(-14deg) translateX(-40vw);
+  animation: gust-sweep 1.15s ease-in-out forwards;
+}
+.breeze.on::after {
+  content: '';
+  position: absolute;
+  top: 45%;
+  bottom: 30%;
+  left: 0;
+  width: 22vw;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent
+  );
+  transform: skewX(-10deg) translateX(-30vw);
+  animation: gust-sweep 1.15s 0.12s ease-in-out forwards;
+}
+@keyframes gust-sweep {
+  to {
+    transform: skewX(-14deg) translateX(130vw);
+  }
+}
+.breeze.on::after {
+  animation-name: gust-sweep-2;
+}
+@keyframes gust-sweep-2 {
+  to {
+    transform: skewX(-10deg) translateX(130vw);
+  }
+}
+/* Pages ruffle as the breeze passes over the desk. Independent
+   translate/rotate properties compose with the pile's var-based
+   transform instead of overriding it. */
+.app-root.breezing .page-paper,
+.app-root.breezing .pile-page {
+  animation: page-flutter 1.1s ease-in-out;
+}
+@keyframes page-flutter {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  20% {
+    translate: 0 -3px;
+    rotate: -1.4deg;
+  }
+  40% {
+    translate: 0 1px;
+    rotate: 0.9deg;
+  }
+  60% {
+    translate: 0 -2px;
+    rotate: -0.7deg;
+  }
+  80% {
+    translate: 0 0;
+    rotate: 0.3deg;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-root.breezing .page-paper,
+  .app-root.breezing .pile-page,
+  .breeze.on::before,
+  .breeze.on::after {
+    animation: none;
+  }
+}
