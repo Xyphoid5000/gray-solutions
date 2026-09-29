@@ -3059,3 +3059,52 @@ html[data-theme='dark'] .page-tab {
     animation: none;
   }
 }
+/* After the match guy quits, this flyer is all that's left where the
+   candle was — a little paper slip taped to the desk. */
+.help-wanted-flyer {
+  position: absolute;
+  /* Same left lane the candle sat in. */
+  left: calc(38px - var(--desk-pl));
+  top: 63svh;
+  width: 72px;
+  padding: 10px 6px 8px;
+  background: #f4ecd9;
+  transform: rotate(-7deg);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  z-index: 849;
+  text-align: center;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .help-wanted-flyer {
+    left: calc(24px - var(--desk-pl));
+    top: 62svh;
+    width: 64px;
+  }
+}
+.hw-tape {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%) rotate(3deg);
+  width: 34px;
+  height: 12px;
+  background: rgba(230, 220, 190, 0.75);
+  border-left: 1px dashed rgba(120, 110, 90, 0.4);
+  border-right: 1px dashed rgba(120, 110, 90, 0.4);
+}
+.hw-title {
+  display: block;
+  font-weight: 800;
+  font-size: 14px;
+  line-height: 1.15;
+  letter-spacing: 0.5px;
+  color: #b3231b;
+}
+.hw-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  font-style: italic;
+  color: #6b5f4c;
+}

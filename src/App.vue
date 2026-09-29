@@ -14,6 +14,7 @@ import DeskPhone from './components/DeskPhone.vue';
 import DeskPencil from './components/DeskPencil.vue';
 import DeskCandle from './components/DeskCandle.vue';
 import MatchHand from './components/MatchHand.vue';
+import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
@@ -316,20 +317,173 @@ function breezeRitual() {
 }
 
 /** Tapping the lit candle blows it out. It stays out — only the hand
-    (or the breeze) changes that. */
+    (or the breeze) changes that. Blow it out as the only light three
+    times in a row and the match guy comes to complain; a fourth time
+    and he quits, taking the candle with him. */
 function onCandleBlowOut() {
-  if (ritualRunning.value || !candleLit.value) return;
+  if (ritualRunning.value || gagRunning.value || !candleLit.value) return;
+  // Only counts when the candle was the room's only light.
+  const alone = isDark() && !ledOn.value;
+  if (alone && !candleGone.value) {
+    blowoutCount.value += 1;
+    // Block the normal relight before the sources update fans out.
+    if (blowoutCount.value >= 3) gagRunning.value = true;
+  }
   candleLit.value = false;
   candleSmoking.value = true;
   updateLights();
   setTimeout(() => {
     candleSmoking.value = false;
   }, 2600);
+  if (blowoutCount.value === 3) matchGuyGag();
+  else if (blowoutCount.value >= 4 && !candleGone.value) matchGuyQuits();
+}
+
+/** The match guy's fuse: consecutive lone-candle blowouts this session. */
+const blowoutCount = ref(0);
+/** He quit and took the candle — it's gone for the session, and the
+    dark just stays dark. */
+const candleGone = ref(false);
+/** A match-guy gag is playing: the normal relight ritual stands down. */
+const gagRunning = ref(false);
+/** The walker himself. */
+const guyMounted = ref(false);
+const guyX = ref(-160);
+const guyMode = ref<'flashlight' | 'match' | 'carry'>('flashlight');
+const guyFacing = ref<1 | -1>(1);
+const guyLine = ref<string | null>(null);
+let guyTimer: ReturnType<typeof setInterval> | null = null;
+
+/** Walk the guy toward a viewport x at px/sec, then call back. */
+function walkGuyTo(targetX: number, speed: number, onArrive: () => void) {
+  if (guyTimer) clearInterval(guyTimer);
+  guyTimer = setInterval(() => {
+    const diff = targetX - guyX.value;
+    const step = speed * 0.05;
+    if (Math.abs(diff) <= step) {
+      guyX.value = targetX;
+      if (guyTimer) clearInterval(guyTimer);
+      guyTimer = null;
+      onArrive();
+    } else {
+      guyX.value += Math.sign(diff) * step;
+    }
+  }, 50);
+}
+
+function stopGuy() {
+  if (guyTimer) clearInterval(guyTimer);
+  guyTimer = null;
+  guyMounted.value = false;
+  guyLine.value = null;
+}
+
+/** Third consecutive blowout: the room stays dark, and the match guy
+    walks across the desk with a flashlight to complain — then walks
+    back with a lit match and relights the candle anyway. */
+function matchGuyGag() {
+  gagRunning.value = true;
+  const vw = window.innerWidth;
+  const wick = measureWickSpot();
+  if (reducedMotion()) {
+    pitchBlack.value = true;
+    updateLights();
+    later(() => {
+      candleLit.value = true;
+      pitchBlack.value = false;
+      gagRunning.value = false;
+      updateLights();
+    }, 1200);
+    return;
+  }
+  pitchBlack.value = true;
+  updateLights();
+  later(() => {
+    // The complaint walk: in from the left, flashlight sweeping.
+    guyMode.value = 'flashlight';
+    guyFacing.value = 1;
+    guyX.value = -160;
+    guyLine.value =
+      "I don't know what you thought was gonna happen. I have to get more matches.";
+    guyMounted.value = true;
+    walkGuyTo(vw + 160, 180, () => {
+      stopGuy();
+      later(() => {
+        // Back with a lit match, from the right this time.
+        guyMode.value = 'match';
+        guyFacing.value = -1;
+        guyX.value = vw + 160;
+        guyMounted.value = true;
+        walkGuyTo(wick.x, 180, () => {
+          later(() => {
+            candleLit.value = true;
+            pitchBlack.value = false;
+            updateLights();
+            later(() => {
+              walkGuyTo(-160, 180, () => {
+                stopGuy();
+                gagRunning.value = false;
+                updateLights();
+              });
+            }, 700);
+          }, 450);
+        });
+      }, 1200);
+    });
+  }, 900);
+}
+
+/** Fourth consecutive blowout: he quits. Walks in from the right,
+    says the line, takes the candle, and leaves. The room light comes
+    back on to reveal a HELP WANTED flyer where the candle was. */
+function matchGuyQuits() {
+  gagRunning.value = true;
+  const vw = window.innerWidth;
+  const wick = measureWickSpot();
+  if (reducedMotion()) {
+    candleGone.value = true;
+    setThemePlain(true);
+    pitchBlack.value = false;
+    gagRunning.value = false;
+    updateLights();
+    return;
+  }
+  pitchBlack.value = true;
+  updateLights();
+  later(() => {
+    guyMode.value = 'flashlight';
+    guyFacing.value = -1;
+    guyX.value = vw + 160;
+    guyLine.value = "That's it. I QUIT.";
+    guyMounted.value = true;
+    walkGuyTo(wick.x + 34, 180, () => {
+      later(() => {
+        // He takes the candle.
+        guyLine.value = null;
+        candleGone.value = true;
+        guyMode.value = 'carry';
+        updateLights();
+        later(() => {
+          guyFacing.value = 1;
+          walkGuyTo(vw + 160, 180, () => {
+            stopGuy();
+            later(() => {
+              // The lights come back on. Just the flyer now.
+              setThemePlain(true);
+              pitchBlack.value = false;
+              gagRunning.value = false;
+              updateLights();
+            }, 900);
+          });
+        }, 500);
+      }, 900);
+    });
+  }, 900);
 }
 
 /** The cord was yanked — decide what the yank means. */
 function onCordPulled() {
-  if (ritualRunning.value) return;
+  if (ritualRunning.value || gagRunning.value) return;
   const goingDark = !isDark();
   if (!showBook.value) {
     // Main view: the cord is just a light switch. No candle out there.
@@ -372,7 +526,13 @@ function refreshSources() {
 }
 
 watch(lightSources, (s) => {
-  if (s.length === 0 && showBook.value && !ritualRunning.value) {
+  if (
+    s.length === 0 &&
+    showBook.value &&
+    !ritualRunning.value &&
+    !gagRunning.value &&
+    !candleGone.value
+  ) {
     candleLightingRitual();
   }
 });
@@ -391,7 +551,9 @@ function updateLights() {
     wash, no hand. The candle stays as it is on the desk. */
 function clearLedScene() {
   clearRitual();
+  stopGuy();
   ritualRunning.value = false;
+  gagRunning.value = false;
   pitchBlack.value = false;
   matchMounted.value = false;
   matchAtWick.value = false;
@@ -402,7 +564,7 @@ function clearLedScene() {
 }
 
 function onRemotePower() {
-  if (ritualRunning.value) return;
+  if (ritualRunning.value || gagRunning.value) return;
   // The remote only toggles the LEDs — nothing else. If switching them
   // off leaves no light source, the watcher lights the candle.
   ledOn.value = !ledOn.value;
@@ -480,10 +642,17 @@ onUnmounted(() => {
         @set-color="onLedColor"
       />
       <DeskCandle
+        v-if="!candleGone"
         :lit="candleLit"
         :smoking="candleSmoking"
         @blow-out="onCandleBlowOut"
       />
+      <!-- After the match guy quits, all that's left is this flyer. -->
+      <div v-if="candleGone" class="help-wanted-flyer" aria-hidden="true">
+        <span class="hw-tape"></span>
+        <span class="hw-title">HELP<br />WANTED</span>
+        <span class="hw-sub">inquire within</span>
+      </div>
       <DeskPencil />
       <DeskClutter />
       <FirstDraft />
@@ -510,6 +679,14 @@ onUnmounted(() => {
     :x="matchXY.x"
     :y="matchXY.y"
     :at-wick="matchAtWick"
+  />
+  <!-- The match guy's complaint walk / resignation. -->
+  <MatchGuy
+    v-if="guyMounted"
+    :x="guyX"
+    :mode="guyMode"
+    :facing="guyFacing"
+    :line="guyLine"
   />
   </div>
 </template>
