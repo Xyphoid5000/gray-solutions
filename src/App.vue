@@ -209,6 +209,9 @@ function onNavHome() {
 const isDark = () => document.documentElement.dataset.theme === 'dark';
 /** The LED strip is lit: dark mode, in the book. */
 const ledOn = ref(false);
+/** Accent mode: LEDs on as a hint of color while the main light is
+    still up — the step before the hand kills the main light. */
+const ledAccent = ref(false);
 /** Current LED color — blue is Chris's. Drives the wash via --led. */
 const ledColor = ref('#2f6bff');
 /** Light rituals: pitch-black beat, rescue hand, page shake. */
@@ -377,7 +380,7 @@ function updateLights() {
     // plain dark theme.
     ledOn.value = isDark() && showBook.value;
   }
-  document.documentElement.dataset.led = ledOn.value ? 'on' : 'off';
+  document.documentElement.dataset.led = ledOn.value && !ledAccent.value ? 'on' : 'off';
 }
 
 /** Leaving the book: the LED scene stays behind. Plain theme, no
@@ -390,6 +393,9 @@ function clearLedScene() {
   handArrived.value = false;
   handHolding.value = false;
   handPress.value = false;
+  handYank.value = false;
+  handYankPull.value = false;
+  ledAccent.value = false;
   document.documentElement.classList.remove('page-shake');
   updateLights();
 }
@@ -404,6 +410,15 @@ function enterBookLighting() {
 
 function onRemotePower() {
   if (ritualRunning.value) return;
+  // Tapping again during the accent beat just turns the LEDs back off.
+  if (ledAccent.value) {
+    clearRitual();
+    ledOn.value = false;
+    ledAccent.value = false;
+    ritualRunning.value = false;
+    updateLights();
+    return;
+  }
   const turningOff = ledOn.value;
   ledOn.value = !ledOn.value;
   // Killing the LEDs in the dark leaves pitch black — the hand
@@ -417,7 +432,59 @@ function onRemotePower() {
     setThemePlain(true);
     ledOn.value = false;
   }
+  // Turning the LEDs on while the main light is up: accent mode first
+  // (a hint of color, room stays bright), then the hand kills the main
+  // light and the full LED scene takes over.
+  if (!turningOff && !isDark() && !reducedMotion()) {
+    ledAccentSequence();
+    return;
+  }
   updateLights();
+}
+
+/** The LEDs come on as an accent while the main light is up — just a
+    hint of color. A beat later a hand reaches in, pulls the cord, and
+    the full LED scene takes over. */
+function ledAccentSequence() {
+  ritualRunning.value = true;
+  ledOn.value = true;
+  ledAccent.value = true;
+  updateLights();
+  // Beat: let the hint of color land before the hand comes in.
+  later(() => {
+    handXY.value = measureCordSpot();
+    handHolding.value = false;
+    handYank.value = true;
+    handYankPull.value = false;
+    handPress.value = false;
+    handArrived.value = false;
+    handMounted.value = true;
+    later(() => {
+      handArrived.value = true;
+    }, 60);
+  }, 1500);
+  later(() => {
+    // The yank: main light off, full LED scene.
+    handYankPull.value = true;
+    setThemePlain(false);
+    ledOn.value = true;
+    ledAccent.value = false;
+    updateLights();
+  }, 2700);
+  later(() => {
+    // Release: the cord swings from the yank.
+    handYankPull.value = false;
+    window.dispatchEvent(new CustomEvent('gs:shake-cord'));
+  }, 3050);
+  later(() => {
+    handArrived.value = false;
+    handYank.value = false;
+  }, 3300);
+  later(() => {
+    handMounted.value = false;
+    ritualRunning.value = false;
+    updateLights();
+  }, 3800);
 }
 
 function onLedColor(hex: string) {
@@ -506,7 +573,7 @@ onUnmounted(() => {
   <!-- Light rituals: true darkness between the cord pull and the LEDs. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
-  <div class="led-wash" :class="{ on: ledOn }" aria-hidden="true"></div>
+  <div class="led-wash" :class="{ on: ledOn, accent: ledAccent }" aria-hidden="true"></div>
   <RemoteHand
     v-if="handMounted"
     :x="handXY.x"

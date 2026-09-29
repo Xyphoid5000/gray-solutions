@@ -94,30 +94,29 @@ const SKIN_LIGHT = '#f6d3a9';
         />
       </g>
 
-      <!-- Pointing hand (empty — just here to press the button) -->
+      <!-- Pointing hand (empty — just here to press the button):
+           a single finger reaching down, no palm to cup anything. -->
       <g v-else>
-        <!-- Back of the hand -->
-        <path
-          d="M56,42 C56,32 64,26 76,26 C90,26 102,30 106,40 C109,48 108,58 102,64 C94,72 78,74 66,70 C58,67 53,58 54,50 C54,46 55,44 56,42 Z"
-          :fill="SKIN"
-        />
-        <!-- Knuckle highlight -->
-        <path d="M64,26 q12,-4 26,0" fill="none" :stroke="SKIN_LIGHT" stroke-width="2.4" opacity="0.8" stroke-linecap="round" />
-        <!-- Curled middle/ring/pinky -->
-        <g :fill="SKIN_SHADE">
-          <circle cx="80" cy="62" r="7" />
-          <circle cx="92" cy="60" r="7" />
-          <circle cx="102" cy="56" r="6.5" />
+        <!-- Knuckles tucked up high, mostly out of the way -->
+        <g :fill="SKIN">
+          <circle cx="52" cy="30" r="10" />
+          <circle cx="66" cy="26" r="10" />
+          <circle cx="80" cy="28" r="9" />
         </g>
-        <!-- Index finger extended down to the button -->
+        <path d="M50,24 q16,-8 32,-2" fill="none" :stroke="SKIN_LIGHT" stroke-width="2.4" opacity="0.8" stroke-linecap="round" />
+        <!-- Index finger extended straight down to the button -->
         <g class="press-finger">
-          <rect x="58" y="56" width="14" height="34" rx="7" :fill="SKIN" />
-          <rect x="58" y="82" width="14" height="8" rx="4" :fill="SKIN_DEEP" opacity="0.5" />
-          <rect x="60" y="58" width="5" height="28" rx="2.5" :fill="SKIN_LIGHT" opacity="0.5" />
+          <rect x="56" y="32" width="16" height="46" rx="8" :fill="SKIN" />
+          <rect x="58.5" y="34" width="5" height="40" rx="2.5" :fill="SKIN_LIGHT" opacity="0.55" />
+          <!-- Fingertip pad -->
+          <ellipse cx="64" cy="74" rx="8" ry="6.5" :fill="SKIN" />
+          <ellipse cx="64" cy="76" rx="4.5" ry="3.5" :fill="SKIN_DEEP" opacity="0.45" />
+          <!-- Nail -->
+          <ellipse cx="64" cy="68" rx="4.5" ry="5.5" :fill="SKIN_LIGHT" opacity="0.95" />
         </g>
-        <!-- Thumb tucked alongside -->
+        <!-- Thumb resting against the finger, not wrapping anything -->
         <path
-          d="M58,44 C52,46 48,50 48,55 C48,60 52,63 56,61 C60,59 62,53 62,49 C62,46 60,44 58,44 Z"
+          d="M56,40 C50,42 46,46 46,51 C46,56 50,59 54,57 C58,55 60,49 60,45 C60,42 58,39 56,40 Z"
           :fill="SKIN_SHADE"
         />
       </g>

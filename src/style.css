@@ -2558,6 +2558,20 @@ html[data-led='on'] .nav-contact {
   border-color: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(4px);
 }
+/* Accent mode: the LEDs are on but the main light is still up — just
+   a hint of color, no darkness, no breathing. */
+.led-wash.accent {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--led, #2f6bff) 20%, transparent) 0%,
+      color-mix(in srgb, var(--led, #2f6bff) 9%, transparent) 45%,
+      transparent 75%
+    );
+}
+.led-wash.accent.on {
+  animation: none;
+}
 @keyframes led-breathe {
   from {
     opacity: 0.82;
