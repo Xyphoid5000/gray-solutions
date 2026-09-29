@@ -126,8 +126,11 @@ async function tiltUp() {
 /** Instant close — used under the binding's blackout, where the swap
     is invisible. */
 function closeBook() {
-  clearLedScene();
+  // Flag the book closed first: updateLights() (via clearLedScene)
+  // kills LED mode when the book isn't open, so the main page lands
+  // on standard dark mode instead of the LED scene.
   showBook.value = false;
+  clearLedScene();
   bookMounted.value = false;
   homeMounted.value = true;
 }
