@@ -532,6 +532,12 @@ defineExpose({ start });
   border: 1px solid var(--line-soft);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
+/* In dark mode the pages stay light paper so the stamped numbers read. */
+html[data-theme='dark'] .bind-stack .bind-page,
+html[data-theme='dark'] .bind-stack .pile-page {
+  background: #e8dcc2;
+  border-color: rgba(60, 45, 10, 0.35);
+}
 /* Numbered stand-ins for pages not in the pile. */
 .bind-page {
   display: flex;

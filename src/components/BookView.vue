@@ -5,7 +5,6 @@ import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
 import { manuscriptBound } from '../lib/manuscript';
 import ChapterModal from './ChapterModal.vue';
-import PageStickies from './PageStickies.vue';
 
 gsap.registerPlugin(Flip);
 
@@ -379,7 +378,6 @@ function onTouchEnd(e: TouchEvent) {
         }"
       >
         <div class="page-paper" :inert="i !== currentIndex">
-          <PageStickies :page-index="i" />
           <component
             :is="ch.component"
             :active="i === currentIndex"

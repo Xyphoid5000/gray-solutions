@@ -715,6 +715,7 @@ a {
   line-height: 1.1;
   margin: 1rem 0 1.1rem;
   text-wrap: balance;
+  color: var(--ink);
 }
 .proof-panel p {
   color: var(--muted);
@@ -2493,19 +2494,20 @@ html[data-blacklight='on'] body::after {  content: '';
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.9s ease;
-  mix-blend-mode: screen;
   /* The LED strip washes the room from above: strong color up top,
-     falling off down the desk. --led is set from the remote. */
+     falling off into darkness down the screen — 75% black at the
+     bottom so the room still feels dark. --led is set from the remote. */
   background:
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--led, #2f6bff) 44%, transparent) 0%,
-      color-mix(in srgb, var(--led, #2f6bff) 20%, transparent) 34%,
-      transparent 62%
+      color-mix(in srgb, var(--led, #2f6bff) 55%, transparent) 0%,
+      color-mix(in srgb, var(--led, #2f6bff) 26%, transparent) 30%,
+      rgba(0, 0, 0, 0.35) 62%,
+      rgba(0, 0, 0, 0.75) 100%
     ),
     radial-gradient(
       ellipse 95vmin 60vmin at 50% -8%,
-      color-mix(in srgb, var(--led, #2f6bff) 32%, transparent) 0%,
+      color-mix(in srgb, var(--led, #2f6bff) 40%, transparent) 0%,
       transparent 70%
     );
 }
@@ -2693,6 +2695,13 @@ html[data-theme='dark'] body.has-book .chapter {
   width: min(640px, 100%);
   max-width: none;
   pointer-events: auto;
+}
+/* Pages you're not on are fully rendered behind the current one; clip
+   their paper to the wrap so a tall hidden chapter can't stretch the
+   document and leave scrollable space past the desk. */
+.page-wrap:not(.is-current) .page-paper {
+  max-height: 100%;
+  overflow: hidden;
 }
 .page-wrap.is-piled {
   display: none;

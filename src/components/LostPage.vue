@@ -22,7 +22,7 @@ const NONSENSE = [
   'seven spare remotes are sleeping in the desk drawer, just in case,',
   'do not fold, spindle, or interrogate this paragraph,',
   'the footnotes filed a complaint with the header and won,',
-  'two left thumbs are why the drawings look the way they do,',
+  'two pencils gave up while drawing this page,',
   'somewhere a semicolon is holding this whole sentence together;',
   'the draft you are looking for was never written, only intended,',
 ];
