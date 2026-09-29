@@ -394,12 +394,11 @@ function stopGuy() {
 
 /** Every fourth blowout: the room stays dark, and the match guy
     walks across the desk with a flashlight to complain — angrier each
-    cycle — then walks back with a lit match and relights the candle
-    anyway. */
+    cycle — then strides back through with a lit match, lighting the
+    candle mid-stride without stopping. */
 function matchGuyGag(level: 1 | 2 | 3) {
   gagRunning.value = true;
   const vw = window.innerWidth;
-  const wick = measureWickSpot();
   if (reducedMotion()) {
     pitchBlack.value = true;
     updateLights();
@@ -423,24 +422,21 @@ function matchGuyGag(level: 1 | 2 | 3) {
     walkGuyTo(vw + 160, 180, () => {
       stopGuy();
       later(() => {
-        // Back with a lit match, from the right this time.
+        // Back with a lit match, from the right this time — and he
+        // doesn't break stride. Past the candle, off the left edge;
+        // the flame catches a beat after he's gone.
         guyMode.value = 'match';
         guyFacing.value = -1;
         guyX.value = vw + 160;
         guyMounted.value = true;
-        walkGuyTo(wick.x, 180, () => {
+        walkGuyTo(-160, 180, () => {
+          stopGuy();
           later(() => {
             candleLit.value = true;
             pitchBlack.value = false;
+            gagRunning.value = false;
             updateLights();
-            later(() => {
-              walkGuyTo(-160, 180, () => {
-                stopGuy();
-                gagRunning.value = false;
-                updateLights();
-              });
-            }, 700);
-          }, 450);
+          }, 600);
         });
       }, 1200);
     });
