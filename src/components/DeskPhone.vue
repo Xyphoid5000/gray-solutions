@@ -5,7 +5,7 @@
  * tries locks it for the session. Unlock it for Snake and a dial pad —
  * dialing Chris's number opens the bonus page with a 20%-off code.
  */
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted, nextTick } from 'vue';
 import { sendDiscountEmail, bonusEmailConfigured } from '../lib/discountEmail';
 
 const PIN = '4132';
@@ -76,7 +76,7 @@ let dir = { x: 1, y: 0 };
 let pendingDir = { x: 1, y: 0 };
 let food = { x: 7, y: 8 };
 let snakeTimer: number | null = null;
-let canvasEl: HTMLCanvasElement | null = null;
+const canvasEl = ref<HTMLCanvasElement | null>(null);
 let touchStart: { x: number; y: number } | null = null;
 
 function stopSnake() {
@@ -101,6 +101,7 @@ function openSnake() {
   screen.value = 'snake';
   snakeState.value = 'ready';
   snakeScore.value = 0;
+  nextTick(() => drawSnake());
 }
 function startSnake() {
   snake = [
@@ -142,7 +143,7 @@ function tickSnake() {
   drawSnake();
 }
 function drawSnake() {
-  const canvas = canvasEl;
+  const canvas = canvasEl.value;
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -198,12 +199,14 @@ function steer(dx: number, dy: number) {
   pendingDir = { x: dx, y: dy };
 }
 function onTouchStart(e: TouchEvent) {
-  const t = e.changedTouches[0];
+  const t = e.changedTouches && e.changedTouches[0];
+  if (!t) return;
   touchStart = { x: t.clientX, y: t.clientY };
 }
 function onTouchEnd(e: TouchEvent) {
   if (!touchStart) return;
-  const t = e.changedTouches[0];
+  const t = e.changedTouches && e.changedTouches[0];
+  if (!t) { touchStart = null; return; }
   const dx = t.clientX - touchStart.x;
   const dy = t.clientY - touchStart.y;
   touchStart = null;

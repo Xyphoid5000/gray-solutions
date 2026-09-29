@@ -267,8 +267,8 @@ function toggleUV() {
 /* ---- red-pen markup around the page numbers ---- */
 .draft-page-num {
   position: absolute;
-  top: 0.7rem;
-  right: 0.9rem;
+  top: 0.95rem;
+  right: 1.05rem;
   font-family: var(--serif);
   font-size: 1.05rem;
   font-weight: 700;
@@ -300,9 +300,8 @@ function toggleUV() {
 .draft-page-num.triangle::before {
   content: '';
   position: absolute;
-  inset: -4px -6px;
-  border: 3px solid #c0392b;
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  inset: -12px -16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 40'%3E%3Cpolygon points='22,3 41,37 3,37' fill='none' stroke='%23c0392b' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
   transform: rotate(-2deg);
 }
 .draft-page-num.underline {
@@ -313,9 +312,12 @@ function toggleUV() {
 }
 .draft-page.uv .draft-page-num.circle,
 .draft-page.uv .draft-page-num.box,
-.draft-page.uv .draft-page-num.triangle::before,
 .draft-page.uv .draft-page-num.underline {
   border-color: #e86a5a;
+}
+.draft-page.uv .draft-page-num.triangle::before {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 40'%3E%3Cpolygon points='22,3 41,37 3,37' fill='none' stroke='%23e86a5a' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat center / 100% 100%;
+  transform: rotate(-2deg);
 }
 
 .draft-nonsense {

@@ -107,7 +107,7 @@ const SKIN_LIGHT = '#f6d3a9';
 <style scoped>
 .remote-hand {
   position: fixed;
-  z-index: 1300;
+  z-index: 2100;
   width: 150px;
   height: 100px;
   margin-left: -75px;

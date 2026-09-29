@@ -243,6 +243,51 @@ function setThemePlain(light: boolean) {
   setTimeout(() => root.classList.remove('theme-fade'), 650);
 }
 
+/** Cord pulled (lights out): a beat of pitch black, then the hand
+    reaches in and thumbs the remote's power — the LEDs bloom. The
+    remote lives on the desk now; the hand just works it. */
+function ledEntrySequence() {
+  ritualRunning.value = true;
+  setThemePlain(false);
+  ledOn.value = false;
+  pitchBlack.value = true;
+  updateLights();
+  handXY.value = measureRemoteSpot();
+  later(() => {
+    handHolding.value = false;
+    handPress.value = false;
+    handArrived.value = false;
+    handMounted.value = true;
+    later(() => {
+      handArrived.value = true;
+    }, 60);
+  }, 900);
+  later(() => {
+    // The thumb hits power: LEDs bloom as the black lifts.
+    handPress.value = true;
+    ledOn.value = true;
+    pitchBlack.value = false;
+    updateLights();
+  }, 2100);
+  later(() => {
+    handArrived.value = false;
+    handPress.value = false;
+  }, 2400);
+  later(() => {
+    handMounted.value = false;
+    ritualRunning.value = false;
+    updateLights();
+  }, 3000);
+}
+
+/** Measure the remote's spot for the hand. */
+function measureRemoteSpot() {
+  const el = document.querySelector('.remote-control');
+  if (!el) return { x: 60, y: window.innerHeight * 0.52 };
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
 /** Pitch black: the LEDs are off and it's dark. A hand reaches in,
     yanks the cord, and the regular light comes back on. */
 function pitchBlackRescueSequence() {
@@ -290,8 +335,20 @@ function measureCordSpot() {
 function onCordPulled() {
   if (ritualRunning.value) return;
   const goingDark = !isDark();
-  // The remote lives on the desk now — no hand delivery, no collection.
-  // The cord is a plain light switch.
+  if (goingDark && showBook.value) {
+    // In the book: pitch black, then the hand thumbs the remote's
+    // power and the LEDs bloom.
+    if (!reducedMotion()) {
+      ledEntrySequence();
+      return;
+    }
+    setThemePlain(false);
+    ledOn.value = true;
+    updateLights();
+    return;
+  }
+  // On the cover the cord is a plain light switch: regular dark mode,
+  // no LED scene. Lights on is always a plain switch back.
   if (goingDark) {
     setThemePlain(false);
     ledOn.value = true;
