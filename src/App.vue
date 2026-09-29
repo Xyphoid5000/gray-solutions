@@ -217,6 +217,8 @@ const handMounted = ref(false);
 const handArrived = ref(false);
 const handHolding = ref(false);
 const handPress = ref(false);
+const handYank = ref(false);
+const handYankPull = ref(false);
 const handXY = ref({ x: 60, y: 400 });
 const ritualRunning = ref(false);
 let ritualTimers: ReturnType<typeof setTimeout>[] = [];
@@ -255,6 +257,8 @@ function ledEntrySequence() {
   handXY.value = measureRemoteSpot();
   later(() => {
     handHolding.value = false;
+    handYank.value = false;
+    handYankPull.value = false;
     handPress.value = false;
     handArrived.value = false;
     handMounted.value = true;
@@ -289,7 +293,7 @@ function measureRemoteSpot() {
 }
 
 /** Pitch black: the LEDs are off and it's dark. A hand reaches in,
-    yanks the cord, and the regular light comes back on. */
+    grabs the cord, yanks it, and the regular light comes back on. */
 function pitchBlackRescueSequence() {
   ritualRunning.value = true;
   pitchBlack.value = true;
@@ -297,6 +301,8 @@ function pitchBlackRescueSequence() {
   handXY.value = measureCordSpot();
   later(() => {
     handHolding.value = false;
+    handYank.value = true;
+    handYankPull.value = false;
     handPress.value = false;
     handArrived.value = false;
     handMounted.value = true;
@@ -305,27 +311,32 @@ function pitchBlackRescueSequence() {
     }, 60);
   }, 900);
   later(() => {
-    // The yank: regular light on, black lifts.
-    handPress.value = true;
+    // The yank: fist pulls down, regular light on, black lifts.
+    handYankPull.value = true;
     setThemePlain(true);
     ledOn.value = false;
     pitchBlack.value = false;
     updateLights();
-  }, 1800);
+  }, 2100);
+  later(() => {
+    // Release: the cord swings from the yank.
+    handYankPull.value = false;
+    window.dispatchEvent(new CustomEvent('gs:shake-cord'));
+  }, 2450);
   later(() => {
     handArrived.value = false;
-    handPress.value = false;
-  }, 2100);
+    handYank.value = false;
+  }, 2700);
   later(() => {
     handMounted.value = false;
     ritualRunning.value = false;
     updateLights();
-  }, 2800);
+  }, 3200);
 }
 
-/** Measure the pull-cord's spot for the rescue hand. */
+/** Measure the pull-cord knob's spot for the rescue hand. */
 function measureCordSpot() {
-  const el = document.querySelector('.pull-cord');
+  const el = document.querySelector('.cord-knob');
   if (!el) return { x: 60, y: 120 };
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -502,6 +513,8 @@ onUnmounted(() => {
     :arrived="handArrived"
     :holding="handHolding"
     :press="handPress"
+    :yank="handYank"
+    :class="{ 'yank-pull': handYankPull }"
   />
   </div>
 </template>

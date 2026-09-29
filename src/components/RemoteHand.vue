@@ -14,6 +14,7 @@ const props = defineProps<{
   arrived: boolean;
   holding: boolean;
   press: boolean;
+  yank: boolean;
 }>();
 
 const SKIN = '#e8b58c';
@@ -36,14 +37,14 @@ const SKIN_LIGHT = '#f6d3a9';
       <!-- Wrist -->
       <rect x="47" y="41" width="16" height="25" rx="7" :fill="SKIN_SHADE" />
 
-      <!-- Fingers curled under the remote (tops hidden behind it) -->
-      <g :fill="SKIN_SHADE">
+      <!-- Fingers curled under the remote (tops hidden behind it) — only when carrying it -->
+      <g v-if="props.holding" :fill="SKIN_SHADE">
         <rect x="63" y="66" width="11" height="24" rx="5.5" />
         <rect x="75" y="66" width="11" height="26" rx="5.5" />
         <rect x="87" y="66" width="11" height="26" rx="5.5" />
         <rect x="99" y="66" width="11" height="23" rx="5.5" />
       </g>
-      <g :fill="SKIN_DEEP" opacity="0.55">
+      <g v-if="props.holding" :fill="SKIN_DEEP" opacity="0.55">
         <rect x="63" y="82" width="11" height="8" rx="4" />
         <rect x="75" y="84" width="11" height="8" rx="4" />
         <rect x="87" y="84" width="11" height="8" rx="4" />
@@ -66,39 +67,101 @@ const SKIN_LIGHT = '#f6d3a9';
         </g>
       </g>
 
-      <!-- Palm / back of the hand over the remote's midsection -->
-      <path
-        d="M58,44 C58,34 66,28 78,28 C92,28 104,32 108,42 C111,50 110,60 104,66 C96,74 78,76 66,72 C58,69 55,60 56,52 C56,48 57,46 58,44 Z"
-        :fill="SKIN"
-      />
-      <!-- Knuckle bumps -->
-      <g :fill="SKIN">
-        <circle cx="70" cy="31" r="6.5" />
-        <circle cx="82" cy="29" r="6.5" />
-        <circle cx="94" cy="31" r="6.5" />
+      <!-- Palm / back of the hand over the remote's midsection (grip pose) -->
+      <g v-if="props.holding">
+        <path
+          d="M58,44 C58,34 66,28 78,28 C92,28 104,32 108,42 C111,50 110,60 104,66 C96,74 78,76 66,72 C58,69 55,60 56,52 C56,48 57,46 58,44 Z"
+          :fill="SKIN"
+        />
+        <!-- Knuckle bumps -->
+        <g :fill="SKIN">
+          <circle cx="70" cy="31" r="6.5" />
+          <circle cx="82" cy="29" r="6.5" />
+          <circle cx="94" cy="31" r="6.5" />
+        </g>
+        <!-- Knuckle shading + highlight -->
+        <g fill="none" stroke-linecap="round">
+          <path d="M65,36 q5,3 10,1" :stroke="SKIN_DEEP" stroke-width="1.6" opacity="0.7" />
+          <path d="M77,34 q5,3 10,1" :stroke="SKIN_DEEP" stroke-width="1.6" opacity="0.7" />
+          <path d="M89,36 q5,3 10,1" :stroke="SKIN_DEEP" stroke-width="1.6" opacity="0.7" />
+          <path d="M66,28 q12,-4 26,0" :stroke="SKIN_LIGHT" stroke-width="2.4" opacity="0.8" />
+        </g>
+        <!-- Palm underside shading -->
+        <path
+          d="M58,60 C70,70 92,72 104,64 C98,72 80,76 66,72 C58,69 55,64 58,60 Z"
+          :fill="SKIN_DEEP"
+          opacity="0.45"
+        />
       </g>
-      <!-- Knuckle shading + highlight -->
-      <g fill="none" stroke-linecap="round">
-        <path d="M65,36 q5,3 10,1" :stroke="SKIN_DEEP" stroke-width="1.6" opacity="0.7" />
-        <path d="M77,34 q5,3 10,1" :stroke="SKIN_DEEP" stroke-width="1.6" opacity="0.7" />
-        <path d="M89,36 q5,3 10,1" :stroke="SKIN_DEEP" stroke-width="1.6" opacity="0.7" />
-        <path d="M66,28 q12,-4 26,0" :stroke="SKIN_LIGHT" stroke-width="2.4" opacity="0.8" />
-      </g>
-      <!-- Palm underside shading -->
-      <path
-        d="M58,60 C70,70 92,72 104,64 C98,72 80,76 66,72 C58,69 55,64 58,60 Z"
-        :fill="SKIN_DEEP"
-        opacity="0.45"
-      />
 
-      <!-- Thumb reaching left to the power button -->
-      <g class="thumb">
+      <!-- Pointing hand (empty — just here to press the button) -->
+      <g v-else>
+        <!-- Back of the hand -->
+        <path
+          d="M56,42 C56,32 64,26 76,26 C90,26 102,30 106,40 C109,48 108,58 102,64 C94,72 78,74 66,70 C58,67 53,58 54,50 C54,46 55,44 56,42 Z"
+          :fill="SKIN"
+        />
+        <!-- Knuckle highlight -->
+        <path d="M64,26 q12,-4 26,0" fill="none" :stroke="SKIN_LIGHT" stroke-width="2.4" opacity="0.8" stroke-linecap="round" />
+        <!-- Curled middle/ring/pinky -->
+        <g :fill="SKIN_SHADE">
+          <circle cx="80" cy="62" r="7" />
+          <circle cx="92" cy="60" r="7" />
+          <circle cx="102" cy="56" r="6.5" />
+        </g>
+        <!-- Index finger extended down to the button -->
+        <g class="press-finger">
+          <rect x="58" y="56" width="14" height="34" rx="7" :fill="SKIN" />
+          <rect x="58" y="82" width="14" height="8" rx="4" :fill="SKIN_DEEP" opacity="0.5" />
+          <rect x="60" y="58" width="5" height="28" rx="2.5" :fill="SKIN_LIGHT" opacity="0.5" />
+        </g>
+        <!-- Thumb tucked alongside -->
+        <path
+          d="M58,44 C52,46 48,50 48,55 C48,60 52,63 56,61 C60,59 62,53 62,49 C62,46 60,44 58,44 Z"
+          :fill="SKIN_SHADE"
+        />
+      </g>
+
+      <!-- Thumb reaching left to the power button (grip pose) -->
+      <g v-if="props.holding" class="thumb">
         <path
           d="M72,36 C64,34 56,38 51,44 C48,48 48,52 51,55 C54,58 59,56 63,52 C67,48 71,43 75,41 C74,39 73,37 72,36 Z"
           :fill="SKIN"
         />
         <circle cx="51" cy="52" r="5.5" :fill="SKIN" />
         <path d="M46,50 q5,-3 9,0" :fill="SKIN_LIGHT" opacity="0.8" />
+      </g>
+
+      <!-- Fist closed around the pull-cord knob (yank pose) -->
+      <g v-if="props.yank" class="yank-motion">
+        <!-- Back of the hand -->
+        <path
+          d="M50,36 C50,26 58,20 70,20 C84,20 96,24 100,34 C103,42 102,52 96,58 C88,66 72,68 60,64 C52,61 47,52 48,44 C48,40 49,38 50,36 Z"
+          :fill="SKIN"
+        />
+        <!-- Knuckle ridges -->
+        <g :fill="SKIN">
+          <circle cx="62" cy="24" r="6" />
+          <circle cx="74" cy="22" r="6" />
+          <circle cx="86" cy="24" r="6" />
+        </g>
+        <path d="M60,20 q14,-5 28,0" fill="none" :stroke="SKIN_LIGHT" stroke-width="2.2" opacity="0.8" stroke-linecap="round" />
+        <!-- Curled fingers (fist front) -->
+        <g :fill="SKIN_SHADE">
+          <rect x="54" y="50" width="42" height="13" rx="6.5" />
+          <rect x="56" y="61" width="38" height="12" rx="6" />
+        </g>
+        <!-- Fingertips -->
+        <g :fill="SKIN">
+          <circle cx="60" cy="56" r="5.5" />
+          <circle cx="72" cy="56" r="5.5" />
+          <circle cx="84" cy="56" r="5.5" />
+        </g>
+        <!-- Thumb wrapped over the fingers -->
+        <path
+          d="M52,44 C46,46 42,50 42,55 C42,60 46,63 50,61 C54,59 56,53 56,49 C56,46 54,43 52,44 Z"
+          :fill="SKIN"
+        />
       </g>
     </svg>
   </div>
@@ -129,8 +192,20 @@ const SKIN_LIGHT = '#f6d3a9';
 .thumb {
   transition: transform 0.18s ease;
 }
+.press-finger {
+  transition: transform 0.18s ease;
+}
 .remote-hand.press .thumb {
   transform: translateY(4px);
+}
+.remote-hand.press .press-finger {
+  transform: translateY(5px);
+}
+.yank-motion {
+  transition: transform 0.22s cubic-bezier(0.5, 0, 0.8, 0.4);
+}
+.remote-hand.yank-pull .yank-motion {
+  transform: translateY(26px);
 }
 @media (prefers-reduced-motion: reduce) {
   .remote-hand {
