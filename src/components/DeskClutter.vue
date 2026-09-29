@@ -62,7 +62,7 @@
   position: absolute;
   z-index: 840;
   pointer-events: none;
-  opacity: 0.97;
+  opacity: 1;
   filter: drop-shadow(0 9px 10px rgba(24, 14, 6, 0.35));
 }
 .clutter svg {
@@ -145,10 +145,11 @@
 }
 
 
-/* ---- dim with the room ---- */
+/* ---- dim with the room (brightness, not translucency — the paper
+   underneath must never show through) ---- */
 html[data-theme='dark'] .clutter {
-  opacity: 0.8;
-  filter: drop-shadow(0 9px 10px rgba(0, 0, 0, 0.5));
+  opacity: 1;
+  filter: drop-shadow(0 9px 10px rgba(0, 0, 0, 0.5)) brightness(0.82);
 }
 html[data-blacklight='on'] .clutter {
   opacity: 0.55;

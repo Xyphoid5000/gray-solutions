@@ -2,6 +2,8 @@
 import { ref } from 'vue';
 import { siteConfig } from '../config';
 
+defineProps<{ bonusContent?: boolean }>();
+
 const hasSite = ref('');
 const formStatus = ref('');
 const showPuzzleInfo = ref(false);
@@ -78,7 +80,7 @@ function submitContactForm(event: SubmitEvent) {
         placeholder="What does your business do, who is it for, and what should your website accomplish?"
       ></textarea>
     </label>
-    <label class="field">
+    <label class="field" v-if="bonusContent">
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>

@@ -8,8 +8,8 @@ import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
 
-const emit = defineEmits(['open-book']);
-const props = defineProps<{ bookDropKey?: number }>();
+const emit = defineEmits(['open-book', 'toggle-bonus']);
+const props = defineProps<{ bookDropKey?: number; bonusContent?: boolean }>();
 
 /** The manuscript becomes a book once the reader finishes and binds it.
     Resets on refresh — every visit starts with the manuscript.
@@ -513,7 +513,22 @@ onUnmounted(() => {
             class="book3d"
             aria-hidden="true"
           >
-            <div class="b-face b-back"></div>
+            <div class="b-face b-back">
+              <button
+                type="button"
+                class="bonus-switch"
+                :class="{ on: bonusContent }"
+                @click="$emit('toggle-bonus')"
+                :aria-pressed="!!bonusContent"
+                aria-label="Toggle bonus content"
+              >
+                <span class="bs-track" aria-hidden="true"><span class="bs-thumb"></span></span>
+                <span class="bs-text" aria-hidden="true">
+                  <span class="bs-label">Bonus content</span>
+                  <span class="bs-state">{{ bonusContent ? 'On' : 'Off' }}</span>
+                </span>
+              </button>
+            </div>
             <div class="b-face b-spine"><span>Gray Solutions</span></div>
             <div class="b-face b-top"></div>
             <div class="b-face b-pages"></div>
@@ -534,6 +549,22 @@ onUnmounted(() => {
                 <p class="b-stamp">Manuscript</p>
                 <p class="b-msub">Six pages &middot; final draft</p>
               </div>
+            </div>
+            <div class="ms-back">
+              <button
+                type="button"
+                class="bonus-switch"
+                :class="{ on: bonusContent }"
+                @click="$emit('toggle-bonus')"
+                :aria-pressed="!!bonusContent"
+                aria-label="Toggle bonus content"
+              >
+                <span class="bs-track" aria-hidden="true"><span class="bs-thumb"></span></span>
+                <span class="bs-text" aria-hidden="true">
+                  <span class="bs-label">Bonus content</span>
+                  <span class="bs-state">{{ bonusContent ? 'On' : 'Off' }}</span>
+                </span>
+              </button>
             </div>
           </div>
           <canvas ref="canvasRef" class="dust-canvas" aria-hidden="true"></canvas>
@@ -560,7 +591,7 @@ onUnmounted(() => {
           straight to my inbox.
         </p>
         <div v-reveal>
-          <ContactForm />
+          <ContactForm :bonus-content="bonusContent" />
         </div>
       </div>
     </section>

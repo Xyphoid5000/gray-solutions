@@ -27,6 +27,10 @@ const showBook = ref(false);
 const homeMounted = ref(true);
 const bookMounted = ref(false);
 const cameraMoving = ref(false);
+/** Bonus content (candle, LEDs, first draft, UV light, phone, discount
+    code) lives behind a toggle on the back of the cover. Off by
+    default; session-scoped, like the bound state. */
+const bonusContent = ref(false);
 /** True while the binding's shelf beat reveals the home page's real
  * bookshelf behind the cinematic; hides the manuscript stack so the
  * filing reads clean. */
@@ -539,6 +543,7 @@ watch(lightSources, (s) => {
   if (
     s.length === 0 &&
     showBook.value &&
+    bonusContent.value &&
     !ritualRunning.value &&
     !gagRunning.value &&
     !candleGone.value
@@ -635,7 +640,12 @@ onUnmounted(() => {
   <div class="grain" aria-hidden="true"></div>
   <SiteNav @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
-    <Cover @open-book="openBook" :book-drop-key="boundBookDrop" />
+    <Cover
+      @open-book="openBook"
+      :book-drop-key="boundBookDrop"
+      :bonus-content="bonusContent"
+      @toggle-bonus="bonusContent = !bonusContent"
+    />
   </div>
   <div v-if="bookMounted" class="view view-book">
   <BookView
@@ -646,27 +656,28 @@ onUnmounted(() => {
   >
     <template #desk-props>
       <RemoteControl
+        v-if="bonusContent"
         :led-on="ledOn"
         :color="ledColor"
         @power="onRemotePower"
         @set-color="onLedColor"
       />
       <DeskCandle
-        v-if="!candleGone"
+        v-if="bonusContent && !candleGone"
         :lit="candleLit"
         :smoking="candleSmoking"
         @blow-out="onCandleBlowOut"
       />
       <!-- After the match guy quits, all that's left is this flyer. -->
-      <div v-if="candleGone" class="help-wanted-flyer" aria-hidden="true">
+      <div v-if="bonusContent && candleGone" class="help-wanted-flyer" aria-hidden="true">
         <span class="hw-tape"></span>
         <span class="hw-title">HELP<br />WANTED</span>
         <span class="hw-sub">inquire within</span>
       </div>
       <DeskPencil />
       <DeskClutter />
-      <FirstDraft />
-      <DeskPhone />
+      <FirstDraft v-if="bonusContent" />
+      <DeskPhone v-if="bonusContent" />
     </template>
   </BookView>
   </div>

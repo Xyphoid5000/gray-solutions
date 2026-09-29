@@ -30,7 +30,7 @@
   z-index: 840;
   width: 150px;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 1;
   transform:
     translate(var(--pencil-dx, 0px), var(--pencil-dy, 0px))
     rotate(calc(-14deg + var(--pencil-rot, 0deg)));

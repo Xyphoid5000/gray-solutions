@@ -425,7 +425,7 @@ onUnmounted(() => {
   background: none;
   cursor: pointer;
   transform: rotate(-10deg);
-  opacity: 0.95;
+  opacity: 1;
   transition: transform 0.25s ease;
 }
 .desk-phone-btn:hover {

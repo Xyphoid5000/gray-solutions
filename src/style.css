@@ -2667,6 +2667,118 @@ html[data-theme='dark'] .b-msub {
   color: rgba(90, 55, 30, 0.75);
 }
 
+/* ---------- bonus content toggle: the back of the cover ---------- */
+/* The manuscript's pages hide their backs so the stack has a real
+   reverse side to spin around to. */
+.ms-page {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+/* The stack needs a real 3D context so the pages' backs hide when spun. */
+.manuscript-stack {
+  transform-style: preserve-3d;
+}
+/* The back of the manuscript stack — spin it around to find the switch. */
+.ms-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--page);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+html[data-theme='dark'] .ms-back {
+  background: #d9cbb0;
+  border-color: rgba(60, 45, 30, 0.55);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(255, 170, 80, 0.08);
+}
+/* A small hardware toggle riveted to the back cover. */
+.b-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bonus-switch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 14px;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.bs-track {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #241c12;
+  border: 1px solid rgba(208, 138, 78, 0.45);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
+  position: relative;
+  flex: none;
+  transition: background 0.25s ease;
+}
+.bs-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #eec27e 0%, #c08a3e 60%, #9a6526 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s ease;
+}
+.bonus-switch.on .bs-thumb {
+  transform: translateX(20px);
+}
+.bonus-switch.on .bs-track {
+  background: #5a3a1c;
+}
+.bs-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.bs-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #c9b995;
+  white-space: nowrap;
+}
+.bs-state {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(201, 185, 149, 0.55);
+}
+.bonus-switch.on .bs-state {
+  color: #eec27e;
+}
+/* On the manuscript's paper back the engraving reads dark instead. */
+.ms-back .bs-label {
+  color: rgba(90, 55, 30, 0.88);
+}
+.ms-back .bs-state {
+  color: rgba(90, 55, 30, 0.5);
+}
+.ms-back .bonus-switch.on .bs-state {
+  color: #9a6526;
+}
+
 /* Dark mode: an open manuscript chapter is candlelit paper, not black.
    Scope-override the ink variables so text flips to dark-on-paper. */
 html[data-theme='dark'] body.has-book .chapter {
