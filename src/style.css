@@ -2545,6 +2545,19 @@ html[data-blacklight='on'] body::after {  content: '';
   opacity: 1;
   animation: led-breathe 4.2s ease-in-out infinite alternate;
 }
+/* LED mode readability: the wash tints everything, so push the
+   manuscript ink to full black and give the header CTA a dark pill
+   it can sit on. */
+html[data-led='on'] body.has-book .chapter {
+  --ink: #000000;
+  --muted: #241f16;
+}
+html[data-led='on'] .nav-contact {
+  background: rgba(8, 8, 12, 0.72);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(4px);
+}
 @keyframes led-breathe {
   from {
     opacity: 0.82;

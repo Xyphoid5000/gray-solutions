@@ -377,6 +377,7 @@ function updateLights() {
     // plain dark theme.
     ledOn.value = isDark() && showBook.value;
   }
+  document.documentElement.dataset.led = ledOn.value ? 'on' : 'off';
 }
 
 /** Leaving the book: the LED scene stays behind. Plain theme, no

@@ -471,7 +471,7 @@ html[data-theme='dark'] .phone-sheen {
   opacity: 0.3;
 }
 html[data-theme='dark'] .desk-phone-btn {
-  opacity: 0.78;
+  opacity: 1;
 }
 html[data-blacklight='on'] .desk-phone-btn {
   opacity: 0.55;
