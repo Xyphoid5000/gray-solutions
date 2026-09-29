@@ -211,10 +211,7 @@ const isDark = () => document.documentElement.dataset.theme === 'dark';
 const ledOn = ref(false);
 /** Current LED color — blue is Chris's. Drives the wash via --led. */
 const ledColor = ref('#2f6bff');
-/** The remote sits on the desk only while the lights are out. */
-const remotePlaced = ref(false);
-
-/** Light rituals: pitch-black beat, remote hand, page shake. */
+/** Light rituals: pitch-black beat, rescue hand, page shake. */
 const pitchBlack = ref(false);
 const handMounted = ref(false);
 const handArrived = ref(false);
@@ -236,13 +233,6 @@ function clearRitual() {
 
 /** Where the remote lives on the desk — the hand aims for its center.
     The remote keeps its layout box while parked, so it's measurable. */
-function measureRemoteSpot() {
-  const el = document.querySelector('.remote-control');
-  if (!el) return { x: 60, y: window.innerHeight * 0.52 };
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-}
-
 /** Plain theme switch, with the half-second palette crossfade. */
 function setThemePlain(light: boolean) {
   const root = document.documentElement;
@@ -253,16 +243,15 @@ function setThemePlain(light: boolean) {
   setTimeout(() => root.classList.remove('theme-fade'), 650);
 }
 
-/** Lights off: a beat of true darkness, then a hand slides in with
-    the LED remote, thumbs the power button — blue blooms — and leaves
-    the remote on the desk. */
-function deliverRemoteSequence() {
+/** Pitch black: the LEDs are off and it's dark. A hand reaches in,
+    yanks the cord, and the regular light comes back on. */
+function pitchBlackRescueSequence() {
   ritualRunning.value = true;
-  setThemePlain(false);
   pitchBlack.value = true;
-  handXY.value = measureRemoteSpot();
+  updateLights();
+  handXY.value = measureCordSpot();
   later(() => {
-    handHolding.value = true;
+    handHolding.value = false;
     handPress.value = false;
     handArrived.value = false;
     handMounted.value = true;
@@ -271,86 +260,45 @@ function deliverRemoteSequence() {
     }, 60);
   }, 900);
   later(() => {
-    // The thumb hits power: LEDs bloom as the black lifts.
+    // The yank: regular light on, black lifts.
     handPress.value = true;
-    ledOn.value = true;
-    pitchBlack.value = false;
-    updateLights();
-  }, 2100);
-  later(() => {
-    // The swap hides in the bloom: the placed remote appears exactly
-    // where the gripped one was, and the hand leaves empty.
-    remotePlaced.value = true;
-    handHolding.value = false;
-    handPress.value = false;
-    updateLights();
-  }, 2350);
-  later(() => {
-    handArrived.value = false;
-  }, 2500);
-  later(() => {
-    handMounted.value = false;
-    ritualRunning.value = false;
-    updateLights();
-  }, 3400);
-}
-
-/** Lights on: the hand returns, grabs the remote, and takes it away
-    as the room brightens. */
-function collectRemoteSequence() {
-  ritualRunning.value = true;
-  handXY.value = measureRemoteSpot();
-  handHolding.value = false;
-  handPress.value = false;
-  handArrived.value = false;
-  handMounted.value = true;
-  later(() => {
-    handArrived.value = true;
-  }, 60);
-  later(() => {
-    // Grab: the placed remote vanishes into the fist.
-    remotePlaced.value = false;
-    handHolding.value = true;
-  }, 900);
-  later(() => {
-    // The lights come up as the hand leaves with the remote.
     setThemePlain(true);
     ledOn.value = false;
+    pitchBlack.value = false;
     updateLights();
+  }, 1800);
+  later(() => {
     handArrived.value = false;
-  }, 1200);
+    handPress.value = false;
+  }, 2100);
   later(() => {
     handMounted.value = false;
-    handHolding.value = false;
     ritualRunning.value = false;
     updateLights();
-  }, 2100);
+  }, 2800);
+}
+
+/** Measure the pull-cord's spot for the rescue hand. */
+function measureCordSpot() {
+  const el = document.querySelector('.pull-cord');
+  if (!el) return { x: 60, y: 120 };
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 /** The cord was yanked — decide what the yank means. */
 function onCordPulled() {
   if (ritualRunning.value) return;
   const goingDark = !isDark();
-  if (showBook.value) {
-    if (goingDark && !reducedMotion()) {
-      deliverRemoteSequence();
-      return;
-    }
-    if (!goingDark && remotePlaced.value && !reducedMotion()) {
-      collectRemoteSequence();
-      return;
-    }
-    // Reduced motion (or plain state): no hand, the remote just
-    // fades in or out with the lights.
-    if (reducedMotion()) remotePlaced.value = goingDark;
-    setThemePlain(!goingDark);
-    updateLights();
-    return;
+  // The remote lives on the desk now — no hand delivery, no collection.
+  // The cord is a plain light switch.
+  if (goingDark) {
+    setThemePlain(false);
+    ledOn.value = true;
+  } else {
+    setThemePlain(true);
+    ledOn.value = false;
   }
-  // On the cover the cord is a plain light switch: regular dark mode,
-  // no LED scene.
-  remotePlaced.value = false;
-  setThemePlain(!goingDark);
   updateLights();
 }
 
@@ -373,28 +321,34 @@ function clearLedScene() {
   handArrived.value = false;
   handHolding.value = false;
   handPress.value = false;
-  remotePlaced.value = false;
   document.documentElement.classList.remove('page-shake');
   updateLights();
 }
 
-/** Entering the book while it's dark: the hand delivers the remote
-    and it lights up blue, the same as pulling the cord in the light. */
+/** Entering the book while it's dark: the LEDs are on, remote
+    already on the desk. */
 function enterBookLighting() {
   if (!isDark()) return;
-  if (reducedMotion()) {
-    remotePlaced.value = true;
-    updateLights();
-    return;
-  }
-  deliverRemoteSequence();
+  ledOn.value = true;
+  updateLights();
 }
 
 function onRemotePower() {
   if (ritualRunning.value) return;
-  // The remote just toggles the LEDs now — the UV flashlight
-  // (under the first draft) is the blacklight trigger.
+  const turningOff = ledOn.value;
   ledOn.value = !ledOn.value;
+  // Killing the LEDs in the dark leaves pitch black — the hand
+  // reaches in and yanks the cord for the regular light.
+  if (turningOff && isDark() && !reducedMotion()) {
+    pitchBlackRescueSequence();
+    return;
+  }
+  if (turningOff && isDark()) {
+    // Reduced motion: no hand, just turn the lights back on.
+    setThemePlain(true);
+    ledOn.value = false;
+  }
+  updateLights();
 }
 
 function onLedColor(hex: string) {
@@ -464,7 +418,6 @@ onUnmounted(() => {
       <RemoteControl
         :led-on="ledOn"
         :color="ledColor"
-        :placed="remotePlaced"
         @power="onRemotePower"
         @set-color="onLedColor"
       />

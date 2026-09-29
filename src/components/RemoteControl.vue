@@ -1,14 +1,11 @@
 <script setup lang="ts">
 /**
- * The LED remote. It doesn't exist in light mode — the hand delivers
- * it when the lights go out and collects it when they come back on.
- * While placed: color dots re-tint the LED wash, the power button
- * toggles the LEDs on and off.
+ * The LED remote. It lives on the desk, always. Color dots re-tint
+ * the LED wash, the power button toggles the LEDs on and off.
  */
 defineProps<{
   ledOn: boolean;
   color: string;
-  placed: boolean;
 }>();
 const emit = defineEmits<{
   power: [];
@@ -28,7 +25,6 @@ const COLORS = [
 <template>
   <div
     class="remote-control"
-    :class="{ parked: !placed }"
     role="group"
     aria-label="LED remote control"
   >
@@ -89,11 +85,6 @@ const COLORS = [
     0 6px 16px rgba(0, 0, 0, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transform: rotate(4deg);
-}
-/* Parked = not on the desk. visibility (not display) keeps its layout
-   box measurable so the hand knows where to deliver it. */
-.remote-control.parked {
-  visibility: hidden;
 }
 .remote-status {
   width: 8px;
