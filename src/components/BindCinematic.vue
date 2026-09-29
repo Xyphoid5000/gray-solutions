@@ -524,8 +524,10 @@ defineExpose({ start });
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
-.bind-stack .bind-page,
-.bind-stack .pile-page {
+/* These cards are built with document.createElement, so they never get
+   the scoped attribute — :deep() lets the styles reach them. */
+.bind-stack :deep(.bind-page),
+.bind-stack :deep(.pile-page) {
   position: absolute;
   inset: 0;
   background: var(--page);
@@ -533,13 +535,13 @@ defineExpose({ start });
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 /* In dark mode the pages stay light paper so the stamped numbers read. */
-html[data-theme='dark'] .bind-stack .bind-page,
-html[data-theme='dark'] .bind-stack .pile-page {
+html[data-theme='dark'] .bind-stack :deep(.bind-page),
+html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   background: #e8dcc2;
   border-color: rgba(60, 45, 10, 0.35);
 }
 /* Numbered stand-ins for pages not in the pile. */
-.bind-page {
+:deep(.bind-page) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -548,14 +550,14 @@ html[data-theme='dark'] .bind-stack .pile-page {
   padding: 1rem;
   text-align: center;
 }
-.bind-num {
+:deep(.bind-num) {
   font-family: var(--serif);
   font-size: 1.8rem;
   font-weight: 600;
   color: rgba(74, 52, 32, 0.6);
   user-select: none;
 }
-.bind-label {
+:deep(.bind-label) {
   font-family: var(--serif);
   font-size: 0.85rem;
   color: rgba(74, 52, 32, 0.75);
