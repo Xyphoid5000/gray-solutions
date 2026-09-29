@@ -35,6 +35,8 @@ watch(
     );
     gsap.to(book, { y: -18, duration: 0.16, ease: 'power2.out', delay: 0.7 });
     gsap.to(book, { y: 0, duration: 0.32, ease: 'bounce.out', delay: 0.86 });
+    // Once the bound book lands, the same little rock hints it spins.
+    gsap.delayedCall(1.25, spinHint);
   },
 );
 
@@ -71,6 +73,10 @@ const AWAY_Y = REST_Y + 180;
 let autoY = REST_Y;
 let manualY = 0;
 let manualX = 0;
+/** Temporary rock-to-hint-spin offset; always zero except while the
+    one-time landing wiggle is playing. */
+let wiggleY = 0;
+let wiggleTl: gsap.core.Timeline | null = null;
 let spinEnabled = false;
 let dragging = false;
 
@@ -81,10 +87,41 @@ function applySpin() {
   const book = bookRef.value;
   if (!book) return;
   gsap.set(book, {
-    rotationY: autoY + manualY,
+    rotationY: autoY + manualY + wiggleY,
     rotationX: REST_X + manualX,
     transformPerspective: 1400,
   });
+}
+
+/** One playful rock after a drop lands, hinting the cover can be spun.
+    Dies quietly if the reader grabs the book mid-wiggle. */
+function spinHint() {
+  if (reducedMotion()) return;
+  wiggleTl?.kill();
+  const w = { v: 0 };
+  wiggleTl = gsap
+    .timeline({ onComplete: () => { wiggleY = 0; applySpin(); } })
+    .to(w, {
+      v: 16,
+      duration: 0.45,
+      ease: 'power2.out',
+      onUpdate: () => { wiggleY = w.v; applySpin(); },
+    })
+    .to(w, {
+      v: 0,
+      duration: 0.7,
+      ease: 'elastic.out(1, 0.45)',
+      onUpdate: () => { wiggleY = w.v; applySpin(); },
+    });
+}
+
+/** The reader grabbed the book — the hint yields to their hand. */
+function cancelSpinHint() {
+  if (!wiggleTl) return;
+  wiggleTl.kill();
+  wiggleTl = null;
+  wiggleY = 0;
+  applySpin();
 }
 
 function updateSpinFromScroll() {
@@ -120,6 +157,7 @@ let dragCommitted = false;
 function onStagePointerDown(e: PointerEvent) {
   if (!spinEnabled) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
+  cancelSpinHint();
   dragPointerId = e.pointerId;
   dragStartX = dragLastX = e.clientX;
   dragStartY = dragLastY = e.clientY;
@@ -465,18 +503,22 @@ onMounted(() => {
     )
     .add(() => {
       // The drop is done — hand the book to the reader: draggable, and
-      // scroll-linked from here on.
+      // scroll-linked from here on. Then one little rock to hint it spins.
       autoY = REST_Y;
       manualY = 0;
       manualX = 0;
       spinEnabled = true;
       updateSpinFromScroll();
+      spinHint();
     });
 });
 
 onUnmounted(() => {
   introTl?.kill();
   introTl = null;
+  wiggleTl?.kill();
+  wiggleTl = null;
+  wiggleY = 0;
   cancelAnimationFrame(raf);
   looping = false;
   motes = [];
