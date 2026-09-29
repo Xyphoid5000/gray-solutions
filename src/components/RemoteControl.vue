@@ -3,11 +3,10 @@
  * The LED remote. It doesn't exist in light mode — the hand delivers
  * it when the lights go out and collects it when they come back on.
  * While placed: color dots re-tint the LED wash, the power button
- * drops the room into UV blacklight (and back out again).
+ * toggles the LEDs on and off.
  */
 defineProps<{
   ledOn: boolean;
-  blacklight: boolean;
   color: string;
   placed: boolean;
 }>();
@@ -36,16 +35,15 @@ const COLORS = [
     <span
       class="remote-status"
       :style="{
-        background: blacklight ? '#b46bff' : ledOn ? color : '#5a2323',
-        boxShadow: ledOn || blacklight ? `0 0 6px ${blacklight ? '#b46bff' : color}` : 'none',
+        background: ledOn ? color : '#5a2323',
+        boxShadow: ledOn ? `0 0 6px ${color}` : 'none',
       }"
       aria-hidden="true"
     ></span>
     <button
       type="button"
       class="remote-power"
-      :disabled="!ledOn && !blacklight"
-      :aria-label="blacklight ? 'Turn off the blacklight' : 'Turn on the blacklight'"
+      :aria-label="ledOn ? 'Turn off the LEDs' : 'Turn on the LEDs'"
       @click="emit('power')"
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">

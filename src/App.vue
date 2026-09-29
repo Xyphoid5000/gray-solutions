@@ -9,10 +9,10 @@ import BookView from './components/BookView.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import RemoteControl from './components/RemoteControl.vue';
 import DeskClutter from './components/DeskClutter.vue';
+import FirstDraft from './components/FirstDraft.vue';
 import DeskPhone from './components/DeskPhone.vue';
 import DeskPencil from './components/DeskPencil.vue';
 import RemoteHand from './components/RemoteHand.vue';
-import LostPage from './components/LostPage.vue';
 import { setLenis } from './lib/scroll';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
@@ -206,10 +206,8 @@ function onNavHome() {
   });
 }
 
-/** Blacklight: the LEDs die, the lost page surfaces under UV. */
-const blacklight = ref(false);
 const isDark = () => document.documentElement.dataset.theme === 'dark';
-/** The LED strip is lit: dark mode and not blacklight. */
+/** The LED strip is lit: dark mode, in the book. */
 const ledOn = ref(false);
 /** Current LED color — blue is Chris's. Drives the wash via --led. */
 const ledColor = ref('#2f6bff');
@@ -357,12 +355,11 @@ function onCordPulled() {
 }
 
 function updateLights() {
-  document.documentElement.dataset.blacklight = blacklight.value ? 'on' : 'off';
   document.documentElement.style.setProperty('--led', ledColor.value);
   if (!ritualRunning.value) {
     // The LED scene lives in the book only — the cover keeps the
     // plain dark theme.
-    ledOn.value = isDark() && !blacklight.value && showBook.value;
+    ledOn.value = isDark() && showBook.value;
   }
 }
 
@@ -384,7 +381,7 @@ function clearLedScene() {
 /** Entering the book while it's dark: the hand delivers the remote
     and it lights up blue, the same as pulling the cord in the light. */
 function enterBookLighting() {
-  if (!isDark() || blacklight.value) return;
+  if (!isDark()) return;
   if (reducedMotion()) {
     remotePlaced.value = true;
     updateLights();
@@ -393,60 +390,11 @@ function enterBookLighting() {
   deliverRemoteSequence();
 }
 
-/** Power on the remote: the LEDs die, the same beat of darkness falls
-    but holds longer, the black lifts as the page shivers — then the
-    UV washes in. */
-function uvSequence() {
-  if (!ledOn.value || ritualRunning.value) return;
-  if (reducedMotion()) {
-    blacklight.value = true;
-    updateLights();
-    return;
-  }
-  ritualRunning.value = true;
-  ledOn.value = false;
-  updateLights();
-  pitchBlack.value = true;
-  later(() => {
-    // The black lifts and the page shivers as it does — the cord
-    // swings wildly too.
-    pitchBlack.value = false;
-    document.documentElement.classList.add('page-shake');
-    window.dispatchEvent(new CustomEvent('gs:shake-cord'));
-  }, 2200);
-  later(() => {
-    blacklight.value = true;
-    updateLights();
-  }, 3000);
-  later(() => {
-    document.documentElement.classList.remove('page-shake');
-    ritualRunning.value = false;
-    updateLights();
-  }, 3200);
-}
-
-/** Power again under UV: back to the LEDs, last color remembered. */
-function exitUV() {
-  if (ritualRunning.value || !blacklight.value) return;
-  if (reducedMotion()) {
-    blacklight.value = false;
-    updateLights();
-    return;
-  }
-  ritualRunning.value = true;
-  pitchBlack.value = true;
-  later(() => {
-    blacklight.value = false;
-    pitchBlack.value = false;
-    ritualRunning.value = false;
-    updateLights();
-  }, 900);
-}
-
 function onRemotePower() {
   if (ritualRunning.value) return;
-  if (blacklight.value) exitUV();
-  else uvSequence();
+  // The remote just toggles the LEDs now — the UV flashlight
+  // (under the first draft) is the blacklight trigger.
+  ledOn.value = !ledOn.value;
 }
 
 function onLedColor(hex: string) {
@@ -455,13 +403,6 @@ function onLedColor(hex: string) {
 }
 
 function onLightsOn() {
-  blacklight.value = false;
-  updateLights();
-}
-
-function onLostPageClose() {
-  // Closing the lost page exits blacklight and the LEDs come back.
-  blacklight.value = false;
   updateLights();
 }
 
@@ -522,7 +463,6 @@ onUnmounted(() => {
     <template #desk-props>
       <RemoteControl
         :led-on="ledOn"
-        :blacklight="blacklight"
         :color="ledColor"
         :placed="remotePlaced"
         @power="onRemotePower"
@@ -530,11 +470,11 @@ onUnmounted(() => {
       />
       <DeskPencil />
       <DeskClutter />
+      <FirstDraft />
       <DeskPhone />
     </template>
   </BookView>
   </div>
-  <LostPage :visible="blacklight" @close="onLostPageClose" />
   <BindCinematic
     ref="bindCinematic"
     @done="onBindDone"

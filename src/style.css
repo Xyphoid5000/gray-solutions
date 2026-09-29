@@ -2351,6 +2351,36 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   letter-spacing: 0;
   color: var(--faint);
 }
+/* Puzzle info button by the discount code field. */
+.puzzle-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.35rem;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: baseline;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.puzzle-info-btn:hover {
+  border-color: var(--ember);
+  color: var(--ember);
+}
+.puzzle-info-text {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ember);
+  font-style: italic;
+}
 .contact-form input[type='text'],
 .contact-form input[type='email'],
 .contact-form input[type='tel'],

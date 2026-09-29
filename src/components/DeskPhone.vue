@@ -8,7 +8,7 @@
 import { ref, onUnmounted } from 'vue';
 import { sendDiscountEmail, bonusEmailConfigured } from '../lib/discountEmail';
 
-const PIN = '3172';
+const PIN = '4132';
 const MAX_ATTEMPTS = 3;
 const CHRIS_NUMBER = '3305549989';
 

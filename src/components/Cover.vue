@@ -532,7 +532,7 @@ onUnmounted(() => {
             <div class="ms-page ms-p1">
               <div class="b-manuscript-frame">
                 <p class="b-stamp">Manuscript</p>
-                <p class="b-msub">Six pages &middot; first draft</p>
+                <p class="b-msub">Six pages &middot; final draft</p>
               </div>
             </div>
           </div>
