@@ -317,17 +317,19 @@ function breezeRitual() {
 }
 
 /** Tapping the lit candle blows it out. It stays out — only the hand
-    (or the breeze) changes that. Blow it out as the only light three
-    times in a row and the match guy comes to complain; a fourth time
-    and he quits, taking the candle with him. */
+    (or the breeze) changes that. Blow out the lone candle in cycles of
+    three and the match guy comes out to complain, angrier each cycle;
+    the tenth blowout is his last — he quits, taking the candle. */
 function onCandleBlowOut() {
   if (ritualRunning.value || gagRunning.value || !candleLit.value) return;
   // Only counts when the candle was the room's only light.
   const alone = isDark() && !ledOn.value;
   if (alone && !candleGone.value) {
     blowoutCount.value += 1;
-    // Block the normal relight before the sources update fans out.
-    if (blowoutCount.value >= 3) gagRunning.value = true;
+    const n = blowoutCount.value;
+    // Cutscene blows: 3, 6, 9 — and 10 is the resignation. Block the
+    // normal relight before the sources update fans out.
+    if (n === 3 || n === 6 || n === 9 || n >= 10) gagRunning.value = true;
   }
   candleLit.value = false;
   candleSmoking.value = true;
@@ -335,9 +337,19 @@ function onCandleBlowOut() {
   setTimeout(() => {
     candleSmoking.value = false;
   }, 2600);
-  if (blowoutCount.value === 3) matchGuyGag();
-  else if (blowoutCount.value >= 4 && !candleGone.value) matchGuyQuits();
+  const n = blowoutCount.value;
+  if (n === 3) matchGuyGag(1);
+  else if (n === 6) matchGuyGag(2);
+  else if (n === 9) matchGuyGag(3);
+  else if (n >= 10 && !candleGone.value) matchGuyQuits();
 }
+
+/** The complaint ladder — wearier every cycle. */
+const GUY_LINES = [
+  "I don't know what you thought was gonna happen. I have to get more matches.",
+  'Come on, man. Really?!',
+  'Nine times! NINE! Are you doing this on purpose?!',
+] as const;
 
 /** The match guy's fuse: consecutive lone-candle blowouts this session. */
 const blowoutCount = ref(0);
@@ -378,10 +390,11 @@ function stopGuy() {
   guyLine.value = null;
 }
 
-/** Third consecutive blowout: the room stays dark, and the match guy
-    walks across the desk with a flashlight to complain — then walks
-    back with a lit match and relights the candle anyway. */
-function matchGuyGag() {
+/** Blowout 3/6/9 of the cycle: the room stays dark, and the match guy
+    walks across the desk with a flashlight to complain — angrier each
+    cycle — then walks back with a lit match and relights the candle
+    anyway. */
+function matchGuyGag(level: 1 | 2 | 3) {
   gagRunning.value = true;
   const vw = window.innerWidth;
   const wick = measureWickSpot();
@@ -403,8 +416,7 @@ function matchGuyGag() {
     guyMode.value = 'flashlight';
     guyFacing.value = 1;
     guyX.value = -160;
-    guyLine.value =
-      "I don't know what you thought was gonna happen. I have to get more matches.";
+    guyLine.value = GUY_LINES[level - 1];
     guyMounted.value = true;
     walkGuyTo(vw + 160, 180, () => {
       stopGuy();
@@ -433,7 +445,7 @@ function matchGuyGag() {
   }, 900);
 }
 
-/** Fourth consecutive blowout: he quits. Walks in from the right,
+/** Tenth consecutive blowout: he quits. Walks in from the right,
     says the line, takes the candle, and leaves. The room light comes
     back on to reveal a HELP WANTED flyer where the candle was. */
 function matchGuyQuits() {
