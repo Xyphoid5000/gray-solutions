@@ -317,9 +317,10 @@ function breezeRitual() {
 }
 
 /** Tapping the lit candle blows it out. It stays out — only the hand
-    (or the breeze) changes that. Blow out the lone candle in cycles of
-    three and the match guy comes out to complain, angrier each cycle;
-    the tenth blowout is his last — he quits, taking the candle. */
+    (or the breeze) changes that. Every fourth blowout of the lone
+    candle, the match guy comes out: three complaint cutscenes,
+    angrier each time, then the sixteenth blowout is his last — he
+    quits, taking the candle. */
 function onCandleBlowOut() {
   if (ritualRunning.value || gagRunning.value || !candleLit.value) return;
   // Only counts when the candle was the room's only light.
@@ -327,9 +328,10 @@ function onCandleBlowOut() {
   if (alone && !candleGone.value) {
     blowoutCount.value += 1;
     const n = blowoutCount.value;
-    // Cutscene blows: 3, 6, 9 — and 10 is the resignation. Block the
-    // normal relight before the sources update fans out.
-    if (n === 3 || n === 6 || n === 9 || n >= 10) gagRunning.value = true;
+    // The bit happens every 4th blowout: 4, 8, 12 — and 16 is the
+    // resignation. Block the normal relight before the sources update
+    // fans out.
+    if (n % 4 === 0) gagRunning.value = true;
   }
   candleLit.value = false;
   candleSmoking.value = true;
@@ -338,17 +340,17 @@ function onCandleBlowOut() {
     candleSmoking.value = false;
   }, 2600);
   const n = blowoutCount.value;
-  if (n === 3) matchGuyGag(1);
-  else if (n === 6) matchGuyGag(2);
-  else if (n === 9) matchGuyGag(3);
-  else if (n >= 10 && !candleGone.value) matchGuyQuits();
+  if (n === 4) matchGuyGag(1);
+  else if (n === 8) matchGuyGag(2);
+  else if (n === 12) matchGuyGag(3);
+  else if (n >= 16 && !candleGone.value) matchGuyQuits();
 }
 
 /** The complaint ladder — wearier every cycle. */
 const GUY_LINES = [
   "I don't know what you thought was gonna happen. I have to get more matches.",
   'Come on, man. Really?!',
-  'Nine times! NINE! Are you doing this on purpose?!',
+  'Twelve times! TWELVE! Are you doing this on purpose?!',
 ] as const;
 
 /** The match guy's fuse: consecutive lone-candle blowouts this session. */
@@ -390,7 +392,7 @@ function stopGuy() {
   guyLine.value = null;
 }
 
-/** Blowout 3/6/9 of the cycle: the room stays dark, and the match guy
+/** Every fourth blowout: the room stays dark, and the match guy
     walks across the desk with a flashlight to complain — angrier each
     cycle — then walks back with a lit match and relights the candle
     anyway. */
@@ -445,7 +447,7 @@ function matchGuyGag(level: 1 | 2 | 3) {
   }, 900);
 }
 
-/** Tenth consecutive blowout: he quits. Walks in from the right,
+/** Sixteenth consecutive blowout: he quits. Walks in from the right,
     says the line, takes the candle, and leaves. The room light comes
     back on to reveal a HELP WANTED flyer where the candle was. */
 function matchGuyQuits() {
