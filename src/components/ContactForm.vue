@@ -83,7 +83,7 @@ function submitContactForm(event: SubmitEvent) {
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
       <input name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" />
-      <small v-if="showPuzzleInfo" class="puzzle-info-text">Solve the hidden puzzle on this site for 20% off your site!</small>
+      <small v-if="showPuzzleInfo" class="puzzle-info-text">Solve the hidden puzzle on this site for 20% off.</small>
     </label>
     <div class="contact-submit">
       <button class="btn btn-solid" type="submit">

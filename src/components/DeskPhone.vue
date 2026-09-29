@@ -320,8 +320,19 @@ onUnmounted(() => {
 
         <!-- Locked out -->
         <div v-else-if="screen === 'locked'" class="scr scr-locked">
+          <svg class="locked-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2 1 21h22L12 2z"
+              fill="none"
+              stroke="#e5484d"
+              stroke-width="2"
+              stroke-linejoin="round"
+            />
+            <line x1="12" y1="9" x2="12" y2="14" stroke="#e5484d" stroke-width="2" stroke-linecap="round" />
+            <circle cx="12" cy="17" r="1.2" fill="#e5484d" />
+          </svg>
           <p class="locked-title">Locked</p>
-          <p class="locked-text">Too many wrong tries. The phone stays shut.</p>
+          <p class="locked-text">Too many attempts.</p>
           <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
         </div>
 
@@ -598,6 +609,10 @@ html[data-blacklight='on'] .desk-phone-btn {
 .scr-locked {
   justify-content: center;
   gap: 0.8rem;
+}
+.locked-icon {
+  width: 44px;
+  height: 44px;
 }
 .locked-title {
   font-size: 1.4rem;
