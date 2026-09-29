@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { siteConfig } from '../config';
+import { activeDiscountCode } from '../lib/discount';
 
 defineProps<{ bonusContent?: boolean }>();
 
 const hasSite = ref('');
 const formStatus = ref('');
 const showPuzzleInfo = ref(false);
+const discountError = ref('');
 
 function submitContactForm(event: SubmitEvent) {
   const form = event.currentTarget as HTMLFormElement;
@@ -18,13 +20,26 @@ function submitContactForm(event: SubmitEvent) {
   const comments = String(formData.get('comments') ?? '').trim();
   const discount = String(formData.get('discount-code') ?? '').trim();
 
+  // A code only counts if it matches the one currently on the phone.
+  discountError.value = '';
+  let discountLine = `Discount code: ${discount || '—'}`;
+  if (discount) {
+    const live = activeDiscountCode.value.trim();
+    if (live && discount.toUpperCase() === live.toUpperCase()) {
+      discountLine = `Discount code: ${live} — verified (20% off)`;
+    } else {
+      discountError.value = "That doesn't match the code on the site.";
+      return;
+    }
+  }
+
   const subject = `Website inquiry from ${name}`;
   const body = [
     `Name: ${name}`,
     `Email: ${email}`,
     `Phone: ${phone || '—'}`,
     `Existing site: ${hasSite.value === 'yes' ? `Yes — ${site}` : 'No'}`,
-    `Discount code: ${discount || '—'}`,
+    discountLine,
     '',
     comments,
   ].join('\n');
@@ -85,6 +100,7 @@ function submitContactForm(event: SubmitEvent) {
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
       <input name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" />
+      <small v-if="discountError" class="discount-error">{{ discountError }}</small>
       <small v-if="showPuzzleInfo" class="puzzle-info-text">Solve the hidden puzzle on this site for 20% off.</small>
     </label>
     <div class="contact-submit">

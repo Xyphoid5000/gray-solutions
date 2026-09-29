@@ -2,25 +2,29 @@
 /**
  * The desk phone, now tappable. Tap it to pick it up: it's PIN-locked
  * (the UV ink hides the code in four plain sentences). Three wrong
- * tries locks it for the session. Unlock it for Snake and a dial pad —
- * dialing Chris's number opens the bonus page with a 20%-off code.
+ * tries locks it for the session. Unlock it for Snake and Contacts —
+ * calling Gray Solutions reveals the 20%-off code, and if the match
+ * guy has quit, his contact appears so you can hire him back.
  */
-import { ref, onUnmounted, nextTick } from 'vue';
-import { sendDiscountEmail, bonusEmailConfigured } from '../lib/discountEmail';
+import { computed, inject, ref, onUnmounted, nextTick, type Ref } from 'vue';
+import { activeDiscountCode } from '../lib/discount';
 
 const PIN = '4132';
 const MAX_ATTEMPTS = 3;
-const CHRIS_NUMBER = '3305549989';
+
+/** The match guy's employment status, provided by the desk. */
+interface MatchGuyPhoneApi {
+  candleGone: Ref<boolean>;
+  rehire: () => void;
+}
+const matchGuy = inject<MatchGuyPhoneApi | undefined>('matchGuy', undefined);
+const guyQuit = computed(() => matchGuy?.candleGone.value ?? false);
 
 const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'dialer'>('pin');
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call'>('pin');
 const pinEntry = ref('');
 const pinAttempts = ref(0);
 const pinError = ref(false);
-
-const bonus = ref(false);
-const bonusCode = ref('');
-const bonusEmailed = ref(false);
 
 function pickUp() {
   held.value = true;
@@ -31,6 +35,10 @@ function pickUp() {
 function putDown() {
   held.value = false;
   stopSnake();
+  if (callTimer !== null) {
+    clearTimeout(callTimer);
+    callTimer = null;
+  }
 }
 
 function pressDigit(d: string) {
@@ -222,36 +230,72 @@ function onKey(e: KeyboardEvent) {
   else if (e.key === 'ArrowRight') steer(1, 0);
 }
 
-/* ---------------- Dialer ---------------- */
-const dialDigits = ref('');
-const dialNote = ref('');
-function dialKey(k: string) {
-  if (dialDigits.value.length >= 14) return;
-  dialNote.value = '';
-  dialDigits.value += k;
+/* ---------------- Contacts ---------------- */
+interface Contact {
+  id: string;
+  name: string;
+  /** The punchline when they don't pick up. */
+  note: string;
+  special?: 'gray' | 'guy';
 }
-function dialBack() {
-  dialDigits.value = dialDigits.value.slice(0, -1);
-  dialNote.value = '';
+const contacts = computed<Contact[]>(() => [
+  { id: 'gray', name: 'Gray Solutions', note: '', special: 'gray' },
+  { id: 'pizza', name: 'Pizza Palace', note: 'Nobody picks up. Rude.' },
+  { id: 'blockbuster', name: 'Blockbuster Video', note: 'This number has been disconnected since 2013.' },
+  { id: 'mom', name: 'Mom', note: "She'll call you back. She always does." },
+  { id: 'tech', name: 'Tech Support', note: 'Have you tried turning it off and on again?' },
+  { id: 'void', name: 'The Void', note: 'It stares back.' },
+  { id: 'dentist', name: 'Dentist', note: 'You have 3 missed cleanings.' },
+  { id: 'snake-line', name: '1-800-SNAKE', note: "…It's just hissing." },
+  // He quit over the candle. Call him and he'll come back.
+  ...(guyQuit.value
+    ? [{ id: 'guy', name: 'Match Guy', note: '', special: 'guy' } as Contact]
+    : []),
+]);
+
+const callContact = ref<Contact | null>(null);
+const callStatus = ref<'calling' | 'connected' | 'noanswer'>('calling');
+let callTimer: number | null = null;
+
+function openContacts() {
+  screen.value = 'contacts';
 }
-function dialCall() {
-  const num = dialDigits.value.replace(/\D/g, '');
-  if (num.endsWith(CHRIS_NUMBER)) {
-    unlockBonus();
-  } else if (num.length === 0) {
-    dialNote.value = 'Dial a number first.';
+function startCall(c: Contact) {
+  callContact.value = c;
+  callStatus.value = 'calling';
+  screen.value = 'call';
+  if (callTimer !== null) clearTimeout(callTimer);
+  if (c.special === 'gray') {
+    // Gray Solutions always answers. The code is minted once per visit.
+    callTimer = window.setTimeout(() => {
+      if (!activeDiscountCode.value) activeDiscountCode.value = makeCode();
+      callStatus.value = 'connected';
+    }, 1400);
+  } else if (c.special === 'guy') {
+    // He agrees to come back — hang up so you can watch him walk in.
+    callTimer = window.setTimeout(() => {
+      callStatus.value = 'connected';
+      callTimer = window.setTimeout(() => {
+        putDown();
+        matchGuy?.rehire();
+      }, 1300);
+    }, 1400);
   } else {
-    dialNote.value = 'That number is not in service. Curious, though.';
+    callTimer = window.setTimeout(() => {
+      callStatus.value = 'noanswer';
+    }, 1600);
   }
 }
-function prettyDial(): string {
-  const d = dialDigits.value.replace(/\D/g, '');
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}-${d.slice(3)}`;
-  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6, 10)}`;
+function endCall() {
+  if (callTimer !== null) {
+    clearTimeout(callTimer);
+    callTimer = null;
+  }
+  callContact.value = null;
+  screen.value = 'contacts';
 }
 
-/* ---------------- Bonus ---------------- */
+/* ---------------- Bonus code ---------------- */
 function makeCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s = '';
@@ -260,16 +304,10 @@ function makeCode(): string {
   }
   return `CURIOUS-${s}`;
 }
-async function unlockBonus() {
-  bonusCode.value = makeCode();
-  bonus.value = true;
-  held.value = false;
-  stopSnake();
-  bonusEmailed.value = await sendDiscountEmail(bonusCode.value);
-}
 
 onUnmounted(() => {
   stopSnake();
+  if (callTimer !== null) clearTimeout(callTimer);
 });
 </script>
 
@@ -344,9 +382,9 @@ onUnmounted(() => {
               <span class="app-glyph app-snake" aria-hidden="true"></span>
               Snake
             </button>
-            <button type="button" class="app-icon" @click="screen = 'dialer'">
-              <span class="app-glyph app-phone" aria-hidden="true"></span>
-              Phone
+            <button type="button" class="app-icon" @click="openContacts">
+              <span class="app-glyph app-contacts" aria-hidden="true"></span>
+              Contacts
             </button>
           </div>
           <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
@@ -373,41 +411,44 @@ onUnmounted(() => {
           <p class="snake-hint">Swipe to steer</p>
         </div>
 
-        <!-- Dialer -->
-        <div v-else-if="screen === 'dialer'" class="scr scr-dialer">
-          <div class="dial-display" aria-live="polite">{{ prettyDial() || ' ' }}</div>
-          <p v-if="dialNote" class="dial-note">{{ dialNote }}</p>
-          <div class="dial-pad">
-            <button v-for="k in ['1','2','3','4','5','6','7','8','9','*','0','#']" :key="k" type="button" @click="dialKey(k)">
-              {{ k }}
-            </button>
+        <!-- Contacts -->
+        <div v-else-if="screen === 'contacts'" class="scr scr-contacts">
+          <div class="contacts-head">
+            <button type="button" class="snake-back" @click="screen = 'home'" aria-label="Back">‹</button>
+            <span>Contacts</span>
           </div>
-          <div class="dial-actions">
-            <button type="button" class="dial-back-btn" @click="dialBack" aria-label="Delete digit">⌫</button>
-            <button type="button" class="dial-call" @click="dialCall" aria-label="Call">Call</button>
-            <button type="button" class="dial-home-btn" @click="screen = 'home'" aria-label="Back">‹</button>
+          <ul class="contacts-list">
+            <li v-for="c in contacts" :key="c.id">
+              <button type="button" class="contact-row" @click="startCall(c)">
+                <span class="contact-avatar" aria-hidden="true">{{ c.name.charAt(0) }}</span>
+                <span class="contact-name">{{ c.name }}</span>
+                <span class="contact-call" aria-hidden="true">Call</span>
+              </button>
+            </li>
+          </ul>
+          <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
+        </div>
+
+        <!-- Call -->
+        <div v-else-if="screen === 'call'" class="scr scr-call">
+          <p class="call-name">{{ callContact?.name }}</p>
+          <p v-if="callStatus === 'calling'" class="call-status">Calling…</p>
+          <div v-else-if="callStatus === 'connected' && callContact?.special === 'gray'" class="call-code">
+            <p class="call-thanks">Thanks for calling Gray Solutions!</p>
+            <p class="call-code-value">{{ activeDiscountCode }}</p>
+            <p class="call-code-note">Mention it in the contact form for <strong>20% off</strong> your new website.</p>
           </div>
+          <p v-else-if="callStatus === 'connected'" class="call-status">“Fine. I’ll come back.”</p>
+          <p v-else class="call-status">{{ callContact?.note }}</p>
+          <button
+            v-if="!(callStatus === 'connected' && callContact?.special === 'guy')"
+            type="button"
+            class="call-end"
+            @click="endCall"
+            aria-label="End call"
+          >End</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Bonus page -->
-  <div v-if="bonus" class="bonus-overlay" role="dialog" aria-label="Bonus: 20 percent off">
-    <div class="bonus-card">
-      <p class="bonus-kicker">For the curious</p>
-      <h2 class="bonus-title">Your curiosity paid off.</h2>
-      <p class="bonus-text">
-        You found the phone, cracked the PIN, and dialed the number.
-        Here's <strong>20% off</strong> your new website:
-      </p>
-      <p class="bonus-code">{{ bonusCode }}</p>
-      <p class="bonus-text small">
-        Mention it in the contact form.
-        <span v-if="bonusEmailed">A copy just landed in Chris's inbox.</span>
-        <span v-else-if="bonusEmailConfigured()">Chris's inbox is getting a copy too.</span>
-      </p>
-      <button type="button" class="btn btn-solid" @click="bonus = false">Nice. Back to poking around</button>
     </div>
   </div>
 </template>
@@ -673,19 +714,32 @@ html[data-blacklight='on'] .desk-phone-btn {
   background: #7ee787;
   box-shadow: -8px -8px 0 -2px #7ee787;
 }
-.app-phone {
-  background: linear-gradient(135deg, #1c2f4a, #2f6bff);
+.app-contacts {
+  background: linear-gradient(135deg, #3a2b12, #b07d2b);
   position: relative;
 }
-.app-phone::after {
+.app-contacts::after {
   content: '';
   position: absolute;
-  left: 20px;
-  top: 14px;
-  width: 18px;
-  height: 30px;
-  border-radius: 5px;
-  border: 2.5px solid #cfe0ff;
+  left: 19px;
+  top: 12px;
+  width: 20px;
+  height: 26px;
+  border-radius: 4px;
+  background: #f3e3c2;
+  box-shadow: 0 0 0 2.5px #8a6420;
+}
+.app-contacts::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  top: 17px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8a6420;
+  box-shadow: 0 13px 0 -1px #8a6420;
+  z-index: 1;
 }
 
 /* Snake */
@@ -726,124 +780,130 @@ html[data-blacklight='on'] .desk-phone-btn {
   margin: 0.7rem 0 0;
 }
 
-/* Dialer */
-.dial-display {
-  min-height: 2.6rem;
-  font-size: 1.5rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  margin-bottom: 0.4rem;
+/* Contacts */
+.scr-contacts {
+  padding-top: 3rem;
 }
-.dial-note {
-  font-size: 0.78rem;
-  color: #8b93a5;
-  margin: 0 0 0.8rem;
-  min-height: 1.1em;
-  text-align: center;
-}
-.dial-pad {
-  display: grid;
-  grid-template-columns: repeat(3, 64px);
-  gap: 0.55rem;
-  justify-content: center;
-}
-.dial-pad button {
-  width: 64px;
-  height: 52px;
-  border-radius: 0.8rem;
-  border: 1px solid #2c313a;
-  background: #141821;
-  color: #e8ecf3;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-.dial-pad button:active {
-  background: #232a38;
-}
-.dial-actions {
+.contacts-head {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.8rem;
+  width: 100%;
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e8ecf3;
 }
-.dial-back-btn,
-.dial-home-btn {
+.contacts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.contact-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.5rem 0.4rem;
   background: none;
   border: 0;
-  color: #8b93a5;
-  font-size: 1.3rem;
+  border-bottom: 1px solid #1a2030;
+  color: #e8ecf3;
   cursor: pointer;
-  padding: 0.5rem;
+  text-align: left;
 }
-.dial-call {
-  width: 76px;
-  height: 76px;
+.contact-row:active {
+  background: #141a26;
+}
+.contact-avatar {
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  border: 0;
-  background: #2f9e44;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.dial-call:active {
-  background: #267d36;
-}
-
-/* ---- bonus page ---- */
-.bonus-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1700;
+  background: #232c38;
+  color: #9fb4d8;
   display: grid;
   place-items: center;
-  padding: 1.5rem;
-  background: rgba(5, 6, 8, 0.82);
-  backdrop-filter: blur(4px);
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: none;
 }
-.bonus-card {
-  width: min(420px, 92vw);
-  background: #10131a;
-  border: 1px solid #2c313a;
-  border-radius: 1.2rem;
-  padding: 2rem 1.6rem;
-  text-align: center;
-  color: #e8ecf3;
-  animation: phone-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+.contact-name {
+  font-size: 0.9rem;
+  flex: 1;
 }
-.bonus-kicker {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 0.7rem;
+.contact-call {
+  font-size: 0.72rem;
   color: #5aa9ff;
-  margin: 0 0 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
-.bonus-title {
-  font-size: 1.5rem;
-  margin: 0 0 0.8rem;
+
+/* Call */
+.scr-call {
+  justify-content: center;
+  gap: 0.7rem;
+  text-align: center;
 }
-.bonus-text {
-  font-size: 0.92rem;
-  color: #aab3c5;
-  margin: 0 0 1rem;
-  line-height: 1.55;
+.call-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
 }
-.bonus-text.small {
-  font-size: 0.8rem;
+.call-status {
+  font-size: 0.9rem;
+  color: #8b93a5;
+  margin: 0;
+  max-width: 24ch;
+  line-height: 1.5;
 }
-.bonus-code {
+.call-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+.call-thanks {
+  font-size: 0.95rem;
+  color: #e8ecf3;
+  margin: 0;
+}
+.call-code-value {
   font-family: ui-monospace, monospace;
-  font-size: 1.6rem;
-  letter-spacing: 0.1em;
+  font-size: 1.25rem;
+  letter-spacing: 0.08em;
   color: #7ee787;
   background: #0d1410;
   border: 1px dashed #2f6b3a;
   border-radius: 0.7rem;
-  padding: 0.9rem;
-  margin: 0 0 1rem;
+  padding: 0.7rem 0.9rem;
+  margin: 0;
 }
-.bonus-card .btn {
-  margin-top: 0.4rem;
+.call-code-note {
+  font-size: 0.78rem;
+  color: #8b93a5;
+  margin: 0;
+  max-width: 26ch;
+  line-height: 1.5;
+}
+.call-end {
+  margin-top: 1.2rem;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 0;
+  background: #c92a2a;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.call-end:active {
+  background: #a61e1e;
 }
 
 @media (max-width: 640px) {
@@ -855,8 +915,7 @@ html[data-blacklight='on'] .desk-phone-btn {
 }
 @media (prefers-reduced-motion: reduce) {
   .phone-notif,
-  .phone-device,
-  .bonus-card {
+  .phone-device {
     animation: none;
   }
 }

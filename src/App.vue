@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -367,7 +367,7 @@ const gagRunning = ref(false);
 /** The walker himself. */
 const guyMounted = ref(false);
 const guyX = ref(-160);
-const guyMode = ref<'flashlight' | 'match' | 'carry'>('flashlight');
+const guyMode = ref<'flashlight' | 'match' | 'carry' | 'empty'>('flashlight');
 const guyFacing = ref<1 | -1>(1);
 const guyLine = ref<string | null>(null);
 let guyTimer: ReturnType<typeof setInterval> | null = null;
@@ -494,6 +494,54 @@ function matchGuyQuits() {
     });
   }, 900);
 }
+
+/** The match guy un-quits — hired back from the phone's contacts. He
+    walks back in with the candle, sets it down where the flyer was,
+    and leaves. Fresh fuse: the blowout count resets. */
+function rehireMatchGuy() {
+  if (!candleGone.value || gagRunning.value || ritualRunning.value) return;
+  blowoutCount.value = 0;
+  const vw = window.innerWidth;
+  if (reducedMotion()) {
+    candleGone.value = false;
+    updateLights();
+    return;
+  }
+  gagRunning.value = true;
+  // The flyer sits where the candle was.
+  const flyer = document.querySelector('.help-wanted-flyer');
+  const spotX = flyer
+    ? flyer.getBoundingClientRect().left + flyer.getBoundingClientRect().width / 2
+    : measureWickSpot().x;
+  guyMode.value = 'carry';
+  guyFacing.value = -1;
+  guyX.value = vw + 160;
+  guyLine.value = "Fine. I'm back.";
+  guyMounted.value = true;
+  walkGuyTo(spotX + 34, 180, () => {
+    later(() => {
+      // He sets the candle down and the flyer comes with him.
+      guyLine.value = null;
+      candleGone.value = false;
+      guyMode.value = 'empty';
+      updateLights();
+      later(() => {
+        guyFacing.value = 1;
+        walkGuyTo(vw + 160, 180, () => {
+          stopGuy();
+          gagRunning.value = false;
+        });
+      }, 500);
+    }, 900);
+  });
+}
+
+/** The desk phone's contacts can see whether the match guy has quit
+    and hire him back. */
+provide('matchGuy', {
+  candleGone,
+  rehire: rehireMatchGuy,
+});
 
 /** The cord was yanked — decide what the yank means. */
 function onCordPulled() {

@@ -3,13 +3,14 @@
  * The match guy: a little silhouette who walks across the desk when the
  * candle gets blown out too many times in a row. Flashlight mode for the
  * complaint walk, match mode for the relight run, carry mode when he
- * quits and takes the candle with him. The parent drives his x; he
- * handles the walk cycle and the speech bubble.
+ * quits and takes the candle with him — and empty mode for the walk off
+ * after he sets it back down. The parent drives his x; he handles the
+ * walk cycle and the speech bubble.
  */
 defineProps<{
   /** Viewport x of his anchor (his center). */
   x: number;
-  mode: 'flashlight' | 'match' | 'carry';
+  mode: 'flashlight' | 'match' | 'carry' | 'empty';
   /** 1 = walking right, -1 = walking left. */
   facing: 1 | -1;
   /** Speech bubble text; null hides the bubble. */
@@ -38,7 +39,7 @@ defineProps<{
         <polygon points="94,46 94,60 250,108 250,4" fill="url(#mg-beam)" />
       </g>
       <!-- match / carried-candle glow -->
-      <g v-if="mode !== 'flashlight'">
+      <g v-if="mode === 'match' || mode === 'carry'">
         <circle :cx="mode === 'match' ? 104 : 87" cy="42" r="32" fill="url(#mg-glow)" />
       </g>
       <!-- legs: opposite-phase swing is the walk -->
