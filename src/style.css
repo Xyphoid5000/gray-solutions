@@ -1278,7 +1278,7 @@ body.has-book .chapter.book-page {
 .read-pile {
   position: absolute;
   left: 20px;
-  top: 22vh;
+  top: 10vh;
   width: 104px;
   height: 140px;
   z-index: 800;
