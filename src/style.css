@@ -2880,10 +2880,6 @@ html[data-theme='dark'] body.has-book .chapter {
 .manuscript-desk {
   position: relative;
   min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   /* Mahogany desk. */
   background-color: #2a140c;
   background-image:
@@ -2942,9 +2938,13 @@ html[data-theme='dark'] body.has-book .chapter {
   bottom: auto;
   left: auto;
   right: auto;
-  width: min(640px, 100%);
-  max-width: none;
+  width: auto;
+  max-width: 640px;
+  margin-inline: auto;
   pointer-events: auto;
+  /* Center vertically on the desk: page is ~62vh, desk is 100vh. */
+  margin-top: 14vh;
+  margin-bottom: 14vh;
 }
 /* Pages you're not on are fully rendered behind the current one; clip
    their paper to the wrap so a tall hidden chapter can't stretch the
