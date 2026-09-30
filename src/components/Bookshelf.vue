@@ -325,7 +325,7 @@ function toggleOurs(ev: Event) {
   pointer-events: none;
 }
 .bookshelf-hero.is-backdrop .bs-case {
-  /* Same size as interactive — no scale difference. */
+  /* Scale is on the base .bs-case — all modes match. */
 }
 .bs-blur-veil {
   position: absolute;
@@ -353,6 +353,7 @@ function toggleOurs(ev: Event) {
   border-right: 14px solid transparent;
   border-image: linear-gradient(to bottom, #4a2e18, #2b1a0e) 1;
   padding: 0 10px;
+  transform: scale(1.35);
 }
 .bs-cornice {
   height: 18px;
