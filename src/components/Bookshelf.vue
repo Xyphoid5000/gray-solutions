@@ -30,31 +30,18 @@ interface ShelfBook {
   synopsis: string;
 }
 
-const topShelf: ShelfBook[] = [
-  { title: 'Moby-Dick', color: '#4a1f1f', h: 232, w: 46, synopsis: 'A man becomes dangerously obsessed with a fish. 600 pages.' },
+/** The shelf: one set of 5 books, used identically everywhere.
+    (Moby-Dick and The Odyssey were cut — the row only fits five.) */
+const SHELF_BOOKS: ShelfBook[] = [
   { title: 'Pride and Prejudice', color: '#1f3a5a', h: 212, w: 40, synopsis: 'Two people who are perfect for each other spend 400 pages pretending they are not.' },
   { title: 'Frankenstein', color: '#2e4a2e', h: 244, w: 48, synopsis: 'A college dropout builds a man, then complains about it for the rest of his life.' },
   { title: 'Jane Eyre', color: '#5a3a1f', h: 222, w: 42, synopsis: 'An orphan gets a job, falls for her boss, discovers he hid his wife in the attic. As you do.' },
-];
-const bottomLeft: ShelfBook[] = [
   { title: 'Dracula', color: '#3a1f3a', h: 236, w: 44, synopsis: 'A group chat of Victorians try to cancel a vampire. Told entirely through emails.' },
   { title: 'Wuthering Heights', color: '#1f4a4a', h: 206, w: 38, synopsis: 'Two terrible people are terrible to each other on a windy hill. Everyone suffers.' },
 ];
-const bottomRight: ShelfBook[] = [
-  { title: 'The Odyssey', color: '#4a4a1f', h: 226, w: 44, synopsis: 'A man takes 10 years to get home from work. His wife fends off 108 suitors.' },
-];
-
-const backdropBooks: ShelfBook[] = [
-  ...topShelf,
-  ...bottomLeft,
-  ...bottomRight,
-];
-/** Backdrop mode: the same shelf, cropped to fit the single-shelf
-    backdrop — outer two books removed so the row doesn't overflow
-    the bookcase. Split around the binding slot. */
-const backdropTrimmed = backdropBooks.slice(1, -1);
-const backdropLeft = backdropTrimmed.slice(0, 3);
-const backdropRight = backdropTrimmed.slice(3);
+/** Split around the binding slot: 3 left, 2 right. */
+const shelfLeft = SHELF_BOOKS.slice(0, 3);
+const shelfRight = SHELF_BOOKS.slice(3);
 
 /** The currently selected (floating) book, by title. Null when none. */
 const selected = ref<string | null>(null);
@@ -179,7 +166,7 @@ function toggleOurs(ev: Event) {
         <div class="bs-shelf">
           <div class="bs-books">
             <div
-              v-for="b in backdropLeft"
+              v-for="b in shelfLeft"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
@@ -190,7 +177,7 @@ function toggleOurs(ev: Event) {
               <div class="bs-ours"><span>Gray Solutions</span></div>
             </div>
             <div
-              v-for="b in backdropRight"
+              v-for="b in shelfRight"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
@@ -205,30 +192,7 @@ function toggleOurs(ev: Event) {
       <div class="bs-shelf">
         <div class="bs-books">
           <button
-            v-for="b in topShelf"
-            :key="b.title"
-            type="button"
-            class="bs-book"
-            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
-            :aria-label="b.title"
-            @click="interactive && toggleBook(b, $event)"
-          >
-            <span class="bs-spine-label">{{ b.title }}</span>
-            <span class="bs-face bs-front" aria-hidden="true">
-              <span class="bs-front-title">{{ b.title }}</span>
-            </span>
-            <span class="bs-face bs-back" aria-hidden="true">
-              <span class="bs-back-text">{{ b.synopsis }}</span>
-            </span>
-          </button>
-        </div>
-        <div class="bs-plank"></div>
-      </div>
-      <div class="bs-shelf">
-        <div class="bs-books">
-          <button
-            v-for="b in bottomLeft"
+            v-for="b in shelfLeft"
             :key="b.title"
             type="button"
             class="bs-book"
@@ -271,7 +235,7 @@ function toggleOurs(ev: Event) {
             <div v-else-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
           <button
-            v-for="b in bottomRight"
+            v-for="b in shelfRight"
             :key="b.title"
             type="button"
             class="bs-book"
