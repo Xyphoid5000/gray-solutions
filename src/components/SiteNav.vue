@@ -11,13 +11,37 @@ const emit = defineEmits<{
 }>();
 
 /** The cord lives here but only while bonus content is on. It mounts
-    tucked up out of sight; `dropCord` lets it fall from behind the
-    header, and `retractCord` sends it back up before it unmounts. The
-    drop plays on the wrapper so it never fights the cord's own sway. */
+    folded up to the right of its base, out of sight; `dropCord` swings
+    it down around its mount like a pendulum unfolding, and
+    `retractCord` folds it back up before it unmounts. The swing plays on
+    the wrapper so it never fights the cord's own sway. */
 const cordWrap = ref<HTMLElement | null>(null);
 let cordResting = false;
+/** Folded pose: tucked up to the right of the base, off-screen. */
+const FOLDED = -150;
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Park the cord folded up around its mount (the bracket under the G.),
+    so the drop always starts attached at the base. */
+function foldUp() {
+  const el = cordWrap.value;
+  if (!el || cordResting) return;
+  const cord = el.querySelector('.pull-cord');
+  const wr = el.getBoundingClientRect();
+  let ox = wr.width / 2;
+  let oy = wr.height / 2;
+  if (cord) {
+    const r = cord.getBoundingClientRect();
+    ox = r.left + r.width / 2 - wr.left;
+    oy = r.top - wr.top;
+  }
+  gsap.set(el, {
+    transformOrigin: `${ox}px ${oy}px`,
+    rotation: FOLDED,
+    visibility: 'hidden',
+  });
+}
 
 watch(
   () => props.bonusContent,
@@ -26,33 +50,30 @@ watch(
       cordResting = false;
       return;
     }
-    nextTick(() => {
-      const el = cordWrap.value;
-      if (!el || cordResting) return;
-      gsap.set(el, { y: -260, visibility: 'hidden' });
-    });
+    nextTick(foldUp);
   },
   { immediate: true },
 );
 
-/** Let the cord fall from behind the header, bounce, and settle. */
+/** Swing the cord down from the right side of its base and let it
+    settle into its sway. */
 function dropCord() {
   const el = cordWrap.value;
   if (!el || cordResting) return;
   cordResting = true;
   if (reducedMotion()) {
-    gsap.set(el, { y: 0, visibility: 'visible' });
+    gsap.set(el, { rotation: 0, visibility: 'visible' });
     return;
   }
   gsap.set(el, { visibility: 'visible' });
   gsap.fromTo(
     el,
-    { y: -260 },
-    { y: 0, duration: 0.9, ease: 'bounce.out' },
+    { rotation: FOLDED },
+    { rotation: 0, duration: 1.15, ease: 'elastic.out(1, 0.32)' },
   );
 }
 
-/** Slide the cord back up behind the header, then hand back control. */
+/** Fold the cord back up to the right of its base, then hand back. */
 function retractCord(done: () => void) {
   const el = cordWrap.value;
   if (!el || !cordResting) {
@@ -65,8 +86,8 @@ function retractCord(done: () => void) {
     return;
   }
   gsap.to(el, {
-    y: -260,
-    duration: 0.45,
+    rotation: FOLDED,
+    duration: 0.5,
     ease: 'power2.in',
     onComplete: () => {
       gsap.set(el, { visibility: 'hidden' });

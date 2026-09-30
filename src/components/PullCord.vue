@@ -142,14 +142,7 @@ const onClick = (e: MouseEvent) => {
 };
 
 onMounted(() => {
-  // The page always opens in light mode — the LEDs stay off until
-  // the reader pulls the cord.
-  document.documentElement.dataset.theme = 'light';
-  try {
-    localStorage.removeItem('gs-theme');
-  } catch {
-    /* ignore */
-  }
+  // App forces the opening theme; the cord just sways and reports yanks.
   startSway();
   window.addEventListener('pointermove', onPointerMove, { passive: true });
   window.addEventListener('pointerup', onPointerUp);

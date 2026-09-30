@@ -647,8 +647,9 @@ function onLedColor(hex: string) {
 }
 
 /** The bonus switch on the back of the stack. Turning it on arms the
-    pull cord's drop from behind the header; turning it off retracts
-    the cord first, then the site goes back to its clean, lit self.
+    pull cord's swing-down from behind the header; turning it off folds
+    the cord back up first, then the site goes back to its clean, lit
+    self.
     Lights always come back on here — otherwise toggling off while dark
     would strand the site in the dark with no switch left to pull. */
 function toggleBonus() {
@@ -692,6 +693,15 @@ let themeObs: MutationObserver | null = null;
 let lenis: Lenis | null = null;
 
 onMounted(() => {
+  // The page always opens in light mode — the LEDs stay off until the
+  // reader pulls the cord. This used to live in PullCord, but the cord
+  // only mounts once bonus content is on, so it has to run regardless.
+  document.documentElement.dataset.theme = 'light';
+  try {
+    localStorage.removeItem('gs-theme');
+  } catch {
+    /* ignore */
+  }
   updateLights();
   themeObs = new MutationObserver(updateLights);
   themeObs.observe(document.documentElement, {
