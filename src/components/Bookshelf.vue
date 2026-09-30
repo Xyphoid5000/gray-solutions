@@ -325,7 +325,7 @@ function toggleOurs(ev: Event) {
   pointer-events: none;
 }
 .bookshelf-hero.is-backdrop .bs-case {
-  transform: scale(1.35);
+  /* Same size as interactive — no scale difference. */
 }
 .bs-blur-veil {
   position: absolute;
