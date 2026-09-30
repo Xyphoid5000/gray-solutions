@@ -20,17 +20,16 @@ onMounted(() => {
     return;
   }
   const vh = window.innerHeight;
-  gsap.set(pagesEl.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
+  gsap.set(pagesEl.children, { y: -vh * 0.6, opacity: 1, rotation: 0 });
 
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   });
-  // Pages fall through and off the bottom.
+  // Pages fall through and off the bottom, fully opaque.
   tl.to(
     pagesEl.children,
     {
       y: vh * 1.2,
-      opacity: 1,
       rotation: () => gsap.utils.random(-8, 8),
       duration: 1.8,
       ease: 'power2.in',
