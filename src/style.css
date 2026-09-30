@@ -1313,9 +1313,9 @@ body.has-book .chapter.book-page {
     rotate(var(--pile-rot, 0deg));
   pointer-events: none;
 }
-/* Pile scatter: finished pages float over the open page, centered on the viewport. */
+/* Pile scatter: finished pages float over the open page, centered on the desk. */
 .pile-scatter {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 700;
   display: grid;
