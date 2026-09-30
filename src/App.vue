@@ -784,7 +784,32 @@ onUnmounted(() => {
     v-if="showOpenTransition"
     :bonus-content="bonusContent"
     @done="onOpenTransitionDone"
-  />
+  >
+    <template #desk-props>
+      <RemoteControl
+        v-if="bonusContent"
+        :led-on="ledOn"
+        :color="ledColor"
+        @power="onRemotePower"
+        @set-color="onLedColor"
+      />
+      <DeskCandle
+        v-if="bonusContent && !candleGone"
+        :lit="candleLit"
+        :smoking="candleSmoking"
+        @blow-out="onCandleBlowOut"
+      />
+      <div v-if="bonusContent && candleGone" class="help-wanted-flyer" aria-hidden="true">
+        <span class="hw-tape"></span>
+        <span class="hw-title">HELP<br />WANTED</span>
+        <span class="hw-sub">inquire within</span>
+      </div>
+      <DeskPencil />
+      <DeskClutter />
+      <FirstDraft v-if="bonusContent" />
+      <DeskPhone v-if="bonusContent" />
+    </template>
+  </OpenTransition>
   <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->

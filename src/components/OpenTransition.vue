@@ -1,14 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
-import Bookshelf from './Bookshelf.vue';
-import BookView from './BookView.vue';
-import DeskClutter from './DeskClutter.vue';
-import DeskPencil from './DeskPencil.vue';
-import DeskCandle from './DeskCandle.vue';
-import DeskPhone from './DeskPhone.vue';
-import FirstDraft from './FirstDraft.vue';
-import RemoteControl from './RemoteControl.vue';
+import Room from './Room.vue';
 
 const emit = defineEmits(['done']);
 
@@ -19,19 +12,19 @@ withDefaults(
   { bonusContent: false },
 );
 
-const roomRef = ref<HTMLElement | null>(null);
+const roomRef = ref<InstanceType<typeof Room> | null>(null);
 const pagesRef = ref<HTMLElement | null>(null);
 const showBook = ref(false);
 
 onMounted(() => {
-  const room = roomRef.value;
+  const roomEl = roomRef.value?.$el as HTMLElement | undefined;
   const pages = pagesRef.value;
-  if (!room || !pages) {
+  if (!roomEl || !pages) {
     emit('done');
     return;
   }
   const vh = window.innerHeight;
-  gsap.set(room, { y: 0 });
+  gsap.set(roomEl, { y: 0 });
   gsap.set(pages.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
 
   const tl = gsap.timeline({
@@ -55,32 +48,23 @@ onMounted(() => {
   tl.call(() => { showBook.value = true; }, [], 1.8);
   // The whole room shifts up: shelf exits top, desk (with BookView
   // already on it) rises into view.
-  tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 2.0);
+  tl.to(roomEl, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 2.0);
   tl.to({}, { duration: 0.5 });
 });
 </script>
 
 <template>
   <div class="open-transition" aria-hidden="true">
-    <div ref="roomRef" class="ot-room">
-      <div class="ot-shelf">
-        <Bookshelf backdrop />
-      </div>
-      <div class="ot-desk">
-        <div v-if="showBook" class="ot-book">
-          <BookView>
-            <template #desk-props>
-              <RemoteControl v-if="bonusContent" :led-on="false" color="#ff0000" />
-              <DeskCandle v-if="bonusContent" :lit="true" :smoking="false" />
-              <DeskPencil />
-              <DeskClutter />
-              <FirstDraft v-if="bonusContent" />
-              <DeskPhone v-if="bonusContent" />
-            </template>
-          </BookView>
-        </div>
-      </div>
-    </div>
+    <Room
+      ref="roomRef"
+      shelf-backdrop
+      :show-book="showBook"
+      :bonus-content="bonusContent"
+    >
+      <template #desk-props>
+        <slot name="desk-props" />
+      </template>
+    </Room>
     <div ref="pagesRef" class="ot-pages">
       <div class="ot-page"><span>Manuscript</span></div>
       <div class="ot-page"></div>
@@ -97,34 +81,6 @@ onMounted(() => {
   z-index: 60;
   overflow: hidden;
   background: #0d0a06;
-  pointer-events: none;
-}
-.ot-room {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 200vh;
-  will-change: transform;
-}
-.ot-shelf,
-.ot-desk {
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-}
-.ot-shelf {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #0d0a06;
-}
-.ot-desk {
-  background: #0d0a06;
-}
-.ot-book {
-  position: absolute;
-  inset: 0;
   pointer-events: none;
 }
 .ot-pages {
