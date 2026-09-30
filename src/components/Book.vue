@@ -3,37 +3,111 @@
  * Book.vue — a reusable 3D book.
  * Renders a true 3D book (spine, front/back covers, page edges) that sits
  * on the shelf spine-out and pulls out, turns, and floats when tapped.
+ * When pulled out, drag to spin it like the manuscript.
  *
  * Props: title, color, synopsis (back-cover text), dimensions.
  */
-defineProps<{
+import { ref, computed } from 'vue';
+
+const props = defineProps<{
   title: string;
   color: string;
   synopsis?: string;
   width?: number;   // spine thickness in px
   height?: number;  // book height in px
   interactive?: boolean;
+  pulled?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'toggle'): void;
 }>();
+
+/* Drag-to-spin when pulled, like the manuscript. */
+const dragRotY = ref(0);
+const dragRotX = ref(0);
+const dragging = ref(false);
+let dragPointerId: number | null = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragLastX = 0;
+let dragLastY = 0;
+let dragMoved = false;
+
+const innerTransform = computed(() => {
+  if (!props.pulled) return '';
+  return `translateY(-70px) translateZ(180px) rotateY(${-68 + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
+});
+
+function onPointerDown(e: PointerEvent) {
+  if (!props.pulled || !props.interactive) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  dragPointerId = e.pointerId;
+  dragStartX = dragLastX = e.clientX;
+  dragStartY = dragLastY = e.clientY;
+  dragMoved = false;
+  dragging.value = false;
+}
+
+function onPointerMove(e: PointerEvent) {
+  if (e.pointerId !== dragPointerId) return;
+  const dx = e.clientX - dragLastX;
+  const dy = e.clientY - dragLastY;
+  dragLastX = e.clientX;
+  dragLastY = e.clientY;
+  if (Math.abs(e.clientX - dragStartX) + Math.abs(e.clientY - dragStartY) > 10) {
+    dragMoved = true;
+    dragging.value = true;
+  }
+  if (dragMoved) {
+    dragRotY.value += dx * 0.5;
+    dragRotX.value = Math.max(-30, Math.min(30, dragRotX.value + dy * 0.3));
+  }
+}
+
+function onPointerUp(e: PointerEvent) {
+  if (e.pointerId !== dragPointerId) return;
+  dragPointerId = null;
+  dragging.value = false;
+  // If it was a drag, don't toggle. If it was a tap, toggle.
+  if (!dragMoved && props.interactive) {
+    emit('toggle');
+  }
+  // Ease the spin back to the resting pose after a drag.
+  if (dragMoved) {
+    dragRotY.value = 0;
+    dragRotX.value = 0;
+  }
+}
+
+function onClick(e: Event) {
+  // Click is handled by pointerup (to distinguish drag from tap).
+  e.preventDefault();
+}
 </script>
 
 <template>
   <button
     type="button"
     class="book3d"
-    :class="{ 'is-interactive': interactive }"
+    :class="{ 'is-interactive': interactive, 'is-pulled': pulled, 'is-dragging': dragging }"
     :style="{
       '--bw': (width ?? 46) + 'px',
       '--bh': (height ?? 220) + 'px',
       '--bc': color,
     }"
     :aria-label="title"
-    @click="interactive && emit('toggle')"
+    @click="onClick"
+    @pointerdown="onPointerDown"
+    @pointermove="onPointerMove"
+    @pointerup="onPointerUp"
+    @pointercancel="onPointerUp"
   >
-    <span class="book3d-inner" aria-hidden="true">
+    <span
+      class="book3d-inner"
+      aria-hidden="true"
+      :style="pulled ? { transform: innerTransform } : {}"
+    >
       <!-- Spine: what you see on the shelf. -->
       <span class="book3d-spine">
         <span class="book3d-spine-label">{{ title }}</span>
@@ -78,10 +152,12 @@ const emit = defineEmits<{
   transform-style: preserve-3d;
   transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Pulled out: lift, turn to show front cover, come toward viewer. */
-.book3d.is-pulled .book3d-inner {
-  transform: translateY(-70px) translateZ(180px) rotateY(-68deg) scale(1.15);
+/* While dragging, the transform is driven by the pointer — no transition. */
+.book3d.is-dragging .book3d-inner {
+  transition: none;
 }
+/* Pulled out: transform is set inline (drag-to-spin). Base pose is
+   translateY(-70px) translateZ(180px) rotateY(-68deg) scale(1.15). */
 /* All faces. */
 .book3d-spine,
 .book3d-front,

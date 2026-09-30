@@ -83,7 +83,7 @@ function toggleOurs() {
             :width="b.w"
             :height="b.h"
             :interactive="interactive"
-            :class="{ 'is-pulled': selected === b.title }"
+            :pulled="selected === b.title"
             @toggle="toggleBook(b)"
           />
           <div class="bs-slot" data-bind-slot>
@@ -95,19 +95,11 @@ function toggleOurs() {
                 :width="52"
                 :height="230"
                 :interactive="interactive"
-                :class="{ 'is-pulled': selected === '__ours' }"
+                :pulled="selected === '__ours'"
                 @toggle="toggleOurs()"
               />
             </template>
-            <button
-              v-if="isBound && interactive && selected === '__ours'"
-              type="button"
-              class="bs-open"
-              @click="emit('open-book')"
-            >
-              Open the book <span aria-hidden="true">&rarr;</span>
-            </button>
-            <div v-else-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
+            <div v-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
           <Book
             v-for="b in shelfRight"
@@ -118,7 +110,7 @@ function toggleOurs() {
             :width="b.w"
             :height="b.h"
             :interactive="interactive"
-            :class="{ 'is-pulled': selected === b.title }"
+            :pulled="selected === b.title"
             @toggle="toggleBook(b)"
           />
         </div>
