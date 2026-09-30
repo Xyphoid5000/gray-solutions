@@ -9,24 +9,6 @@ const emit = defineEmits<{
   contact: [];
 }>();
 
-const LINKS = [
-  {
-    label: 'GitHub',
-    href: 'https://github.com/Xyphoid5000',
-    external: true,
-  },
-  {
-    label: 'Email',
-    href: 'mailto:c90gray@gmail.com?subject=Let%27s%20write%20my%20story',
-    external: false,
-  },
-  {
-    label: 'LinkedIn',
-    href: 'https://www.linkedin.com/in/chris-gray-b0b50b1b4',
-    external: true,
-  },
-];
-
 /**
  * The whole page is the manuscript being finished live — every line
  * types out in sequence with one traveling cursor, no separations.
@@ -179,16 +161,6 @@ onUnmounted(() => {
           <button class="btn btn-solid" @click="emit('contact')">
             Start your story <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
-          <nav class="fin-links" aria-label="Elsewhere">
-            <a
-              v-for="l in LINKS"
-              :key="l.label"
-              :href="l.href"
-              :target="l.external ? '_blank' : undefined"
-              :rel="l.external ? 'noopener' : undefined"
-              >{{ l.label }}</a
-            >
-          </nav>
         </div>
       </div>
     </div>

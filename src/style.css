@@ -950,12 +950,14 @@ a {
   align-items: center;
   gap: 1.4rem 2.4rem;
 }
-.fin-links {
+.fin-links,
+.about-links {
   display: flex;
   gap: 1.8rem;
   flex-wrap: wrap;
 }
-.fin-links a {
+.fin-links a,
+.about-links a {
   color: var(--faint);
   text-decoration: none;
   font-size: 0.85rem;
@@ -964,8 +966,12 @@ a {
   font-weight: 500;
   transition: color 0.25s;
 }
-.fin-links a:hover {
+.fin-links a:hover,
+.about-links a:hover {
   color: var(--ember);
+}
+.about-links {
+  margin-top: 2rem;
 }
 /* The Finale types itself live: one continuous page, no separations. */
 .finale {
@@ -1026,6 +1032,8 @@ a {
 .about-section {
   padding: clamp(5rem, 12vw, 9rem) 0;
   border-top: 1px solid var(--line-soft);
+  /* Same as contact: stop below the header, not under it. */
+  scroll-margin-top: var(--nav-h);
 }
 .about-portrait {
   width: 128px;
