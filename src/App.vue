@@ -7,6 +7,7 @@ import SiteNav from './components/SiteNav.vue';
 import Cover from './components/Cover.vue';
 import BookView from './components/BookView.vue';
 import BindCinematic from './components/BindCinematic.vue';
+import OpenTransition from './components/OpenTransition.vue';
 import RemoteControl from './components/RemoteControl.vue';
 import DeskClutter from './components/DeskClutter.vue';
 import FirstDraft from './components/FirstDraft.vue';
@@ -27,6 +28,8 @@ const showBook = ref(false);
 const homeMounted = ref(true);
 const bookMounted = ref(false);
 const cameraMoving = ref(false);
+/** The shelf-to-desk room transition when opening the manuscript. */
+const showOpenTransition = ref(false);
 /** Bonus content (candle, LEDs, first draft, UV light, phone, discount
     code) lives behind a toggle on the back of the cover. Off by
     default; session-scoped, like the bound state. */
@@ -65,38 +68,32 @@ async function openBook() {
     updateLights();
     return;
   }
+  // The room shifts from shelf to desk, pages float down, then the
+  // manuscript scene is revealed.
   cameraMoving.value = true;
   noScroll(true);
+  showOpenTransition.value = true;
+  await nextTick();
+  // Wait for the transition to complete (it emits 'done').
+  await new Promise<void>((resolve) => {
+    const check = () => {
+      if (!showOpenTransition.value) resolve();
+      else requestAnimationFrame(check);
+    };
+    check();
+  });
   showBook.value = true;
   bookMounted.value = true;
   await nextTick();
-  const home = document.querySelector('.view-home') as HTMLElement | null;
-  const book = document.querySelector('.view-book') as HTMLElement | null;
-  const vh = window.innerHeight;
   window.scrollTo(0, 0);
-  if (home && book) {
-    gsap.set(book, { y: vh * 0.6, opacity: 0 });
-    await gsap
-      .timeline()
-      .to(
-        home,
-        {
-          y: -vh * 0.35,
-          opacity: 0,
-          scale: 0.98,
-          duration: 1.25,
-          ease: 'power3.inOut',
-        },
-        0,
-      )
-      .to(book, { y: 0, opacity: 1, duration: 1.25, ease: 'power3.inOut' }, 0)
-      .then();
-    gsap.set(book, { clearProps: 'all' });
-  }
   homeMounted.value = false;
   cameraMoving.value = false;
   noScroll(false);
   updateLights();
+}
+
+function onOpenTransitionDone() {
+  showOpenTransition.value = false;
 }
 
 /** Tilt up: the desk slides away below, the shelf glides back in. */
@@ -777,9 +774,15 @@ onUnmounted(() => {
   </div>
   <BindCinematic
     ref="bindCinematic"
+    :bonus-content="bonusContent"
     @done="onBindDone"
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
+  />
+  <OpenTransition
+    v-if="showOpenTransition"
+    :bonus-content="bonusContent"
+    @done="onOpenTransitionDone"
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>

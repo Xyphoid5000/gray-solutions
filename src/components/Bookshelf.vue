@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import { gsap } from 'gsap';
 import { manuscriptBound } from '../lib/manuscript';
 
 withDefaults(
@@ -25,20 +27,21 @@ interface ShelfBook {
   color: string;
   h: number;
   w: number;
+  synopsis: string;
 }
 
 const topShelf: ShelfBook[] = [
-  { title: 'Moby-Dick', color: '#4a1f1f', h: 232, w: 46 },
-  { title: 'Pride and Prejudice', color: '#1f3a5a', h: 212, w: 40 },
-  { title: 'Frankenstein', color: '#2e4a2e', h: 244, w: 48 },
-  { title: 'Jane Eyre', color: '#5a3a1f', h: 222, w: 42 },
+  { title: 'Moby-Dick', color: '#4a1f1f', h: 232, w: 46, synopsis: 'A man becomes dangerously obsessed with a fish. 600 pages.' },
+  { title: 'Pride and Prejudice', color: '#1f3a5a', h: 212, w: 40, synopsis: 'Two people who are perfect for each other spend 400 pages pretending they are not.' },
+  { title: 'Frankenstein', color: '#2e4a2e', h: 244, w: 48, synopsis: 'A college dropout builds a man, then complains about it for the rest of his life.' },
+  { title: 'Jane Eyre', color: '#5a3a1f', h: 222, w: 42, synopsis: 'An orphan gets a job, falls for her boss, discovers he hid his wife in the attic. As you do.' },
 ];
 const bottomLeft: ShelfBook[] = [
-  { title: 'Dracula', color: '#3a1f3a', h: 236, w: 44 },
-  { title: 'Wuthering Heights', color: '#1f4a4a', h: 206, w: 38 },
+  { title: 'Dracula', color: '#3a1f3a', h: 236, w: 44, synopsis: 'A group chat of Victorians try to cancel a vampire. Told entirely through emails.' },
+  { title: 'Wuthering Heights', color: '#1f4a4a', h: 206, w: 38, synopsis: 'Two terrible people are terrible to each other on a windy hill. Everyone suffers.' },
 ];
 const bottomRight: ShelfBook[] = [
-  { title: 'The Odyssey', color: '#4a4a1f', h: 226, w: 44 },
+  { title: 'The Odyssey', color: '#4a4a1f', h: 226, w: 44, synopsis: 'A man takes 10 years to get home from work. His wife fends off 108 suitors.' },
 ];
 
 const backdropBooks: ShelfBook[] = [
@@ -49,6 +52,112 @@ const backdropBooks: ShelfBook[] = [
 /** Backdrop mode: trimmed shelf (outermost books removed so the row
     fits) with the binding slot in the middle. */
 const backdropTrimmed = backdropBooks.slice(1, -1);
+
+/** The currently selected (floating) book, by title. Null when none. */
+const selected = ref<string | null>(null);
+/** The floating book element, for the put-back animation. */
+let floatingEl: HTMLElement | null = null;
+/** The book's home position, to return it. */
+let homeRect: DOMRect | null = null;
+
+/** Pull a book off the shelf: reverse of the file-away — the spine
+    becomes 3D, turns to face you, and floats in the middle. */
+function selectBook(book: ShelfBook, el: HTMLElement) {
+  if (selected.value) return;
+  selected.value = book.title;
+  floatingEl = el;
+  homeRect = el.getBoundingClientRect();
+  const r = homeRect;
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  // Lift off the shelf and come to the middle, turning to show the
+  // front cover as it floats.
+  gsap.to(el, {
+    x: cx - (r.left + r.width / 2),
+    y: cy - (r.top + r.height / 2),
+    z: 220,
+    rotationY: -68,
+    scale: 1.35,
+    duration: 0.9,
+    ease: 'power3.inOut',
+    transformPerspective: 900,
+  });
+  // Gentle float once it's out.
+  gsap.to(el, {
+    y: '+=14',
+    duration: 1.6,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+    delay: 0.9,
+  });
+  el.classList.add('is-floating');
+}
+
+/** Slide the floating book back into its slot. */
+function deselectBook() {
+  const el = floatingEl;
+  if (!el) {
+    selected.value = null;
+    return;
+  }
+  gsap.killTweensOf(el);
+  el.classList.remove('is-floating');
+  gsap.to(el, {
+    x: 0,
+    y: 0,
+    z: 0,
+    rotationY: 0,
+    scale: 1,
+    duration: 0.7,
+    ease: 'power3.inOut',
+    transformPerspective: 900,
+    onComplete: () => {
+      selected.value = null;
+      floatingEl = null;
+      homeRect = null;
+    },
+  });
+}
+
+function toggleBook(book: ShelfBook, ev: Event) {
+  const el = ev.currentTarget as HTMLElement;
+  if (selected.value === book.title) deselectBook();
+  else if (!selected.value) selectBook(book, el);
+}
+
+/** Gray Solutions, when bound: pull it out like the others, but it
+    can actually be opened. */
+function toggleOurs(ev: Event) {
+  const el = ev.currentTarget as HTMLElement;
+  if (selected.value === '__ours') deselectBook();
+  else if (!selected.value) {
+    selected.value = '__ours';
+    floatingEl = el;
+    const r = el.getBoundingClientRect();
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    gsap.to(el, {
+      x: cx - (r.left + r.width / 2),
+      y: cy - (r.top + r.height / 2),
+      z: 220,
+      rotationY: -68,
+      scale: 1.35,
+      duration: 0.9,
+      ease: 'power3.inOut',
+      transformPerspective: 900,
+    });
+    gsap.to(el, {
+      y: '+=14',
+      duration: 1.6,
+      ease: 'sine.inOut',
+      yoyo: true,
+      repeat: -1,
+      delay: 0.9,
+    });
+    el.classList.add('is-floating');
+  }
+}
 </script>
 
 <template>
@@ -70,7 +179,7 @@ const backdropTrimmed = backdropBooks.slice(1, -1);
               v-for="b in backdropTrimmed.slice(0, Math.ceil(backdropTrimmed.length / 2))"
               :key="'bg-' + b.title"
               class="bs-book"
-              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
             >
               <span>{{ b.title }}</span>
             </div>
@@ -81,7 +190,7 @@ const backdropTrimmed = backdropBooks.slice(1, -1);
               v-for="b in backdropTrimmed.slice(Math.ceil(backdropTrimmed.length / 2))"
               :key="'bg-' + b.title"
               class="bs-book"
-              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
             >
               <span>{{ b.title }}</span>
             </div>
@@ -92,38 +201,90 @@ const backdropTrimmed = backdropBooks.slice(1, -1);
       <template v-else>
       <div class="bs-shelf">
         <div class="bs-books">
-          <div
+          <button
             v-for="b in topShelf"
             :key="b.title"
+            type="button"
             class="bs-book"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :aria-label="b.title"
+            @click="interactive && toggleBook(b, $event)"
           >
-            <span>{{ b.title }}</span>
-          </div>
+            <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
+          </button>
         </div>
         <div class="bs-plank"></div>
       </div>
       <div class="bs-shelf">
         <div class="bs-books">
-          <div
+          <button
             v-for="b in bottomLeft"
             :key="b.title"
+            type="button"
             class="bs-book"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :aria-label="b.title"
+            @click="interactive && toggleBook(b, $event)"
           >
-            <span>{{ b.title }}</span>
-          </div>
+            <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
+          </button>
           <div class="bs-slot" data-bind-slot>
-            <div class="bs-ours"><span>Gray Solutions</span></div>
+            <button
+              v-if="isBound"
+              type="button"
+              class="bs-ours"
+              :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
+              aria-label="Gray Solutions — open the book"
+              @click="interactive && toggleOurs($event)"
+            >
+              <span>Gray Solutions</span>
+              <span class="bs-face bs-front" aria-hidden="true">
+                <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
+                <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
+              </span>
+            </button>
+            <button
+              v-if="isBound && interactive && selected === '__ours'"
+              type="button"
+              class="bs-open"
+              @click="emit('open-book')"
+            >
+              Open the book <span aria-hidden="true">&rarr;</span>
+            </button>
+            <div v-else-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
-          <div
+          <button
             v-for="b in bottomRight"
             :key="b.title"
+            type="button"
             class="bs-book"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :aria-label="b.title"
+            @click="interactive && toggleBook(b, $event)"
           >
-            <span>{{ b.title }}</span>
-          </div>
+            <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
+          </button>
         </div>
         <div class="bs-plank"></div>
       </div>
@@ -248,6 +409,113 @@ const backdropTrimmed = backdropBooks.slice(1, -1);
   min-height: 244px;
   padding: 0 6px;
 }
+/* Interactive books: clickable, 3D. */
+.bs-book.is-interactive {
+  cursor: pointer;
+  transform-style: preserve-3d;
+}
+.bs-book.is-interactive:hover {
+  filter: brightness(1.12);
+}
+.bs-book .bs-spine-label {
+  transform: translateZ(100px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Front and back covers: edge-on until the book turns. */
+.bs-face {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: 200px;
+  left: 50%;
+  margin-left: -100px;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.2rem;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.bs-book.is-selected .bs-face {
+  opacity: 1;
+}
+.bs-front {
+  transform: rotateY(90deg) translateZ(calc(var(--bw, 46px) / 2));
+  background: linear-gradient(145deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 100%), var(--bc, #333);
+  border: 1px solid rgba(232, 205, 150, 0.25);
+}
+.bs-front-title {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: rgba(232, 205, 150, 0.95);
+  line-height: 1.25;
+  writing-mode: horizontal-tb;
+  white-space: normal;
+}
+.bs-back {
+  transform: rotateY(-90deg) translateZ(calc(var(--bw, 46px) / 2));
+  background: linear-gradient(145deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 100%), var(--bc, #333);
+  border: 1px solid rgba(232, 205, 150, 0.2);
+}
+.bs-back-text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: rgba(232, 205, 150, 0.85);
+  line-height: 1.5;
+  writing-mode: horizontal-tb;
+  white-space: normal;
+}
+/* The floating book lifts above the shelf. */
+.bs-book.is-floating {
+  z-index: 10;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+}
+/* Gray Solutions in the slot: clickable when bound + interactive. */
+.bs-ours.is-interactive {
+  cursor: pointer;
+  transform-style: preserve-3d;
+  opacity: 1;
+}
+.bs-ours .bs-face {
+  width: 200px;
+  left: 50%;
+  margin-left: -100px;
+}
+.bs-ours.is-selected .bs-face {
+  opacity: 1;
+}
+/* Open button appears when Gray Solutions is floating. */
+.bs-open {
+  position: absolute;
+  left: 50%;
+  bottom: -3.2rem;
+  transform: translateX(-50%);
+  background: rgba(208, 138, 78, 0.16);
+  border: 1px solid rgba(208, 138, 78, 0.55);
+  border-radius: 999px;
+  color: #e8cd96;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.65em 1.4em;
+  cursor: pointer;
+  white-space: nowrap;
+  z-index: 11;
+}
+.bs-open:hover {
+  background: rgba(208, 138, 78, 0.28);
+}
 .bs-book {
   flex-shrink: 0;
   writing-mode: vertical-rl;
@@ -266,7 +534,7 @@ const backdropTrimmed = backdropBooks.slice(1, -1);
     inset -4px 0 7px rgba(0, 0, 0, 0.4),
     inset 2px 0 3px rgba(255, 235, 200, 0.06);
 }
-.bs-book span {
+.bs-book .bs-spine-label {
   overflow: hidden;
   text-overflow: ellipsis;
 }

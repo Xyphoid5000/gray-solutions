@@ -533,6 +533,13 @@ onUnmounted(() => {
 <template>
   <div class="cover-page">
     <section class="cover" aria-label="Cover">
+      <Bookshelf
+        v-if="isBound"
+        :interactive="true"
+        :show-manuscript="false"
+        @open-book="$emit('open-book')"
+      />
+      <template v-else>
       <Bookshelf backdrop class="cover-shelf-bg" />
       <div class="cover-desk" aria-hidden="true"></div>
       <div class="cover-glow" aria-hidden="true"></div>
@@ -678,6 +685,7 @@ onUnmounted(() => {
           <p class="cover-hint">Six pages &middot; best read front to back</p>
         </div>
       </div>
+      </template>
     </section>
     <section id="contact" class="cover-contact" aria-label="Contact">
       <div class="wrap">
