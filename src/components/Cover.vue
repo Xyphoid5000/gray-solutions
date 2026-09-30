@@ -590,6 +590,7 @@ onUnmounted(() => {
               <div class="b-manuscript-frame">
                 <p class="b-stamp">Manuscript</p>
                 <p class="b-msub">Six pages &middot; final draft</p>
+                <div v-if="bonusContent" class="wax-seal" aria-hidden="true"><span>G.</span></div>
               </div>
             </div>
             <div class="ms-back">
