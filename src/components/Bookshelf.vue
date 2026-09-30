@@ -52,26 +52,38 @@ let homeRect: DOMRect | null = null;
 
 /** Pull a book off the shelf: reverse of the file-away — the spine
     becomes 3D, turns to face you, and floats in the middle. */
-function selectBook(book: ShelfBook, el: HTMLElement) {
-  if (selected.value) return;
-  selected.value = book.title;
-  floatingEl = el;
-  homeRect = el.getBoundingClientRect();
-  const r = homeRect;
+function pullOut(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  const isMobile = window.innerWidth < 640;
   const cx = window.innerWidth / 2;
   const cy = window.innerHeight / 2;
-  // Lift off the shelf and come to the middle, turning to show the
-  // front cover as it floats.
-  gsap.to(el, {
-    x: cx - (r.left + r.width / 2),
-    y: cy - (r.top + r.height / 2),
-    z: 220,
-    rotationY: -68,
-    scale: 1.35,
-    duration: 0.9,
-    ease: 'power3.inOut',
-    transformPerspective: 900,
-  });
+  if (isMobile) {
+    // On phones the book stays near its slot — lift and turn to show
+    // the cover, but don't fly to screen center or it swallows the shelf.
+    gsap.to(el, {
+      x: 0,
+      y: -60,
+      z: 100,
+      rotationY: -68,
+      scale: 0.9,
+      duration: 0.9,
+      ease: 'power3.inOut',
+      transformPerspective: 900,
+    });
+  } else {
+    // Lift off the shelf and come to the middle, turning to show the
+    // front cover as it floats.
+    gsap.to(el, {
+      x: cx - (r.left + r.width / 2),
+      y: cy - (r.top + r.height / 2),
+      z: 220,
+      rotationY: -68,
+      scale: 1.35,
+      duration: 0.9,
+      ease: 'power3.inOut',
+      transformPerspective: 900,
+    });
+  }
   // Gentle float once it's out.
   gsap.to(el, {
     y: '+=14',
@@ -82,6 +94,14 @@ function selectBook(book: ShelfBook, el: HTMLElement) {
     delay: 0.9,
   });
   el.classList.add('is-floating');
+}
+
+function selectBook(book: ShelfBook, el: HTMLElement) {
+  if (selected.value) return;
+  selected.value = book.title;
+  floatingEl = el;
+  homeRect = el.getBoundingClientRect();
+  pullOut(el);
 }
 
 /** Slide the floating book back into its slot. */
@@ -124,28 +144,7 @@ function toggleOurs(ev: Event) {
   else if (!selected.value) {
     selected.value = '__ours';
     floatingEl = el;
-    const r = el.getBoundingClientRect();
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    gsap.to(el, {
-      x: cx - (r.left + r.width / 2),
-      y: cy - (r.top + r.height / 2),
-      z: 220,
-      rotationY: -68,
-      scale: 1.35,
-      duration: 0.9,
-      ease: 'power3.inOut',
-      transformPerspective: 900,
-    });
-    gsap.to(el, {
-      y: '+=14',
-      duration: 1.6,
-      ease: 'sine.inOut',
-      yoyo: true,
-      repeat: -1,
-      delay: 0.9,
-    });
-    el.classList.add('is-floating');
+    pullOut(el);
   }
 }
 </script>
