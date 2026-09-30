@@ -2880,6 +2880,10 @@ html[data-theme='dark'] body.has-book .chapter {
 .manuscript-desk {
   position: relative;
   min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   /* Mahogany desk. */
   background-color: #2a140c;
   background-image:
@@ -2977,10 +2981,16 @@ html[data-theme='dark'] body.has-book .chapter {
 /* Paginated book pages: each fills the paper, no scrolling. */
 .book-page {
   width: 100%;
-  min-height: 70vh;
+  height: 62vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem 2rem;
+  overflow: hidden;
 }
 .book-page > * {
   break-inside: avoid;
+  flex-shrink: 0;
 }
 /* Page turn tap zones: narrow strips on the paper edges. */
 .page-tap {

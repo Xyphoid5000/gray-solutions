@@ -317,15 +317,15 @@ function toggleOurs(ev: Event) {
   color: rgba(232, 205, 150, 0.6);
   margin: 0;
 }
-/* The bookcase. */
+/* The bookcase. Sized directly — no transform scale, which would flatten
+   the 3D book pull-out and overflow small screens. */
 .bs-case {
   position: relative;
-  width: min(400px, 86vw);
+  width: min(540px, 94vw);
   border-left: 14px solid transparent;
   border-right: 14px solid transparent;
   border-image: linear-gradient(to bottom, #4a2e18, #2b1a0e) 1;
   padding: 0 10px;
-  transform: scale(1.35);
 }
 .bs-cornice {
   height: 18px;

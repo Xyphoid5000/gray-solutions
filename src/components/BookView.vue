@@ -241,8 +241,9 @@ async function paginateCurrentChapter() {
   const children = Array.from(wrap.children) as HTMLElement[];
   if (children.length === 0) return;
 
-  // Available height: the desk viewport minus paper padding and chrome.
-  const available = window.innerHeight * 0.72;
+  // Available height: page height (62vh) minus padding, with a conservative
+  // margin. Prefer more pages over cramming content to the edges.
+  const available = window.innerHeight * 0.62 - 96;
 
   const pages: HTMLElement[][] = [];
   let current: HTMLElement[] = [];
