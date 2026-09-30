@@ -3,6 +3,12 @@ import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
+import DeskClutter from './DeskClutter.vue';
+import DeskPencil from './DeskPencil.vue';
+import DeskCandle from './DeskCandle.vue';
+import DeskPhone from './DeskPhone.vue';
+import FirstDraft from './FirstDraft.vue';
+import RemoteControl from './RemoteControl.vue';
 
 const emit = defineEmits(['done']);
 
@@ -62,7 +68,16 @@ onMounted(() => {
       </div>
       <div class="ot-desk">
         <div v-if="showBook" class="ot-book">
-          <BookView />
+          <BookView>
+            <template #desk-props>
+              <RemoteControl v-if="bonusContent" :led-on="false" color="#ff0000" />
+              <DeskCandle v-if="bonusContent" :lit="true" :smoking="false" />
+              <DeskPencil />
+              <DeskClutter />
+              <FirstDraft v-if="bonusContent" />
+              <DeskPhone v-if="bonusContent" />
+            </template>
+          </BookView>
         </div>
       </div>
     </div>
