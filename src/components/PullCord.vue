@@ -3,14 +3,19 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { gsap } from 'gsap';
 
 const root = ref<HTMLElement | null>(null);
+const mount = ref<HTMLElement | null>(null);
 const line = ref<HTMLElement | null>(null);
 const knob = ref<HTMLElement | null>(null);
 
 const LINE_H = 104;
 const PULL_MAX = 130;
 const PULL_TRIGGER = 36;
+/** How far the base slides up to hide inside the G emblem. */
+const MOUNT_HIDE = 16;
 
 let dragging = false;
+/** True while the cord is retracting into the G — grabs are ignored. */
+let retracting = false;
 let startY = 0;
 let pull = 0;
 let sway: gsap.core.Tween | null = null;
@@ -94,6 +99,7 @@ const release = () => {
 };
 
 const onPointerDown = (e: PointerEvent) => {
+  if (retracting) return;
   if (releaseTimer) {
     clearTimeout(releaseTimer);
     releaseTimer = null;
@@ -106,6 +112,7 @@ const onPointerDown = (e: PointerEvent) => {
   // header so the scheduled ball drop never fights the user's hand.
   if (knob.value) gsap.killTweensOf(knob.value);
   if (line.value) gsap.killTweensOf(line.value);
+  if (mount.value) gsap.killTweensOf(mount.value);
   window.dispatchEvent(new CustomEvent('gs:cord-grabbed'));
   gsap.set(root.value, { rotation: 0 });
 };
@@ -146,6 +153,37 @@ const onClick = (e: MouseEvent) => {
   }, 130);
 };
 
+/** Park the base up inside the G emblem (clipped, invisible) — the
+    entrance starts with everything living inside the G. */
+const parkBase = () => {
+  if (!mount.value) return;
+  retracting = false;
+  gsap.killTweensOf(mount.value);
+  gsap.set(mount.value, { y: -MOUNT_HIDE });
+};
+
+/** The base slowly slides out of the bottom of the G. */
+const dropBase = () => {
+  if (!mount.value) return;
+  gsap.killTweensOf(mount.value);
+  gsap.to(mount.value, { y: 0, duration: 0.9, ease: 'sine.out' });
+};
+
+/** Base in place, no animation (reduced motion). */
+const settleBase = () => {
+  if (!mount.value) return;
+  gsap.killTweensOf(mount.value);
+  gsap.set(mount.value, { y: 0 });
+};
+
+/** The base slides back up into the G (clipped — never fades through
+    the header). */
+const retractBase = () => {
+  if (!mount.value) return;
+  gsap.killTweensOf(mount.value);
+  gsap.to(mount.value, { y: -MOUNT_HIDE, duration: 0.9, ease: 'sine.in' });
+};
+
 /** Park the line fully retracted into the header — the entrance starts
     with the cord alone, dropping straight down from the mount. */
 const parkLine = () => {
@@ -169,20 +207,40 @@ const settleLine = () => {
   gsap.set(line.value, { scaleY: 1 });
 };
 
-/** Park the ball up at the base, tucked behind the header — the staged
-    drop starts with the line alone, then the ball falls to the line's
-    end as if it had been sitting up by the base. */
+/** The line retracts up into the base (clipped by the G — never visible
+    above the emblem). */
+const retractLine = () => {
+  if (!line.value) return;
+  gsap.killTweensOf(line.value);
+  gsap.to(line.value, { scaleY: 0, duration: 0.6, ease: 'sine.in' });
+};
+
+/** How far up the ball must go to hide fully inside the G emblem. */
+const ballHideY = () =>
+  -((line.value?.offsetHeight || LINE_H) + (knob.value?.offsetHeight || 36) + 16);
+
+/** Park the ball up inside the G emblem (clipped, invisible) — it lives
+    in there until the string has dropped. */
 const parkBall = () => {
   if (!knob.value || !line.value) return;
   gsap.killTweensOf(knob.value);
-  gsap.set(knob.value, { y: -(line.value.offsetHeight || LINE_H) });
+  gsap.set(knob.value, { y: ballHideY() });
 };
 
-/** Let the parked ball fall from the base to the line's end. */
+/** The ball falls from inside the G to the line's end. */
 const dropBall = () => {
   if (!knob.value) return;
   gsap.killTweensOf(knob.value);
   gsap.to(knob.value, { y: 0, duration: 0.8, ease: 'bounce.out' });
+};
+
+/** The ball rises back into the G (clipped — never visible above the
+    emblem). Grabs are ignored from here until the next entrance. */
+const retractBall = () => {
+  if (!knob.value || !line.value) return;
+  retracting = true;
+  gsap.killTweensOf(knob.value);
+  gsap.to(knob.value, { y: ballHideY(), duration: 0.6, ease: 'sine.in' });
 };
 
 /** Ball to the line's end, no animation (reduced motion). */
@@ -192,7 +250,33 @@ const settleBall = () => {
   gsap.set(knob.value, { y: 0 });
 };
 
-defineExpose({ parkBall, dropBall, settleBall, parkLine, dropLine, settleLine });
+/** Stop an in-flight drag (e.g. bonus is switched off mid-pull). */
+const cancelDrag = () => {
+  dragging = false;
+  if (releaseTimer) {
+    clearTimeout(releaseTimer);
+    releaseTimer = null;
+  }
+  if (knob.value) gsap.killTweensOf(knob.value);
+  if (line.value) gsap.killTweensOf(line.value);
+  if (mount.value) gsap.killTweensOf(mount.value);
+};
+
+defineExpose({
+  parkBase,
+  dropBase,
+  settleBase,
+  retractBase,
+  parkLine,
+  dropLine,
+  settleLine,
+  retractLine,
+  parkBall,
+  dropBall,
+  settleBall,
+  retractBall,
+  cancelDrag,
+});
 
 onMounted(() => {
   // App forces the opening theme; the cord just sways and reports yanks.
@@ -215,7 +299,7 @@ onUnmounted(() => {
 
 <template>
   <div ref="root" class="pull-cord" aria-hidden="false">
-    <span class="cord-mount" aria-hidden="true"></span>
+    <span ref="mount" class="cord-mount" aria-hidden="true"></span>
     <span ref="line" class="cord-line" aria-hidden="true"></span>
     <button
       ref="knob"

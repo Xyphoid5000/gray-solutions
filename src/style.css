@@ -2048,6 +2048,12 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   align-items: center;
   transform-origin: top center;
   pointer-events: none;
+  /* The G emblem is the cord's housing: the top edge sits exactly at the
+     G's bottom, and everything above it is clipped — the base, string and
+     ball emerge from and return into the G, never fading through it.
+     Height clears the full drop plus a max pull. */
+  overflow: hidden;
+  height: 300px;
 }
 .cord-mount {
   width: 12px;

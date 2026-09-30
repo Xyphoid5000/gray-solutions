@@ -11,12 +11,13 @@ const emit = defineEmits<{
 }>();
 
 /** The cord lives here but only while bonus content is on. It mounts
-    with the line retracted and the ball parked at the mount; the drop is
-    a two-beat entrance — the line falls straight down from the header
-    first, then the ball drops to the line's end. Turning bonus off draws
-    the whole cord slowly straight up into the header, dissolving as it
-    goes. The drop plays on the wrapper so it never fights the cord's own
-    sway. */
+    with everything hidden inside the G. emblem (the G is its housing —
+    the cord container clips at the G's bottom edge). The drop is a
+    three-beat entrance: the base slides slowly out of the G, the string
+    drops, then the ball falls from inside the G to the string's end.
+    Turning bonus off reverses it — ball, string and base all return up
+    into the G, clipped, never fading through the header. The drop plays
+    on the wrapper so it never fights the cord's own sway. */
 const cordWrap = ref<HTMLElement | null>(null);
 const pullCord = ref<InstanceType<typeof PullCord> | null>(null);
 let cordResting = false;
@@ -60,19 +61,22 @@ watch(
   { immediate: true },
 );
 
-/** Two-beat entrance, straight down from the header: the line falls
-    first, then the ball drops from the mount to the line's end. */
+/** Three-beat entrance, straight down from the G. emblem: the base
+    slides slowly out of the G first, then the string drops, then the
+    ball falls from inside the G to the string's end. */
 function dropCord() {
   const el = cordWrap.value;
   if (!el || cordResting) return;
   riseTl?.kill();
   riseTl = null;
   cordResting = true;
-  // Parked pose: line retracted into the header, ball waiting at the mount.
+  // Parked pose: everything lives inside the G (clipped, invisible).
+  pullCord.value?.parkBase();
   pullCord.value?.parkLine();
   pullCord.value?.parkBall();
   gsap.set(el, { y: 0, rotation: 0, opacity: 1, visibility: 'visible' });
   if (reducedMotion()) {
+    pullCord.value?.settleBase();
     pullCord.value?.settleLine();
     pullCord.value?.settleBall();
     return;
@@ -80,13 +84,15 @@ function dropCord() {
   dropTl?.kill();
   dropTl = gsap
     .timeline()
-    .add(() => pullCord.value?.dropLine(), 0)
-    .add(() => pullCord.value?.dropBall(), 1.0);
+    .add(() => pullCord.value?.dropBase(), 0)
+    .add(() => pullCord.value?.dropLine(), 0.9)
+    .add(() => pullCord.value?.dropBall(), 1.9);
 }
 
-/** The exit: the whole cord is drawn slowly straight up into the
-    header, dissolving as it goes so the ball never slides across the
-    G. mark, then hands back. */
+/** The exit, clipped by the G emblem: the ball rises back into the G,
+    the string retracts up into the base, then the base slides slowly
+    back into the G — no fade, no wrapper travel, nothing visible above
+    the G's bottom edge. Then hands back for unmount. */
 function retractCord(done: () => void) {
   const el = cordWrap.value;
   if (!el || !cordResting) {
@@ -96,34 +102,29 @@ function retractCord(done: () => void) {
   cordResting = false;
   dropTl?.kill();
   dropTl = null;
+  riseTl?.kill();
+  riseTl = null;
+  pullCord.value?.cancelDrag();
   if (reducedMotion()) {
+    pullCord.value?.parkBase();
+    pullCord.value?.parkLine();
+    pullCord.value?.parkBall();
     done();
     return;
   }
-  // How far the wrap must rise to tuck the ball fully into the header.
-  const knob = el.querySelector('.cord-knob');
-  const lineEl = el.querySelector('.cord-line');
-  const wr = el.getBoundingClientRect();
-  const rise =
-    (knob ? knob.getBoundingClientRect().bottom - wr.top : 200) + 24;
-  riseTl?.kill();
   riseTl = gsap
     .timeline({
       onComplete: () => {
-        gsap.set(el, { visibility: 'hidden', y: 0, opacity: 1 });
         riseTl = null;
         done();
       },
     })
-    // Straighten first — no fold, no swing toward the right. If the
-    // entrance was interrupted mid-drop, finish growing the line so the
-    // ball lands on its end.
-    .to(knob, { y: 0, duration: 0.35, ease: 'sine.out' }, 0)
-    .to(lineEl, { scaleY: 1, duration: 0.35, ease: 'sine.out' }, 0)
-    .to(el, { rotation: 0, duration: 0.35, ease: 'sine.out' }, 0)
-    // Then the slow draw upward into the header, dissolving as it rises.
-    .to(el, { y: -rise, duration: 1.8, ease: 'sine.inOut' }, 0.35)
-    .to(el, { opacity: 0, duration: 1.0, ease: 'sine.out' }, 0.35);
+    .add(() => pullCord.value?.retractBall(), 0)
+    .add(() => pullCord.value?.retractLine(), 0.15)
+    .add(() => pullCord.value?.retractBase(), 0.7)
+    // The callbacks above fire-and-forget their tweens; hold the timeline
+    // open until the base finishes sliding into the G (0.7s + 0.9s).
+    .to({}, { duration: 1.6 });
 }
 
 </script>
