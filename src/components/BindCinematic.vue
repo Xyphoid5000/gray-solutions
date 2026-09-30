@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
 import Bookshelf from './Bookshelf.vue';
+import Book from './Book.vue';
 import DeskClutter from './DeskClutter.vue';
 import DeskPencil from './DeskPencil.vue';
 import DeskCandle from './DeskCandle.vue';
@@ -446,16 +447,17 @@ defineExpose({ start });
 
     <!-- The finished book as a 3D object. -->
     <div ref="book3d" class="bind-book3d" aria-hidden="true">
-      <div class="b3d-face b3d-front">
-        <div class="b3d-frame">
-          <span class="b3d-mark">G.</span>
-          <p class="b3d-title">Gray<br />Solutions<em>.</em></p>
-          <p class="b3d-tag"><em>Websites that tell stories.</em></p>
-          <p class="b3d-by">Chris Gray</p>
-        </div>
-      </div>
-      <div class="b3d-face b3d-spine"><span>Gray Solutions</span></div>
-      <div class="b3d-face b3d-pages"></div>
+      <Book
+        title="Gray Solutions"
+        color="#1a1a1a"
+        :width="36"
+        :height="340"
+        :front="true"
+        :interactive="false"
+        mark="G."
+        tagline="Websites that tell stories."
+        author="Chris Gray"
+      />
     </div>
 
     <!-- Flat spine: seats into the shelf gap. -->
@@ -705,16 +707,14 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   margin: auto 0 0;
 }
 .bind-book3d {
-  --t: 36px;
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 260px;
-  height: 340px;
-  transform-style: preserve-3d;
   display: none;
   opacity: 0;
   z-index: 3;
+  perspective: 900px;
+  /* The Book component sizes itself; GSAP handles position/scale. */
 }
 .b3d-face {
   position: absolute;

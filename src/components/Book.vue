@@ -22,6 +22,7 @@ const props = defineProps<{
   tagline?: string;   // front-cover tagline
   author?: string;    // front-cover author
   showBonusToggle?: boolean;  // back cover shows bonus toggle instead of synopsis
+  front?: boolean;    // pose the book front-cover-forward (for cinematics)
 }>();
 
 const emit = defineEmits<{
@@ -42,6 +43,10 @@ let dragLastY = 0;
 let dragMoved = false;
 
 const innerTransform = computed(() => {
+  if (props.front) {
+    // Front cover facing the camera, with drag offsets applied.
+    return `rotateY(${-90 + dragRotY.value}deg) rotateX(${dragRotX.value}deg)`;
+  }
   if (!props.pulled) return '';
   return `translateY(-70px) translateZ(180px) rotateY(${-68 + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
 });
@@ -116,7 +121,7 @@ function onClick(e: Event) {
     <span
       class="book3d-inner"
       aria-hidden="true"
-      :style="pulled ? { transform: innerTransform } : {}"
+      :style="(pulled || front) ? { transform: innerTransform } : {}"
     >
       <!-- Spine: what you see on the shelf. -->
       <span class="book3d-spine">
