@@ -2974,6 +2974,32 @@ html[data-theme='dark'] body.has-book .chapter {
   width: 100%;
   margin: 0;
 }
+/* Paginated book pages: each fills the paper, no scrolling. */
+.book-page {
+  width: 100%;
+  min-height: 70vh;
+}
+.book-page > * {
+  break-inside: avoid;
+}
+/* Page turn tap zones: narrow strips on the paper edges. */
+.page-tap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 56px;
+  z-index: 20;
+  background: none;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.page-tap-prev {
+  left: 0;
+}
+.page-tap-next {
+  right: 0;
+}
 html[data-theme='dark'] .page-paper {
   /* The paper stays light in dark mode, so its ink stays dark too —
      otherwise muted copy washes out to pale gray on the cream page. */

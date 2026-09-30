@@ -76,8 +76,7 @@ const trackClass = computed(() => ({
   overflow: hidden;
 }
 .office-desk {
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
 }
 .office-shelf {
   display: flex;

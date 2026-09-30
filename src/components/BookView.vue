@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue';
+import { computed, ref, nextTick, onMounted, watch } from 'vue';
 import { gsap } from 'gsap';
 import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
@@ -23,6 +23,10 @@ function onChapterContact(i: number) {
 const currentIndex = ref(0);
 /** Indices of chapters sitting in the left pile, in order. */
 const pile = ref<number[]>([]);
+
+/** Pagination: which screen-sized page of the current chapter is visible. */
+const currentPage = ref(0);
+const pageCount = ref(1);
 
 const isFinale = computed(() => currentIndex.value === chapters.length - 1);
 /** Nudge the pencil somewhere slightly different on each chapter, like
@@ -77,17 +81,54 @@ async function goTo(target: number) {
 
 async function tossToPile(i: number): Promise<void> {
   const paper = pageEl(i);
-  const state = paper ? Flip.getState(paper) : null;
+  const pileEl = document.querySelector('.read-pile') as HTMLElement | null;
+
+  // If we can't animate (reduced motion, missing elements), just update the pile.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!paper || !pileEl || reduced) {
+    pile.value.push(i);
+    await nextTick();
+    return;
+  }
+
+  // Capture positions before the DOM changes.
+  const paperRect = paper.getBoundingClientRect();
+  const pileRect = pileEl.getBoundingClientRect();
+
+  // Clone the paper, pin it over the original.
+  const clone = paper.cloneNode(true) as HTMLElement;
+  clone.style.cssText = `
+    position: fixed;
+    left: ${paperRect.left}px;
+    top: ${paperRect.top}px;
+    width: ${paperRect.width}px;
+    height: ${paperRect.height}px;
+    margin: 0;
+    z-index: 2000;
+    pointer-events: none;
+  `;
+  document.body.appendChild(clone);
+
+  // Update the pile (hides the original via is-piled, shows the card).
   pile.value.push(i);
   await nextTick();
-  const card = pileCardEl(i);
-  if (state && card && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    await Flip.from(state, {
-      targets: card,
-      duration: 0.7,
-      ease: 'power2.inOut',
-    }).then();
-  }
+
+  // Fly the clone to the pile with a toss rotation.
+  const dx = pileRect.left + pileRect.width / 2 - (paperRect.left + paperRect.width / 2);
+  const dy = pileRect.top + pileRect.height / 2 - (paperRect.top + paperRect.height / 2);
+  const rot = (i % 2 === 0 ? 1 : -1) * 12;
+
+  await gsap.to(clone, {
+    x: dx,
+    y: dy,
+    rotation: rot,
+    scale: 0.32,
+    opacity: 0.9,
+    duration: 0.7,
+    ease: 'power2.inOut',
+  }).then();
+
+  clone.remove();
 }
 
 /** Toss the currently open page into the pile — the binding calls this
@@ -102,17 +143,63 @@ defineExpose({ tossCurrentToPile });
 
 async function bringBack(i: number): Promise<void> {
   const card = pileCardEl(i);
-  const state = card ? Flip.getState(card) : null;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (!card || reduced) {
+    pile.value = pile.value.filter((x) => x !== i);
+    await nextTick();
+    // Re-paginate the restored chapter.
+    await paginateCurrentChapter();
+    return;
+  }
+
+  // Capture the card's position before removing it.
+  const cardRect = card.getBoundingClientRect();
+
+  // Remove from pile (card disappears, paper reappears via is-piled removal).
   pile.value = pile.value.filter((x) => x !== i);
   await nextTick();
+
   const paper = pageEl(i);
-  if (state && paper && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    await Flip.from(state, {
-      targets: paper,
-      duration: 0.7,
-      ease: 'power2.inOut',
-    }).then();
+  if (!paper) {
+    await paginateCurrentChapter();
+    return;
   }
+
+  const paperRect = paper.getBoundingClientRect();
+
+  // Clone the card, fly it from pile to the paper's position.
+  const clone = card.cloneNode(true) as HTMLElement;
+  clone.style.cssText = `
+    position: fixed;
+    left: ${cardRect.left}px;
+    top: ${cardRect.top}px;
+    width: ${cardRect.width}px;
+    height: ${cardRect.height}px;
+    margin: 0;
+    z-index: 2000;
+    pointer-events: none;
+  `;
+  document.body.appendChild(clone);
+
+  // Start the clone at the card's scale, animate to full paper size.
+  const scaleX = paperRect.width / cardRect.width;
+  const scaleY = paperRect.height / cardRect.height;
+
+  gsap.set(clone, { transformOrigin: 'center center' });
+  await gsap.to(clone, {
+    x: paperRect.left - cardRect.left,
+    y: paperRect.top - cardRect.top,
+    scaleX,
+    scaleY,
+    rotation: 0,
+    duration: 0.7,
+    ease: 'power2.inOut',
+  }).then();
+
+  clone.remove();
+  // Re-paginate the restored chapter.
+  await paginateCurrentChapter();
 }
 
 /** Deterministic toss so each page lands the same way. */
@@ -128,17 +215,174 @@ function pileToss(index: number): { rotation: number; x: number; y: number } {
   };
 }
 
-function next() {
-  goTo(currentIndex.value + 1);
+/** Paginate the current chapter's content into screen-sized pages.
+    Groups the .wrap's block children by measured height. Moves the actual
+    elements (no clones) into .book-page divs. */
+async function paginateCurrentChapter() {
+  await nextTick();
+  const paper = document.querySelector(
+    `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
+  ) as HTMLElement | null;
+  if (!paper) return;
+
+  // Clear any previous pagination.
+  paper.querySelectorAll('.book-page').forEach((p) => {
+    // Move children back to the wrap before removing the page div.
+    const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
+    if (wrap) {
+      Array.from(p.children).forEach((c) => wrap.appendChild(c));
+    }
+    p.remove();
+  });
+
+  const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
+  if (!wrap) return;
+
+  const children = Array.from(wrap.children) as HTMLElement[];
+  if (children.length === 0) return;
+
+  // Available height: the desk viewport minus paper padding and chrome.
+  const available = window.innerHeight * 0.72;
+
+  const pages: HTMLElement[][] = [];
+  let current: HTMLElement[] = [];
+  let height = 0;
+
+  for (const child of children) {
+    const h = (child as HTMLElement).offsetHeight || 120;
+    if (current.length > 0 && height + h > available) {
+      pages.push(current);
+      current = [];
+      height = 0;
+    }
+    current.push(child as HTMLElement);
+    height += h;
+  }
+  if (current.length > 0) pages.push(current);
+
+  pageCount.value = pages.length;
+  currentPage.value = 0;
+
+  // Create page divs and move elements.
+  pages.forEach((els, idx) => {
+    const pageDiv = document.createElement('div');
+    pageDiv.className = 'book-page';
+    pageDiv.dataset.page = String(idx);
+    if (idx !== 0) pageDiv.style.display = 'none';
+    els.forEach((el) => pageDiv.appendChild(el));
+    paper.appendChild(pageDiv);
+  });
+
+  // Reveal all content immediately — no scroll triggers in paginated mode.
+  // Kill orphaned ScrollTriggers (elements moved, triggers point at old positions).
+  paper.querySelectorAll('.reveal').forEach((el) => {
+    const ext = el as HTMLElement & { _revealST?: { kill(): void } };
+    if (ext._revealST) {
+      ext._revealST.kill();
+      delete ext._revealST;
+    }
+    gsap.set(el, { clearProps: 'opacity,transform' });
+    el.classList.add('reveal-visible');
+  });
 }
+
+/** Show a specific page of the current chapter. */
+function showPage(n: number) {
+  const paper = document.querySelector(
+    `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
+  ) as HTMLElement | null;
+  if (!paper) return;
+
+  const pages = paper.querySelectorAll('.book-page');
+  pages.forEach((p, idx) => {
+    (p as HTMLElement).style.display = idx === n ? '' : 'none';
+  });
+  currentPage.value = n;
+}
+
+function next() {
+  // If more pages in this chapter, turn the page. Otherwise, next chapter.
+  if (currentPage.value < pageCount.value - 1) {
+    const nextPage = currentPage.value + 1;
+    // Animate the page turn.
+    const paper = document.querySelector(
+      `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
+    ) as HTMLElement | null;
+    if (paper) {
+      const current = paper.querySelector(`.book-page[data-page="${currentPage.value}"]`) as HTMLElement | null;
+      const next = paper.querySelector(`.book-page[data-page="${nextPage}"]`) as HTMLElement | null;
+      if (current && next) {
+        gsap.to(current, {
+          x: '-30%',
+          opacity: 0,
+          duration: 0.35,
+          ease: 'power2.in',
+          onComplete: () => {
+            showPage(nextPage);
+            gsap.fromTo(
+              next,
+              { x: '30%', opacity: 0 },
+              { x: '0%', opacity: 1, duration: 0.35, ease: 'power2.out' },
+            );
+          },
+        });
+        return;
+      }
+    }
+    showPage(nextPage);
+  } else {
+    goTo(currentIndex.value + 1);
+  }
+}
+
 function prev() {
-  goTo(currentIndex.value - 1);
+  // If not on first page, go back a page. Otherwise, previous chapter.
+  if (currentPage.value > 0) {
+    const prevPage = currentPage.value - 1;
+    const paper = document.querySelector(
+      `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
+    ) as HTMLElement | null;
+    if (paper) {
+      const current = paper.querySelector(`.book-page[data-page="${currentPage.value}"]`) as HTMLElement | null;
+      const prevEl = paper.querySelector(`.book-page[data-page="${prevPage}"]`) as HTMLElement | null;
+      if (current && prevEl) {
+        gsap.to(current, {
+          x: '30%',
+          opacity: 0,
+          duration: 0.35,
+          ease: 'power2.in',
+          onComplete: () => {
+            showPage(prevPage);
+            gsap.fromTo(
+              prevEl,
+              { x: '-30%', opacity: 0 },
+              { x: '0%', opacity: 1, duration: 0.35, ease: 'power2.out' },
+            );
+          },
+        });
+        return;
+      }
+    }
+    showPage(prevPage);
+  } else {
+    goTo(currentIndex.value - 1);
+  }
 }
 
 /** Tabs: a tab to an unread chapter opens the chapter card first;
     heading back to a finished page jumps straight there — the pile
     already says where you're going. */
 const modalIndex = ref<number | null>(null);
+
+/** Re-paginate when the chapter changes. Reset to first page. */
+watch(currentIndex, () => {
+  paginateCurrentChapter();
+});
+
+onMounted(() => {
+  paginateCurrentChapter();
+});
+
 function onTabClick(i: number) {
   if (i === currentIndex.value) return;
   if (i > currentIndex.value) modalIndex.value = i;
@@ -406,6 +650,21 @@ function onTouchEnd(e: TouchEvent) {
         >
           {{ ch.num }}
         </button>
+        <!-- Page turn tap zones: only on the current chapter. -->
+        <template v-if="i === currentIndex">
+          <button
+            type="button"
+            class="page-tap page-tap-prev"
+            aria-label="Previous page"
+            @click="prev()"
+          />
+          <button
+            type="button"
+            class="page-tap page-tap-next"
+            aria-label="Next page"
+            @click="next()"
+          />
+        </template>
       </div>
 
     <!-- Chapter card: tabs to unread chapters preview here first. -->
