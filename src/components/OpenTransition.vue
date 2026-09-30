@@ -1,26 +1,33 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
+import { chapters } from '../lib/chapters';
 
 const emit = defineEmits(['done']);
 
 const pagesRef = ref<HTMLElement | null>(null);
 
+/** The six manuscript pages: five chapters + the stamped cover. */
+const pages = [
+  ...chapters.slice(0, 5).map((ch) => ({ num: String(ch.num), label: ch.label })),
+  { num: '', label: 'Manuscript' },
+];
+
 onMounted(() => {
-  const pages = pagesRef.value;
-  if (!pages) {
+  const pagesEl = pagesRef.value;
+  if (!pagesEl) {
     emit('done');
     return;
   }
   const vh = window.innerHeight;
-  gsap.set(pages.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
+  gsap.set(pagesEl.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
 
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   });
   // Pages fall through and off the bottom.
   tl.to(
-    pages.children,
+    pagesEl.children,
     {
       y: vh * 1.2,
       opacity: 1,
@@ -31,7 +38,7 @@ onMounted(() => {
     },
     0.2,
   );
-  tl.to(pages.children, { opacity: 0, duration: 0.4 }, 1.6);
+  tl.to(pagesEl.children, { opacity: 0, duration: 0.4 }, 1.6);
   tl.to({}, { duration: 0.5 });
 });
 </script>
@@ -39,10 +46,10 @@ onMounted(() => {
 <template>
   <div class="open-transition" aria-hidden="true">
     <div ref="pagesRef" class="ot-pages">
-      <div class="ot-page"><span>Manuscript</span></div>
-      <div class="ot-page"></div>
-      <div class="ot-page"></div>
-      <div class="ot-page"></div>
+      <div v-for="(p, i) in pages" :key="i" class="ot-page">
+        <span v-if="p.num" class="ot-num">{{ p.num }}</span>
+        <span class="ot-label">{{ p.label }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -70,9 +77,19 @@ onMounted(() => {
   border: 1px solid #d8c9a8;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   font-family: var(--serif);
   color: #5a4a32;
+}
+.ot-num {
+  font-size: 2rem;
+  font-weight: 600;
+}
+.ot-label {
+  font-size: 0.9rem;
+  font-style: italic;
 }
 </style>
