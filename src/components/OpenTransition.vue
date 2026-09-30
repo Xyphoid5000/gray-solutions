@@ -44,8 +44,9 @@ onMounted(() => {
     0.2,
   );
   tl.to(pages.children, { opacity: 0, duration: 0.4 }, 1.6);
-  // BookView appears on the desk BEFORE the shift.
-  tl.call(() => { showBook.value = true; }, [], 1.8);
+  // BookView appears on the desk early (while pages fall, desk is below
+  // the viewport) so its content is fully rendered before the shift.
+  tl.call(() => { showBook.value = true; }, [], 1.0);
   // The whole room shifts up: shelf exits top, desk (with BookView
   // already on it) rises into view.
   tl.to(roomEl, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 2.0);

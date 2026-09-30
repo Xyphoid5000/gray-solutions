@@ -1276,14 +1276,19 @@ body.has-book .chapter.book-page {
 
 /* The read pile: finished manuscript pages, in the left desk margin. */
 .read-pile {
-  position: absolute;
+  position: fixed;
   left: 20px;
-  top: 22%;
+  top: 22vh;
   width: 104px;
   height: 140px;
   z-index: 800;
   pointer-events: auto;
   cursor: pointer;
+}
+/* In the transition Room, the desk is 100vh — absolute matches the viewport position. */
+.room-desk .read-pile {
+  position: absolute;
+  top: 22%;
 }
 .read-pile .pile-page {
   position: absolute;
