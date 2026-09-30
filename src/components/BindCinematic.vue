@@ -5,6 +5,10 @@ import { chapters } from '../lib/chapters';
 import Bookshelf from './Bookshelf.vue';
 import DeskClutter from './DeskClutter.vue';
 import DeskPencil from './DeskPencil.vue';
+import DeskCandle from './DeskCandle.vue';
+import DeskPhone from './DeskPhone.vue';
+import FirstDraft from './FirstDraft.vue';
+import RemoteControl from './RemoteControl.vue';
 
 defineProps<{ bonusContent?: boolean }>();
 
@@ -407,10 +411,11 @@ defineExpose({ start });
              manuscript desk. Bonus pieces frame the action when on. -->
         <DeskClutter />
         <DeskPencil />
-        <div v-if="bonusContent" class="bind-props" aria-hidden="true">
-          <div class="bp-candle"><i></i></div>
-          <div class="bp-phone"></div>
-          <div class="bp-draft"><i></i><i></i><i></i></div>
+        <div v-if="bonusContent" class="bind-bonus" aria-hidden="true">
+          <DeskCandle :lit="true" :smoking="false" />
+          <RemoteControl :led-on="false" color="#ffd9a0" />
+          <FirstDraft />
+          <DeskPhone />
         </div>
       </div>
     </div>
@@ -494,6 +499,12 @@ defineExpose({ start });
   height: 100vh;
   overflow: hidden;
 }
+/* Bonus props are dressing in the binding — never interactive. */
+.bind-bonus {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 /* The desk: same mahogany as the manuscript desk. */
 .bind-desk-half {
   background-color: #2a140c;
@@ -507,61 +518,6 @@ defineExpose({ start });
     ),
     linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
 }
-/* Bonus props framing the desk: static dressing, never interactive. */
-.bind-props {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.bind-props > div {
-  position: absolute;
-}
-.bp-candle {
-  left: 6%;
-  top: 8%;
-  width: 34px;
-  height: 64px;
-  background: linear-gradient(180deg, #f5e8d0 0%, #d9c39a 100%);
-  border-radius: 6px 6px 3px 3px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-.bp-candle i {
-  position: absolute;
-  left: 50%;
-  top: -14px;
-  width: 10px;
-  height: 16px;
-  transform: translateX(-50%);
-  background: radial-gradient(closest-side, #fff6d8 0%, #ffca7a 55%, rgba(255, 150, 50, 0) 100%);
-  border-radius: 50%;
-  filter: blur(1px);
-}
-.bp-phone {
-  right: 10%;
-  bottom: 12%;
-  width: 38px;
-  height: 66px;
-  background: linear-gradient(180deg, #1a1a1c 0%, #0c0c0e 100%);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  transform: rotate(-8deg);
-}
-.bp-draft {
-  left: 12%;
-  top: 14%;
-  width: 56px;
-  height: 70px;
-}
-.bp-draft i {
-  position: absolute;
-  inset: 0;
-  background: #e8dcc2;
-  border: 1px solid rgba(60, 45, 10, 0.3);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
-}
-.bp-draft i:nth-child(2) { transform: rotate(-4deg) translate(-2px, 2px); }
-.bp-draft i:nth-child(3) { transform: rotate(3deg) translate(2px, -1px); }
 .bind-skip {
   position: absolute;
   top: max(1rem, env(safe-area-inset-top));

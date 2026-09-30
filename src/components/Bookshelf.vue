@@ -49,9 +49,11 @@ const backdropBooks: ShelfBook[] = [
   ...bottomLeft,
   ...bottomRight,
 ];
-/** Backdrop mode: trimmed shelf (outermost books removed so the row
-    fits) with the binding slot in the middle. */
-const backdropTrimmed = backdropBooks.slice(1, -1);
+/** Backdrop mode: the SAME shelf, everywhere. No trimming — the only
+    difference is the visual treatment (dimmed, scaled). Split around
+    the binding slot. */
+const backdropLeft = backdropBooks.slice(0, 3);
+const backdropRight = backdropBooks.slice(3);
 
 /** The currently selected (floating) book, by title. Null when none. */
 const selected = ref<string | null>(null);
@@ -176,7 +178,7 @@ function toggleOurs(ev: Event) {
         <div class="bs-shelf">
           <div class="bs-books">
             <div
-              v-for="b in backdropTrimmed.slice(0, Math.ceil(backdropTrimmed.length / 2))"
+              v-for="b in backdropLeft"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
@@ -187,7 +189,7 @@ function toggleOurs(ev: Event) {
               <div class="bs-ours"><span>Gray Solutions</span></div>
             </div>
             <div
-              v-for="b in backdropTrimmed.slice(Math.ceil(backdropTrimmed.length / 2))"
+              v-for="b in backdropRight"
               :key="'bg-' + b.title"
               class="bs-book"
               :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
