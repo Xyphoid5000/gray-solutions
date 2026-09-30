@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -18,11 +18,15 @@ import MatchHand from './components/MatchHand.vue';
 import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
+import { useBonusStore } from './stores/bonus';
+import { useInteractionsStore } from './stores/interactions';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const office = useOfficeStore();
+const bonus = useBonusStore();
+const interactions = useInteractionsStore();
 
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
@@ -33,7 +37,6 @@ const bookMounted = computed(() => office.view === 'desk');
 /** Bonus content (candle, LEDs, first draft, UV light, phone, discount
     code) lives behind a toggle on the back of the cover. Off by
     default; session-scoped, like the bound state. */
-const bonusContent = ref(false);
 /** The pull cord only exists while bonus content is on. Flipping the
     switch arms its drop; it falls from behind the header once the
     stack's front face swings back into view (or the book opens). */
@@ -55,8 +58,8 @@ async function openBook() {
   if ((office.view === 'desk') || office.transitioning) return;
   // Entering the book in the dark: the candle is already lit — no
   // pitch-black beat, no lighting ceremony.
-  if (isDark() && bonusContent.value && !candleGone.value) {
-    candleLit.value = true;
+  if (isDark() && bonus.enabled && !bonus.candleGone) {
+    bonus.candleLit = true;
   }
   // The cord is purely bonus-gated: it only ever appears while bonus
   // content is on, and opening the book never triggers it.
@@ -229,23 +232,12 @@ function onNavHome() {
 
 const isDark = () => document.documentElement.dataset.theme === 'dark';
 /** The LED strip is lit: dark mode, in the book. */
-const ledOn = ref(false);
 /** Accent mode: LEDs on as a hint of color while the main light is
     still up — the step before the hand kills the main light. */
-const ledAccent = ref(false);
 /** Current LED color — blue is Chris's. Drives the wash via --led. */
-const ledColor = ref('#2f6bff');
 /** The desk candle: lit only when nothing else is. Persists on the desk. */
-const candleLit = ref(false);
-const candleSmoking = ref(false);
 /** Breeze gust sweeping the desk (pages flutter, candle blows out). */
-const breezeOn = ref(false);
 /** Light rituals: pitch-black beat, match hand, breeze. */
-const pitchBlack = ref(false);
-const matchMounted = ref(false);
-const matchAtWick = ref(false);
-const matchXY = ref({ x: 60, y: 400 });
-const ritualRunning = ref(false);
 let ritualTimers: ReturnType<typeof setTimeout>[] = [];
 const reducedMotion = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -275,29 +267,29 @@ function setThemePlain(light: boolean) {
     and leaves. The candle stays lit until it's blown out or the
     main light comes back on. */
 function candleLightingRitual() {
-  ritualRunning.value = true;
+  interactions.ritualRunning = true;
   setThemePlain(false);
-  pitchBlack.value = true;
+  interactions.pitchBlack = true;
   updateLights();
-  matchXY.value = measureWickSpot();
+  interactions.matchXY = measureWickSpot();
   later(() => {
-    matchMounted.value = true;
+    interactions.matchMounted = true;
     later(() => {
-      matchAtWick.value = true;
+      interactions.matchAtWick = true;
     }, 60);
   }, 900);
   later(() => {
     // The match touches the wick: the candle catches, black lifts.
-    candleLit.value = true;
-    pitchBlack.value = false;
+    bonus.candleLit = true;
+    interactions.pitchBlack = false;
     updateLights();
   }, 2100);
   later(() => {
-    matchAtWick.value = false;
+    interactions.matchAtWick = false;
   }, 2500);
   later(() => {
-    matchMounted.value = false;
-    ritualRunning.value = false;
+    interactions.matchMounted = false;
+    interactions.ritualRunning = false;
     updateLights();
   }, 3100);
 }
@@ -313,22 +305,22 @@ function measureWickSpot() {
 /** The main light comes back on while the candle burns: a breeze
     sweeps the desk, ruffles the pages, and blows the candle out. */
 function breezeRitual() {
-  ritualRunning.value = true;
-  breezeOn.value = true;
+  interactions.ritualRunning = true;
+  bonus.breezeOn = true;
   updateLights();
   later(() => {
     // The gust reaches the candle: the flame gutters out.
-    candleLit.value = false;
-    candleSmoking.value = true;
+    bonus.candleLit = false;
+    bonus.candleSmoking = true;
     updateLights();
   }, 1300);
   later(() => {
-    breezeOn.value = false;
-    ritualRunning.value = false;
+    bonus.breezeOn = false;
+    interactions.ritualRunning = false;
     updateLights();
   }, 2400);
   later(() => {
-    candleSmoking.value = false;
+    bonus.candleSmoking = false;
   }, 4400);
 }
 
@@ -338,28 +330,28 @@ function breezeRitual() {
     angrier each time, then the sixteenth blowout is his last — he
     quits, taking the candle. */
 function onCandleBlowOut() {
-  if (ritualRunning.value || gagRunning.value || !candleLit.value) return;
+  if (interactions.ritualRunning || interactions.gagRunning || !bonus.candleLit) return;
   // Only counts when the candle was the room's only light.
-  const alone = isDark() && !ledOn.value;
-  if (alone && !candleGone.value) {
-    blowoutCount.value += 1;
-    const n = blowoutCount.value;
+  const alone = isDark() && !bonus.ledOn;
+  if (alone && !bonus.candleGone) {
+    bonus.blowoutCount += 1;
+    const n = bonus.blowoutCount;
     // The bit happens every 4th blowout: 4, 8, 12 — and 16 is the
     // resignation. Block the normal relight before the sources update
     // fans out.
-    if (n % 4 === 0) gagRunning.value = true;
+    if (n % 4 === 0) interactions.gagRunning = true;
   }
-  candleLit.value = false;
-  candleSmoking.value = true;
+  bonus.candleLit = false;
+  bonus.candleSmoking = true;
   updateLights();
   setTimeout(() => {
-    candleSmoking.value = false;
+    bonus.candleSmoking = false;
   }, 2600);
-  const n = blowoutCount.value;
+  const n = bonus.blowoutCount;
   if (n === 4) matchGuyGag(1);
   else if (n === 8) matchGuyGag(2);
   else if (n === 12) matchGuyGag(3);
-  else if (n >= 16 && !candleGone.value) matchGuyQuits();
+  else if (n >= 16 && !bonus.candleGone) matchGuyQuits();
 }
 
 /** The complaint ladder — wearier every cycle. */
@@ -370,33 +362,25 @@ const GUY_LINES = [
 ] as const;
 
 /** The match guy's fuse: consecutive lone-candle blowouts this session. */
-const blowoutCount = ref(0);
 /** He quit and took the candle — it's gone for the session, and the
     dark just stays dark. */
-const candleGone = ref(false);
 /** A match-guy gag is playing: the normal relight ritual stands down. */
-const gagRunning = ref(false);
 /** The walker himself. */
-const guyMounted = ref(false);
-const guyX = ref(-160);
-const guyMode = ref<'flashlight' | 'match' | 'carry' | 'empty'>('flashlight');
-const guyFacing = ref<1 | -1>(1);
-const guyLine = ref<string | null>(null);
 let guyTimer: ReturnType<typeof setInterval> | null = null;
 
 /** Walk the guy toward a viewport x at px/sec, then call back. */
 function walkGuyTo(targetX: number, speed: number, onArrive: () => void) {
   if (guyTimer) clearInterval(guyTimer);
   guyTimer = setInterval(() => {
-    const diff = targetX - guyX.value;
+    const diff = targetX - interactions.guyX;
     const step = speed * 0.05;
     if (Math.abs(diff) <= step) {
-      guyX.value = targetX;
+      interactions.guyX = targetX;
       if (guyTimer) clearInterval(guyTimer);
       guyTimer = null;
       onArrive();
     } else {
-      guyX.value += Math.sign(diff) * step;
+      interactions.guyX += Math.sign(diff) * step;
     }
   }, 50);
 }
@@ -404,8 +388,8 @@ function walkGuyTo(targetX: number, speed: number, onArrive: () => void) {
 function stopGuy() {
   if (guyTimer) clearInterval(guyTimer);
   guyTimer = null;
-  guyMounted.value = false;
-  guyLine.value = null;
+  interactions.guyMounted = false;
+  interactions.guyLine = null;
 }
 
 /** Every fourth blowout: the room stays dark, and the match guy
@@ -413,44 +397,44 @@ function stopGuy() {
     cycle — then strides back through with a lit match, lighting the
     candle mid-stride without stopping. */
 function matchGuyGag(level: 1 | 2 | 3) {
-  gagRunning.value = true;
+  interactions.gagRunning = true;
   const vw = window.innerWidth;
   if (reducedMotion()) {
-    pitchBlack.value = true;
+    interactions.pitchBlack = true;
     updateLights();
     later(() => {
-      candleLit.value = true;
-      pitchBlack.value = false;
-      gagRunning.value = false;
+      bonus.candleLit = true;
+      interactions.pitchBlack = false;
+      interactions.gagRunning = false;
       updateLights();
     }, 1200);
     return;
   }
-  pitchBlack.value = true;
+  interactions.pitchBlack = true;
   updateLights();
   later(() => {
     // The complaint walk: in from the left, flashlight sweeping.
-    guyMode.value = 'flashlight';
-    guyFacing.value = 1;
-    guyX.value = -160;
-    guyLine.value = GUY_LINES[level - 1];
-    guyMounted.value = true;
+    interactions.guyMode = 'flashlight';
+    interactions.guyFacing = 1;
+    interactions.guyX = -160;
+    interactions.guyLine = GUY_LINES[level - 1];
+    interactions.guyMounted = true;
     walkGuyTo(vw + 160, 110, () => {
       stopGuy();
       later(() => {
         // Back with a lit match, from the right this time — and he
         // doesn't break stride. Past the candle, off the left edge;
         // the flame catches a beat after he's gone.
-        guyMode.value = 'match';
-        guyFacing.value = -1;
-        guyX.value = vw + 160;
-        guyMounted.value = true;
+        interactions.guyMode = 'match';
+        interactions.guyFacing = -1;
+        interactions.guyX = vw + 160;
+        interactions.guyMounted = true;
         walkGuyTo(-160, 110, () => {
           stopGuy();
           later(() => {
-            candleLit.value = true;
-            pitchBlack.value = false;
-            gagRunning.value = false;
+            bonus.candleLit = true;
+            interactions.pitchBlack = false;
+            interactions.gagRunning = false;
             updateLights();
           }, 600);
         });
@@ -463,41 +447,41 @@ function matchGuyGag(level: 1 | 2 | 3) {
     says the line, takes the candle, and leaves. The room light comes
     back on to reveal a HELP WANTED flyer where the candle was. */
 function matchGuyQuits() {
-  gagRunning.value = true;
+  interactions.gagRunning = true;
   const vw = window.innerWidth;
   const wick = measureWickSpot();
   if (reducedMotion()) {
-    candleGone.value = true;
+    bonus.candleGone = true;
     setThemePlain(true);
-    pitchBlack.value = false;
-    gagRunning.value = false;
+    interactions.pitchBlack = false;
+    interactions.gagRunning = false;
     updateLights();
     return;
   }
-  pitchBlack.value = true;
+  interactions.pitchBlack = true;
   updateLights();
   later(() => {
-    guyMode.value = 'flashlight';
-    guyFacing.value = -1;
-    guyX.value = vw + 160;
-    guyLine.value = "That's it. I QUIT.";
-    guyMounted.value = true;
+    interactions.guyMode = 'flashlight';
+    interactions.guyFacing = -1;
+    interactions.guyX = vw + 160;
+    interactions.guyLine = "That's it. I QUIT.";
+    interactions.guyMounted = true;
     walkGuyTo(wick.x + 34, 110, () => {
       later(() => {
         // He takes the candle.
-        guyLine.value = null;
-        candleGone.value = true;
-        guyMode.value = 'carry';
+        interactions.guyLine = null;
+        bonus.candleGone = true;
+        interactions.guyMode = 'carry';
         updateLights();
         later(() => {
-          guyFacing.value = 1;
+          interactions.guyFacing = 1;
           walkGuyTo(vw + 160, 110, () => {
             stopGuy();
             later(() => {
               // The lights come back on. Just the flyer now.
               setThemePlain(true);
-              pitchBlack.value = false;
-              gagRunning.value = false;
+              interactions.pitchBlack = false;
+              interactions.gagRunning = false;
               updateLights();
             }, 900);
           });
@@ -511,37 +495,37 @@ function matchGuyQuits() {
     walks back in with the candle, sets it down where the flyer was,
     and leaves. Fresh fuse: the blowout count resets. */
 function rehireMatchGuy() {
-  if (!candleGone.value || gagRunning.value || ritualRunning.value) return;
-  blowoutCount.value = 0;
+  if (!bonus.candleGone || interactions.gagRunning || interactions.ritualRunning) return;
+  bonus.blowoutCount = 0;
   const vw = window.innerWidth;
   if (reducedMotion()) {
-    candleGone.value = false;
+    bonus.candleGone = false;
     updateLights();
     return;
   }
-  gagRunning.value = true;
+  interactions.gagRunning = true;
   // The flyer sits where the candle was.
   const flyer = document.querySelector('.help-wanted-flyer');
   const spotX = flyer
     ? flyer.getBoundingClientRect().left + flyer.getBoundingClientRect().width / 2
     : measureWickSpot().x;
-  guyMode.value = 'carry';
-  guyFacing.value = -1;
-  guyX.value = vw + 160;
-  guyLine.value = "Fine. I'm back.";
-  guyMounted.value = true;
+  interactions.guyMode = 'carry';
+  interactions.guyFacing = -1;
+  interactions.guyX = vw + 160;
+  interactions.guyLine = "Fine. I'm back.";
+  interactions.guyMounted = true;
   walkGuyTo(spotX + 34, 110, () => {
     later(() => {
       // He sets the candle down and the flyer comes with him.
-      guyLine.value = null;
-      candleGone.value = false;
-      guyMode.value = 'empty';
+      interactions.guyLine = null;
+      bonus.candleGone = false;
+      interactions.guyMode = 'empty';
       updateLights();
       later(() => {
-        guyFacing.value = 1;
+        interactions.guyFacing = 1;
         walkGuyTo(vw + 160, 110, () => {
           stopGuy();
-          gagRunning.value = false;
+          interactions.gagRunning = false;
         });
       }, 500);
     }, 900);
@@ -551,13 +535,13 @@ function rehireMatchGuy() {
 /** The desk phone's contacts can see whether the match guy has quit
     and hire him back. */
 provide('matchGuy', {
-  candleGone,
+  candleGone: toRef(bonus, 'candleGone'),
   rehire: rehireMatchGuy,
 });
 
 /** The cord was yanked — decide what the yank means. */
 function onCordPulled() {
-  if (ritualRunning.value || gagRunning.value) return;
+  if (interactions.ritualRunning || interactions.gagRunning) return;
   const goingDark = !isDark();
   if (!(office.view === 'desk')) {
     // Main view: the cord is just a light switch. No candle out there.
@@ -569,17 +553,17 @@ function onCordPulled() {
     // Lights out in the book. The LEDs stay exactly as they are —
     // if that leaves no light source, the watcher lights the candle.
     setThemePlain(false);
-  } else if (candleLit.value) {
+  } else if (bonus.candleLit) {
     // Lights on while the candle burns: the breeze blows it out.
     setThemePlain(true);
     if (!reducedMotion()) {
       breezeRitual();
       return;
     }
-    candleLit.value = false;
-    candleSmoking.value = true;
+    bonus.candleLit = false;
+    bonus.candleSmoking = true;
     setTimeout(() => {
-      candleSmoking.value = false;
+      bonus.candleSmoking = false;
     }, 2600);
   } else {
     setThemePlain(true);
@@ -589,36 +573,35 @@ function onCordPulled() {
 
 /** Active light sources. The one rule: if this is ever empty while
     the book is open, the hand comes in and lights the candle. */
-const lightSources = ref<string[]>(['main']);
 
 function refreshSources() {
   const s: string[] = [];
   if (!isDark()) s.push('main');
-  if ((office.view === 'desk') && ledOn.value) s.push('led');
-  if ((office.view === 'desk') && candleLit.value) s.push('candle');
-  lightSources.value = s;
+  if ((office.view === 'desk') && bonus.ledOn) s.push('led');
+  if ((office.view === 'desk') && bonus.candleLit) s.push('candle');
+  bonus.lightSources = s;
 }
 
-watch(lightSources, (s) => {
+watch(() => bonus.lightSources, (s) => {
   if (
     s.length === 0 &&
     (office.view === 'desk') &&
-    bonusContent.value &&
-    !ritualRunning.value &&
-    !gagRunning.value &&
-    !candleGone.value
+    bonus.enabled &&
+    !interactions.ritualRunning &&
+    !interactions.gagRunning &&
+    !bonus.candleGone
   ) {
     candleLightingRitual();
   }
 });
 
 function updateLights() {
-  document.documentElement.style.setProperty('--led', ledColor.value);
+  document.documentElement.style.setProperty('--led', bonus.ledColor);
   // The LEDs only exist in the desk view — leaving the book kills them.
-  if (!(office.view === 'desk')) ledOn.value = false;
+  if (!(office.view === 'desk')) bonus.ledOn = false;
   // Faded accent wash while the main light is up; full scene in the dark.
-  ledAccent.value = ledOn.value && !isDark();
-  document.documentElement.dataset.led = ledOn.value && !ledAccent.value ? 'on' : 'off';
+  bonus.ledAccent = bonus.ledOn && !isDark();
+  document.documentElement.dataset.led = bonus.ledOn && !bonus.ledAccent ? 'on' : 'off';
   refreshSources();
 }
 
@@ -627,27 +610,27 @@ function updateLights() {
 function clearLedScene() {
   clearRitual();
   stopGuy();
-  ritualRunning.value = false;
-  gagRunning.value = false;
-  pitchBlack.value = false;
-  matchMounted.value = false;
-  matchAtWick.value = false;
-  breezeOn.value = false;
-  candleSmoking.value = false;
+  interactions.ritualRunning = false;
+  interactions.gagRunning = false;
+  interactions.pitchBlack = false;
+  interactions.matchMounted = false;
+  interactions.matchAtWick = false;
+  bonus.breezeOn = false;
+  bonus.candleSmoking = false;
   document.documentElement.classList.remove('page-shake');
   updateLights();
 }
 
 function onRemotePower() {
-  if (ritualRunning.value || gagRunning.value) return;
+  if (interactions.ritualRunning || interactions.gagRunning) return;
   // The remote only toggles the LEDs — nothing else. If switching them
   // off leaves no light source, the watcher lights the candle.
-  ledOn.value = !ledOn.value;
+  bonus.ledOn = !bonus.ledOn;
   updateLights();
 }
 
 function onLedColor(hex: string) {
-  ledColor.value = hex;
+  bonus.ledColor = hex;
   updateLights();
 }
 
@@ -657,22 +640,22 @@ function onLedColor(hex: string) {
     own beat via the header watcher. The room stays as it was, so a dark
     page stays dark. */
 function toggleBonus() {
-  if (!bonusContent.value) {
-    bonusContent.value = true;
+  if (!bonus.enabled) {
+    bonus.enabled = true;
     return;
   }
-  bonusContent.value = false;
-  ledOn.value = false;
-  candleLit.value = false;
+  bonus.enabled = false;
+  bonus.ledOn = false;
+  bonus.candleLit = false;
   clearRitual();
   stopGuy();
-  ritualRunning.value = false;
-  gagRunning.value = false;
-  pitchBlack.value = false;
-  matchMounted.value = false;
-  matchAtWick.value = false;
-  breezeOn.value = false;
-  candleSmoking.value = false;
+  interactions.ritualRunning = false;
+  interactions.gagRunning = false;
+  interactions.pitchBlack = false;
+  interactions.matchMounted = false;
+  interactions.matchAtWick = false;
+  bonus.breezeOn = false;
+  bonus.candleSmoking = false;
   document.documentElement.classList.remove('page-shake');
   updateLights();
 }
@@ -731,14 +714,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: breezeOn }">
+  <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn }">
   <div class="grain" aria-hidden="true"></div>
-  <SiteNav :bonus-content="bonusContent" @contact="onNavContact" @home="onNavHome" />
+  <SiteNav :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
     <Cover
       @open-book="openBook"
       :book-drop-key="boundBookDrop"
-      :bonus-content="bonusContent"
+      :bonus-content="bonus.enabled"
       @toggle-bonus="toggleBonus"
     />
   </div>
@@ -751,34 +734,34 @@ onUnmounted(() => {
   >
     <template #desk-props>
       <RemoteControl
-        v-if="bonusContent"
-        :led-on="ledOn"
-        :color="ledColor"
+        v-if="bonus.enabled"
+        :led-on="bonus.ledOn"
+        :color="bonus.ledColor"
         @power="onRemotePower"
         @set-color="onLedColor"
       />
       <DeskCandle
-        v-if="bonusContent && !candleGone"
-        :lit="candleLit"
-        :smoking="candleSmoking"
+        v-if="bonus.enabled && !bonus.candleGone"
+        :lit="bonus.candleLit"
+        :smoking="bonus.candleSmoking"
         @blow-out="onCandleBlowOut"
       />
       <!-- After the match guy quits, all that's left is this flyer. -->
-      <div v-if="bonusContent && candleGone" class="help-wanted-flyer" aria-hidden="true">
+      <div v-if="bonus.enabled && bonus.candleGone" class="help-wanted-flyer" aria-hidden="true">
         <span class="hw-tape"></span>
         <span class="hw-title">HELP<br />WANTED</span>
         <span class="hw-sub">inquire within</span>
       </div>
       <DeskPencil />
       <DeskClutter />
-      <FirstDraft v-if="bonusContent" />
-      <DeskPhone v-if="bonusContent" />
+      <FirstDraft v-if="bonus.enabled" />
+      <DeskPhone v-if="bonus.enabled" />
     </template>
   </BookView>
   </div>
   <BindCinematic
     ref="bindCinematic"
-    :bonus-content="bonusContent"
+    :bonus-content="bonus.enabled"
     @done="onBindDone"
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
@@ -788,26 +771,26 @@ onUnmounted(() => {
     @done="onOpenTransitionDone"
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
-  <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
+  <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
-  <div class="led-wash" :class="{ on: ledOn, accent: ledAccent }" aria-hidden="true"></div>
+  <div class="led-wash" :class="{ on: bonus.ledOn, accent: bonus.ledAccent }" aria-hidden="true"></div>
   <!-- Candlelight: warm wash while the candle burns. -->
-  <div class="candle-wash" :class="{ on: candleLit }" aria-hidden="true"></div>
+  <div class="candle-wash" :class="{ on: bonus.candleLit }" aria-hidden="true"></div>
   <!-- Breeze gust sweeping the desk, left to right. -->
-  <div class="breeze" :class="{ on: breezeOn }" aria-hidden="true"></div>
+  <div class="breeze" :class="{ on: bonus.breezeOn }" aria-hidden="true"></div>
   <MatchHand
-    v-if="matchMounted"
-    :x="matchXY.x"
-    :y="matchXY.y"
-    :at-wick="matchAtWick"
+    v-if="interactions.matchMounted"
+    :x="interactions.matchXY.x"
+    :y="interactions.matchXY.y"
+    :at-wick="interactions.matchAtWick"
   />
   <!-- The match guy's complaint walk / resignation. -->
   <MatchGuy
-    v-if="guyMounted"
-    :x="guyX"
-    :mode="guyMode"
-    :facing="guyFacing"
-    :line="guyLine"
+    v-if="interactions.guyMounted"
+    :x="interactions.guyX"
+    :mode="interactions.guyMode"
+    :facing="interactions.guyFacing"
+    :line="interactions.guyLine"
   />
   </div>
 </template>
