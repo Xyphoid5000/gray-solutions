@@ -150,8 +150,16 @@ function goFromModal(i: number) {
 }
 
 function onKey(e: KeyboardEvent) {
+  if (overlayOpen()) return;
   if (e.key === 'ArrowRight') next();
   if (e.key === 'ArrowLeft') prev();
+}
+
+/** An overlay (phone, first draft, chapter preview) is open over the
+    pages — swipes and arrow keys must not turn pages (or trigger the
+    binding) underneath it. The overlays only exist in the DOM while open. */
+function overlayOpen(): boolean {
+  return !!document.querySelector('.phone-modal, .draft-modal, .chapter-modal');
 }
 
 /** Direct navigation — tabs and scattered pages go straight there. */
@@ -275,6 +283,7 @@ function onTouchEnd(e: TouchEvent) {
   touchX = null;
   touchOnStrip = false;
   if (onStrip) return;
+  if (overlayOpen()) return;
   if (Math.abs(dx) < 48) return;
   // Last page: swipe left (toward the next page) to bind the book.
   if (dx < 0 && currentIndex.value === chapters.length - 1) {

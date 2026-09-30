@@ -35,7 +35,6 @@ const bonusContent = ref(false);
     switch arms its drop; it falls from behind the header once the
     stack's front face swings back into view (or the book opens). */
 
-const siteNavRef = ref<InstanceType<typeof SiteNav> | null>(null);
 /** True while the binding's shelf beat reveals the home page's real
  * bookshelf behind the cinematic; hides the manuscript stack so the
  * filing reads clean. */
@@ -647,30 +646,29 @@ function onLedColor(hex: string) {
 }
 
 /** The bonus switch on the back of the stack. On: the pull cord drops
-    itself from the header. Off: the cord draws back up into the header
-    first, then the bonus layer wipes — the room stays as it was, so a
-    dark page stays dark. */
+    itself from the header. Off: the switch flips instantly and the bonus
+    layer wipes — the cord draws itself back up into the header on its
+    own beat via the header watcher. The room stays as it was, so a dark
+    page stays dark. */
 function toggleBonus() {
   if (!bonusContent.value) {
     bonusContent.value = true;
     return;
   }
-  siteNavRef.value?.retractCord(() => {
-    ledOn.value = false;
-    candleLit.value = false;
-    bonusContent.value = false;
-    clearRitual();
-    stopGuy();
-    ritualRunning.value = false;
-    gagRunning.value = false;
-    pitchBlack.value = false;
-    matchMounted.value = false;
-    matchAtWick.value = false;
-    breezeOn.value = false;
-    candleSmoking.value = false;
-    document.documentElement.classList.remove('page-shake');
-    updateLights();
-  });
+  bonusContent.value = false;
+  ledOn.value = false;
+  candleLit.value = false;
+  clearRitual();
+  stopGuy();
+  ritualRunning.value = false;
+  gagRunning.value = false;
+  pitchBlack.value = false;
+  matchMounted.value = false;
+  matchAtWick.value = false;
+  breezeOn.value = false;
+  candleSmoking.value = false;
+  document.documentElement.classList.remove('page-shake');
+  updateLights();
 }
 
 function onLightsOn() {
@@ -729,7 +727,7 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': cameraMoving, breezing: breezeOn }">
   <div class="grain" aria-hidden="true"></div>
-  <SiteNav ref="siteNavRef" :bonus-content="bonusContent" @contact="onNavContact" @home="onNavHome" />
+  <SiteNav :bonus-content="bonusContent" @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
     <Cover
       @open-book="openBook"

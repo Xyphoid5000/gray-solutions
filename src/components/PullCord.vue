@@ -102,8 +102,11 @@ const onPointerDown = (e: PointerEvent) => {
   startY = e.clientY;
   pull = 0;
   stopSway();
-  // A grab always wins — stop any in-flight ball drop first.
+  // A grab always wins — stop any in-flight entrance first, and tell the
+  // header so the scheduled ball drop never fights the user's hand.
   if (knob.value) gsap.killTweensOf(knob.value);
+  if (line.value) gsap.killTweensOf(line.value);
+  window.dispatchEvent(new CustomEvent('gs:cord-grabbed'));
   gsap.set(root.value, { rotation: 0 });
 };
 
@@ -143,6 +146,29 @@ const onClick = (e: MouseEvent) => {
   }, 130);
 };
 
+/** Park the line fully retracted into the header — the entrance starts
+    with the cord alone, dropping straight down from the mount. */
+const parkLine = () => {
+  if (!line.value) return;
+  gsap.killTweensOf(line.value);
+  gsap.set(line.value, { scaleY: 0 });
+};
+
+/** The cord drops: the line falls straight down from the header,
+    accelerating like gravity. */
+const dropLine = () => {
+  if (!line.value) return;
+  gsap.killTweensOf(line.value);
+  gsap.to(line.value, { scaleY: 1, duration: 1.0, ease: 'power2.in' });
+};
+
+/** Line to full length, no animation (reduced motion). */
+const settleLine = () => {
+  if (!line.value) return;
+  gsap.killTweensOf(line.value);
+  gsap.set(line.value, { scaleY: 1 });
+};
+
 /** Park the ball up at the base, tucked behind the header — the staged
     drop starts with the line alone, then the ball falls to the line's
     end as if it had been sitting up by the base. */
@@ -166,7 +192,7 @@ const settleBall = () => {
   gsap.set(knob.value, { y: 0 });
 };
 
-defineExpose({ parkBall, dropBall, settleBall });
+defineExpose({ parkBall, dropBall, settleBall, parkLine, dropLine, settleLine });
 
 onMounted(() => {
   // App forces the opening theme; the cord just sways and reports yanks.

@@ -607,6 +607,21 @@ onUnmounted(() => {
               <feGaussianBlur stdDeviation="2.2" />
             </filter>
           </defs>
+          <!-- contact shadow grounds the wax on the paper -->
+          <ellipse cx="60" cy="111" rx="42" ry="7" fill="#3a0d06" opacity="0.28" filter="url(#waxSoft)" />
+          <!-- side wall: a dark extrusion under the wax gives it real
+               height, so it reads as a thick blob from the side -->
+          <g fill="#5e0d05">
+            <g transform="translate(0,7)">
+              <path
+                d="M60 14 C76 12, 92 22, 97 38 C100 48, 98 54, 100 62 C102 74, 94 88, 82 96 C70 104, 54 106, 40 100 C26 94, 16 82, 15 66 C14 54, 18 48, 17 38 C16 26, 30 16, 44 15 C49 14.5, 55 14.5, 60 14 Z"
+              />
+            </g>
+            <g transform="translate(0,4)">
+              <ellipse cx="101" cy="30" rx="7" ry="9" />
+              <circle cx="20" cy="95" r="6" />
+            </g>
+          </g>
           <!-- satellite droplets -->
           <ellipse cx="101" cy="30" rx="7" ry="9" fill="url(#waxBody)" stroke="#7d130a" stroke-width="1.5" />
           <ellipse cx="99" cy="27" rx="2.4" ry="3.4" fill="#ffb3a0" opacity="0.75" filter="url(#waxSoft)" />

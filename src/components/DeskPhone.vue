@@ -238,20 +238,21 @@ interface Contact {
   note: string;
   special?: 'gray' | 'guy';
 }
-const contacts = computed<Contact[]>(() => [
-  { id: 'gray', name: 'Gray Solutions', note: '', special: 'gray' },
-  { id: 'pizza', name: 'Pizza Palace', note: 'Nobody picks up. Rude.' },
-  { id: 'blockbuster', name: 'Blockbuster Video', note: 'This number has been disconnected since 2013.' },
-  { id: 'mom', name: 'Mom', note: "She'll call you back. She always does." },
-  { id: 'tech', name: 'Tech Support', note: 'Have you tried turning it off and on again?' },
-  { id: 'void', name: 'The Void', note: 'It stares back.' },
-  { id: 'dentist', name: 'Dentist', note: 'You have 3 missed cleanings.' },
-  { id: 'snake-line', name: '1-800-SNAKE', note: "…It's just hissing." },
-  // He quit over the candle. Call him and he'll come back.
-  ...(guyQuit.value
-    ? [{ id: 'guy', name: 'Match Guy', note: '', special: 'guy' } as Contact]
-    : []),
-]);
+const contacts = computed<Contact[]>(() => {
+  const list: Contact[] = [
+    { id: 'gray', name: 'Gray Solutions', note: '', special: 'gray' },
+    { id: 'pizza', name: 'Pizza Palace', note: 'Nobody picks up. Rude.' },
+    { id: 'blockbuster', name: 'Blockbuster Video', note: 'This number has been disconnected since 2013.' },
+    { id: 'mom', name: 'Mom', note: "She'll call you back. She always does." },
+    // He's always listed; what he says depends on his employment status.
+    { id: 'guy', name: 'Match Guy', note: '', special: 'guy' },
+    { id: 'tech', name: 'Tech Support', note: 'Have you tried turning it off and on again?' },
+    { id: 'void', name: 'The Void', note: 'It stares back.' },
+    { id: 'dentist', name: 'Dentist', note: 'You have 3 missed cleanings.' },
+    { id: 'website', name: 'Your Current Website', note: "It doesn't answer. It just begs for a redesign." },
+  ];
+  return list.sort((a, b) => a.name.localeCompare(b.name));
+});
 
 const callContact = ref<Contact | null>(null);
 const callStatus = ref<'calling' | 'connected' | 'noanswer'>('calling');
@@ -272,13 +273,16 @@ function startCall(c: Contact) {
       callStatus.value = 'connected';
     }, 1400);
   } else if (c.special === 'guy') {
-    // He agrees to come back — hang up so you can watch him walk in.
+    // He answers either way. If he quit over the candle, he agrees to
+    // come back — hang up so you can watch him walk in with it. If he's
+    // still employed, he's at work and brushes you off.
     callTimer = window.setTimeout(() => {
       callStatus.value = 'connected';
       callTimer = window.setTimeout(() => {
+        const quit = guyQuit.value;
         putDown();
-        matchGuy?.rehire();
-      }, 1300);
+        if (quit) matchGuy?.rehire();
+      }, 1500);
     }, 1400);
   } else {
     callTimer = window.setTimeout(() => {
@@ -438,7 +442,13 @@ onUnmounted(() => {
             <p class="call-code-value">{{ activeDiscountCode }}</p>
             <p class="call-code-note">Mention it in the contact form for <strong>20% off</strong> your new website.</p>
           </div>
-          <p v-else-if="callStatus === 'connected'" class="call-status">“Fine. I’ll come back.”</p>
+          <p v-else-if="callStatus === 'connected'" class="call-status">
+            {{
+              callContact?.special === 'guy' && !guyQuit
+                ? '“I’m at work — call me back later.”'
+                : '“Fine. I’ll come back.”'
+            }}
+          </p>
           <p v-else class="call-status">{{ callContact?.note }}</p>
           <button
             v-if="!(callStatus === 'connected' && callContact?.special === 'guy')"
