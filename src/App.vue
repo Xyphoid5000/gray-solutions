@@ -31,6 +31,11 @@ const cameraMoving = ref(false);
     code) lives behind a toggle on the back of the cover. Off by
     default; session-scoped, like the bound state. */
 const bonusContent = ref(false);
+/** The pull cord only exists while bonus content is on. Flipping the
+    switch arms its drop; it falls from behind the header once the
+    stack's front face swings back into view (or the book opens). */
+const cordDropArmed = ref(false);
+const siteNavRef = ref<InstanceType<typeof SiteNav> | null>(null);
 /** True while the binding's shelf beat reveals the home page's real
  * bookshelf behind the cinematic; hides the manuscript stack so the
  * filing reads clean. */
@@ -46,6 +51,8 @@ function noScroll(on: boolean) {
 /** Tilt down: the shelf glides up and away, the desk glides in from below. */
 async function openBook() {
   if (showBook.value || cameraMoving.value) return;
+  // The cord's drop shouldn't wait on a stack that's leaving the stage.
+  fireCordDrop();
   if (reducedMotion()) {
     showBook.value = true;
     bookMounted.value = true;
@@ -639,6 +646,44 @@ function onLedColor(hex: string) {
   updateLights();
 }
 
+/** The bonus switch on the back of the stack. Turning it on arms the
+    pull cord's drop from behind the header; turning it off retracts
+    the cord first, then the site goes back to its clean, lit self.
+    Lights always come back on here — otherwise toggling off while dark
+    would strand the site in the dark with no switch left to pull. */
+function toggleBonus() {
+  if (!bonusContent.value) {
+    bonusContent.value = true;
+    cordDropArmed.value = true;
+    return;
+  }
+  cordDropArmed.value = false;
+  siteNavRef.value?.retractCord(() => {
+    setThemePlain(true);
+    ledOn.value = false;
+    candleLit.value = false;
+    bonusContent.value = false;
+    clearRitual();
+    stopGuy();
+    ritualRunning.value = false;
+    gagRunning.value = false;
+    pitchBlack.value = false;
+    matchMounted.value = false;
+    matchAtWick.value = false;
+    breezeOn.value = false;
+    candleSmoking.value = false;
+    document.documentElement.classList.remove('page-shake');
+    updateLights();
+  });
+}
+
+/** The stack's front face is back in view — let the cord fall. */
+function fireCordDrop() {
+  if (!cordDropArmed.value) return;
+  cordDropArmed.value = false;
+  siteNavRef.value?.dropCord();
+}
+
 function onLightsOn() {
   updateLights();
 }
@@ -686,13 +731,15 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': cameraMoving, breezing: breezeOn }">
   <div class="grain" aria-hidden="true"></div>
-  <SiteNav @contact="onNavContact" @home="onNavHome" />
+  <SiteNav ref="siteNavRef" :bonus-content="bonusContent" @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
     <Cover
       @open-book="openBook"
       :book-drop-key="boundBookDrop"
       :bonus-content="bonusContent"
-      @toggle-bonus="bonusContent = !bonusContent"
+      :cord-drop-armed="cordDropArmed"
+      @toggle-bonus="toggleBonus"
+      @cord-drop="fireCordDrop"
     />
   </div>
   <div v-if="bookMounted" class="view view-book">

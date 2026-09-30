@@ -1992,6 +1992,16 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 
 /* ---------- minimal header (brand only — nav lives in the tabs) ---------- */
 /* ---------- light/dark pull cord ---------- */
+/* The pull cord only exists while bonus content is on. This wrapper is
+   the header-sized stage it falls from: the cord mounts tucked up out
+   of sight, drops from behind the header on cue, and retracts the same
+   way. The drop animates the wrapper so it never fights the cord's
+   own sway, and the inner knob keeps its own pointer events. */
+.cord-drop-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
 /* A ceiling-pull cord hanging from the top of the viewport. It overlays
    the page, sways gently at idle, and toggles the theme when yanked. */
 .pull-cord {

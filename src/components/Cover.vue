@@ -8,8 +8,8 @@ import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
 
-const emit = defineEmits(['open-book', 'toggle-bonus']);
-const props = defineProps<{ bookDropKey?: number; bonusContent?: boolean }>();
+const emit = defineEmits(['open-book', 'toggle-bonus', 'cord-drop']);
+const props = defineProps<{ bookDropKey?: number; bonusContent?: boolean; cordDropArmed?: boolean }>();
 
 /** The manuscript becomes a book once the reader finishes and binds it.
     Resets on refresh — every visit starts with the manuscript.
@@ -91,7 +91,32 @@ function applySpin() {
     rotationX: REST_X + manualX,
     transformPerspective: 1400,
   });
+  checkCordDrop();
 }
+
+/** The bonus switch lives on the stack's back, so the reader flips it
+    while looking away from the front. The cord's drop waits until the
+    front face swings back into view — otherwise the whole moment would
+    play to an empty room. */
+let cordDropSent = false;
+function checkCordDrop() {
+  if (!props.cordDropArmed || cordDropSent) return;
+  const rot = autoY + manualY + wiggleY;
+  const norm = ((rot % 360) + 360) % 360;
+  const d = Math.abs(norm - 338); // REST_Y (-22°) normalized
+  if (Math.min(d, 360 - d) < 45) {
+    cordDropSent = true;
+    emit('cord-drop');
+  }
+}
+
+watch(
+  () => props.cordDropArmed,
+  (armed) => {
+    if (armed) checkCordDrop();
+    else cordDropSent = false;
+  },
+);
 
 /** One playful rock after a drop lands, hinting the cover can be spun.
     Dies quietly if the reader grabs the book mid-wiggle. */
