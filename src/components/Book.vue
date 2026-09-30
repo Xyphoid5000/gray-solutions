@@ -47,7 +47,7 @@ const innerTransform = computed(() => {
 });
 
 function onPointerDown(e: PointerEvent) {
-  if (!props.pulled || !props.interactive) return;
+  if (!props.interactive) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   dragPointerId = e.pointerId;
   dragStartX = dragLastX = e.clientX;
@@ -58,6 +58,13 @@ function onPointerDown(e: PointerEvent) {
 
 function onPointerMove(e: PointerEvent) {
   if (e.pointerId !== dragPointerId) return;
+  // Spinning only applies once the book is pulled out.
+  if (!props.pulled) {
+    if (Math.abs(e.clientX - dragStartX) + Math.abs(e.clientY - dragStartY) > 10) {
+      dragMoved = true;
+    }
+    return;
+  }
   const dx = e.clientX - dragLastX;
   const dy = e.clientY - dragLastY;
   dragLastX = e.clientX;
