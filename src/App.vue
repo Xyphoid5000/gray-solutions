@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, provide, ref, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -17,19 +17,19 @@ import DeskCandle from './components/DeskCandle.vue';
 import MatchHand from './components/MatchHand.vue';
 import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
+import { useOfficeStore } from './stores/office';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 
 gsap.registerPlugin(ScrollTrigger);
 
-/** The book is a SPA now — no router. Shelf or the open book, with a
-    camera tilt between them. `showBook` is the logical state; the mount
-    flags let a tilt hold both views at once. */
-const showBook = ref(false);
-const homeMounted = ref(true);
-const bookMounted = ref(false);
-const cameraMoving = ref(false);
-/** The shelf-to-desk room transition when opening the manuscript. */
+const office = useOfficeStore();
+
+/** The book is a SPA now — no router. The Office carousel handles
+    shelf vs desk; `office.view` is the single source of truth. */
 const showOpenTransition = ref(false);
+/** Computed mount flags for the template (Office will replace these). */
+const homeMounted = computed(() => office.view === 'shelf');
+const bookMounted = computed(() => office.view === 'desk');
 /** Bonus content (candle, LEDs, first draft, UV light, phone, discount
     code) lives behind a toggle on the back of the cover. Off by
     default; session-scoped, like the bound state. */
@@ -52,7 +52,7 @@ function noScroll(on: boolean) {
 
 /** Tilt down: the shelf glides up and away, the desk glides in from below. */
 async function openBook() {
-  if (showBook.value || cameraMoving.value) return;
+  if ((office.view === 'desk') || office.transitioning) return;
   // Entering the book in the dark: the candle is already lit — no
   // pitch-black beat, no lighting ceremony.
   if (isDark() && bonusContent.value && !candleGone.value) {
@@ -61,19 +61,16 @@ async function openBook() {
   // The cord is purely bonus-gated: it only ever appears while bonus
   // content is on, and opening the book never triggers it.
   if (reducedMotion()) {
-    showBook.value = true;
-    bookMounted.value = true;
-    homeMounted.value = false;
+    office.showDesk();
     window.scrollTo(0, 0);
     updateLights();
     return;
   }
   // The desk (real BookView) mounts offscreen, fully rendered, then
   // pulls into frame after the pages fall. No duplicate, no blank.
-  cameraMoving.value = true;
+  office.setTransitioning(true);
   noScroll(true);
-  showBook.value = true;
-  bookMounted.value = true;
+  office.showDesk();
   await nextTick();
   window.scrollTo(0, 0);
   const vh = window.innerHeight;
@@ -99,8 +96,7 @@ async function openBook() {
       gsap.to(book, { y: 0, duration: 1.6, ease: 'power2.inOut' }).then(),
     ]);
   }
-  homeMounted.value = false;
-  cameraMoving.value = false;
+  office.setTransitioning(false);
   if (book) gsap.set(book, { y: 0 });
   noScroll(false);
   updateLights();
@@ -112,17 +108,16 @@ function onOpenTransitionDone() {
 
 /** Tilt up: the desk slides away below, the shelf glides back in. */
 async function tiltUp() {
-  if (!showBook.value || cameraMoving.value) return;
+  if (!(office.view === 'desk') || office.transitioning) return;
   if (reducedMotion()) {
     clearLedScene();
     closeBook();
     window.scrollTo(0, 0);
     return;
   }
-  cameraMoving.value = true;
+  office.setTransitioning(true);
   noScroll(true);
-  showBook.value = false;
-  homeMounted.value = true;
+  office.showShelf();
   await nextTick();
   const home = document.querySelector('.view-home') as HTMLElement | null;
   const book = document.querySelector('.view-book') as HTMLElement | null;
@@ -145,8 +140,7 @@ async function tiltUp() {
       .then();
     gsap.set(home, { clearProps: 'all' });
   }
-  bookMounted.value = false;
-  cameraMoving.value = false;
+  office.setTransitioning(false);
   noScroll(false);
   clearLedScene();
 }
@@ -157,13 +151,11 @@ function closeBook() {
   // Flag the book closed first: updateLights() (via clearLedScene)
   // kills LED mode when the book isn't open, so the main page lands
   // on standard dark mode instead of the LED scene.
-  showBook.value = false;
+  office.showShelf();
   clearLedScene();
-  bookMounted.value = false;
-  homeMounted.value = true;
 }
 async function closeBookToSection(section: 'about' | 'contact', after = 100) {
-  if (showBook.value) await tiltUp();
+  if ((office.view === 'desk')) await tiltUp();
   else closeBook();
   // After the shelf is back, scroll to the section.
   requestAnimationFrame(() => {
@@ -210,13 +202,11 @@ function onBindBlackout() {
 /** The binding's shelf beat: mount the home page behind the cinematic
     so the 3D book files into the real bookshelf. */
 function onBindShelf() {
-  bookMounted.value = false;
-  homeMounted.value = true;
   shelfReveal.value = true;
 }
 /** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
 function onNavContact() {
-  if (showBook.value) {
+  if ((office.view === 'desk')) {
     if (!manuscriptBound.value && bindCinematic.value) {
       runBinding();
       return;
@@ -227,7 +217,7 @@ function onNavContact() {
   }
 }
 function onNavHome() {
-  if (showBook.value) {
+  if ((office.view === 'desk')) {
     tiltUp();
   } else {
     closeBook();
@@ -569,7 +559,7 @@ provide('matchGuy', {
 function onCordPulled() {
   if (ritualRunning.value || gagRunning.value) return;
   const goingDark = !isDark();
-  if (!showBook.value) {
+  if (!(office.view === 'desk')) {
     // Main view: the cord is just a light switch. No candle out there.
     setThemePlain(!goingDark);
     updateLights();
@@ -604,15 +594,15 @@ const lightSources = ref<string[]>(['main']);
 function refreshSources() {
   const s: string[] = [];
   if (!isDark()) s.push('main');
-  if (showBook.value && ledOn.value) s.push('led');
-  if (showBook.value && candleLit.value) s.push('candle');
+  if ((office.view === 'desk') && ledOn.value) s.push('led');
+  if ((office.view === 'desk') && candleLit.value) s.push('candle');
   lightSources.value = s;
 }
 
 watch(lightSources, (s) => {
   if (
     s.length === 0 &&
-    showBook.value &&
+    (office.view === 'desk') &&
     bonusContent.value &&
     !ritualRunning.value &&
     !gagRunning.value &&
@@ -625,7 +615,7 @@ watch(lightSources, (s) => {
 function updateLights() {
   document.documentElement.style.setProperty('--led', ledColor.value);
   // The LEDs only exist in the desk view — leaving the book kills them.
-  if (!showBook.value) ledOn.value = false;
+  if (!(office.view === 'desk')) ledOn.value = false;
   // Faded accent wash while the main light is up; full scene in the dark.
   ledAccent.value = ledOn.value && !isDark();
   document.documentElement.dataset.led = ledOn.value && !ledAccent.value ? 'on' : 'off';
@@ -741,7 +731,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-root" :class="{ 'camera-moving': cameraMoving, breezing: breezeOn }">
+  <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: breezeOn }">
   <div class="grain" aria-hidden="true"></div>
   <SiteNav :bonus-content="bonusContent" @contact="onNavContact" @home="onNavHome" />
   <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
