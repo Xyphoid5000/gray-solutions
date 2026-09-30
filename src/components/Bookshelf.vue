@@ -48,7 +48,6 @@ const selected = ref<string | null>(null);
 /** The floating book element, for the put-back animation. */
 let floatingEl: HTMLElement | null = null;
 /** The book's home position, to return it. */
-let homeRect: DOMRect | null = null;
 
 /** Pull a book off the shelf: reverse of the file-away — the spine
     becomes 3D, turns to face you, and floats in the middle. */
@@ -100,7 +99,6 @@ function selectBook(book: ShelfBook, el: HTMLElement) {
   if (selected.value) return;
   selected.value = book.title;
   floatingEl = el;
-  homeRect = el.getBoundingClientRect();
   pullOut(el);
 }
 
@@ -125,7 +123,6 @@ function deselectBook() {
     onComplete: () => {
       selected.value = null;
       floatingEl = null;
-      homeRect = null;
     },
   });
 }
