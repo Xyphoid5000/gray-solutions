@@ -51,13 +51,6 @@ function toggleBook(book: ShelfBook) {
   if (selected.value === book.title) selected.value = null;
   else if (!selected.value) selected.value = book.title;
 }
-
-/** Gray Solutions, when bound: pull it out like the others, but it
-    can actually be opened. */
-function toggleOurs() {
-  if (selected.value === '__ours') selected.value = null;
-  else if (!selected.value) selected.value = '__ours';
-}
 </script>
 
 <template>
@@ -87,19 +80,7 @@ function toggleOurs() {
             @toggle="toggleBook(b)"
           />
           <div class="bs-slot" data-bind-slot>
-            <template v-if="isBound">
-              <Book
-                title="Gray Solutions"
-                color="#1a1a1a"
-                synopsis="Websites that tell stories."
-                :width="52"
-                :height="230"
-                :interactive="interactive"
-                :pulled="selected === '__ours'"
-                @toggle="toggleOurs()"
-              />
-            </template>
-            <div v-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
+            <div class="bs-slot-empty" aria-hidden="true"></div>
           </div>
           <Book
             v-for="b in shelfRight"
@@ -121,6 +102,21 @@ function toggleOurs() {
     <div v-if="backdrop" class="bs-blur-veil" aria-hidden="true"></div>
 
     <div v-if="!backdrop" class="bs-foreground">
+      <div
+        v-if="isBound && interactive"
+        class="bs-hero-book"
+      >
+        <Book
+          title="Gray Solutions"
+          color="#1a1a1a"
+          synopsis="Websites that tell stories."
+          :width="68"
+          :height="300"
+          :interactive="true"
+          :pulled="true"
+          @toggle="emit('open-book')"
+        />
+      </div>
       <button
         v-if="showManuscript && !isBound"
         type="button"
@@ -430,6 +426,16 @@ function toggleOurs() {
   align-items: center;
   gap: 0.6rem;
   z-index: 2;
+}
+/* The bound book as hero, mirroring the manuscript pre-bind. */
+.bs-hero-book {
+  display: flex;
+  justify-content: center;
+  pointer-events: auto;
+}
+.bs-hero-book .book3d {
+  /* Larger hero size is set via props; ensure it's above the shelf. */
+  z-index: 3;
 }
 .bs-manuscript {
   background: none;
