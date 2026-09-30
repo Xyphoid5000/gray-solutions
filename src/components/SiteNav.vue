@@ -50,7 +50,12 @@ watch(
       cordResting = false;
       return;
     }
-    nextTick(foldUp);
+    // KISS: the bonus switch is the cord's only trigger — on mount it
+    // parks folded above the header, then immediately swings down.
+    nextTick(() => {
+      foldUp();
+      dropCord();
+    });
   },
   { immediate: true },
 );

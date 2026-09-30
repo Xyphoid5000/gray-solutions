@@ -34,7 +34,7 @@ const bonusContent = ref(false);
 /** The pull cord only exists while bonus content is on. Flipping the
     switch arms its drop; it falls from behind the header once the
     stack's front face swings back into view (or the book opens). */
-const cordDropArmed = ref(false);
+
 const siteNavRef = ref<InstanceType<typeof SiteNav> | null>(null);
 /** True while the binding's shelf beat reveals the home page's real
  * bookshelf behind the cinematic; hides the manuscript stack so the
@@ -51,9 +51,8 @@ function noScroll(on: boolean) {
 /** Tilt down: the shelf glides up and away, the desk glides in from below. */
 async function openBook() {
   if (showBook.value || cameraMoving.value) return;
-  // The cord's entrance is never tied to opening the book — it only
-  // ever swings down for bonus content, with the stack in view. An
-  // armed drop simply waits until the reader comes back home.
+  // The cord is purely bonus-gated: it only ever appears while bonus
+  // content is on, and opening the book never triggers it.
   if (reducedMotion()) {
     showBook.value = true;
     bookMounted.value = true;
@@ -647,19 +646,16 @@ function onLedColor(hex: string) {
   updateLights();
 }
 
-/** The bonus switch on the back of the stack. Turning it on arms the
-    pull cord's swing-down from behind the header; turning it off folds
-    the cord back up first, then the site goes back to its clean, lit
-    self.
+/** The bonus switch on the back of the stack. On: the pull cord drops
+    itself from the header. Off: the cord folds back up first, then the
+    site goes back to its clean, lit self.
     Lights always come back on here — otherwise toggling off while dark
     would strand the site in the dark with no switch left to pull. */
 function toggleBonus() {
   if (!bonusContent.value) {
     bonusContent.value = true;
-    cordDropArmed.value = true;
     return;
   }
-  cordDropArmed.value = false;
   siteNavRef.value?.retractCord(() => {
     setThemePlain(true);
     ledOn.value = false;
@@ -677,13 +673,6 @@ function toggleBonus() {
     document.documentElement.classList.remove('page-shake');
     updateLights();
   });
-}
-
-/** The stack's front face is back in view — let the cord fall. */
-function fireCordDrop() {
-  if (!cordDropArmed.value) return;
-  cordDropArmed.value = false;
-  siteNavRef.value?.dropCord();
 }
 
 function onLightsOn() {
@@ -748,9 +737,7 @@ onUnmounted(() => {
       @open-book="openBook"
       :book-drop-key="boundBookDrop"
       :bonus-content="bonusContent"
-      :cord-drop-armed="cordDropArmed"
       @toggle-bonus="toggleBonus"
-      @cord-drop="fireCordDrop"
     />
   </div>
   <div v-if="bookMounted" class="view view-book">
