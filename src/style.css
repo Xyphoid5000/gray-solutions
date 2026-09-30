@@ -2338,6 +2338,9 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   position: relative;
   padding: 5rem 0 7rem;
   border-top: 1px solid var(--line-soft);
+  /* Stop the scroll when the workspace background above hits the
+     header's bottom edge — not underneath it. */
+  scroll-margin-top: var(--nav-h);
   background: radial-gradient(
     70% 40% at 50% 0%,
     rgba(208, 138, 78, 0.06),
