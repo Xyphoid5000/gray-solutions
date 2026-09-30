@@ -64,17 +64,20 @@ onMounted(() => {
       <div class="ot-shelf">
         <Bookshelf backdrop />
       </div>
+      <!-- The pages fall over the shelf (first phase), then ride the
+           room down to the desk. Must be a direct child of the room,
+           not inside the desk, or they're clipped during the fall. -->
+      <div ref="pagesRef" class="ot-pages">
+        <div class="ot-page"><span>Manuscript</span></div>
+        <div class="ot-page"></div>
+        <div class="ot-page"></div>
+        <div class="ot-page"></div>
+      </div>
       <div class="ot-desk">
         <div class="ot-desk-surface"></div>
         <!-- The literal desk props. -->
         <DeskClutter />
         <DeskPencil />
-        <div ref="pagesRef" class="ot-pages">
-          <div class="ot-page"><span>Manuscript</span></div>
-          <div class="ot-page"></div>
-          <div class="ot-page"></div>
-          <div class="ot-page"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -142,11 +145,15 @@ onMounted(() => {
 }
 .ot-pages {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  z-index: 5;
 }
 .ot-page {
   position: absolute;
