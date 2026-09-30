@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import Bookshelf from './Bookshelf.vue';
+import BookView from './BookView.vue';
 
 const emit = defineEmits(['done']);
 
@@ -15,26 +16,29 @@ withDefaults(
 const roomRef = ref<HTMLElement | null>(null);
 const pagesRef = ref<HTMLElement | null>(null);
 const overlayRef = ref<HTMLElement | null>(null);
+const deskRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
   const room = roomRef.value;
   const pages = pagesRef.value;
   const overlay = overlayRef.value;
-  if (!room || !pages || !overlay) {
+  const desk = deskRef.value;
+  if (!room || !pages || !overlay || !desk) {
     emit('done');
     return;
   }
   const vh = window.innerHeight;
-  // Start on the shelf. Pages begin above the frame.
+  // Start on the shelf. Pages begin above the frame. The desk (BookView)
+  // starts below the screen, ready to push up.
   gsap.set(room, { y: 0 });
+  gsap.set(desk, { y: vh });
   gsap.set(pages.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
 
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   });
   // First: the pages float down THROUGH the frame and off the bottom —
-  // they don't land, they fall away. The manuscript is already waiting
-  // on the desk (BookView mounted behind the overlay).
+  // we're dropping the manuscript onto the desk.
   tl.to(
     pages.children,
     {
@@ -57,11 +61,14 @@ onMounted(() => {
     },
     1.6,
   );
-  // Then: the shelf slides up, revealing the BookView (manuscript
-  // already on the desk) mounted behind. Slow, so the reveal feels
-  // like the room lifting away.
-  tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 1.8);
-  // The overlay is transparent — no fade needed. Just hand off.
+  // Then: the desk pushes up from the bottom, on top of the bookshelf.
+  // We're sitting at the desk, looking down — the back of the desk
+  // arrives first, then the manuscript reveals as it settles.
+  // The BookView is already on it.
+  tl.to(desk, { y: 0, duration: 2.4, ease: 'power2.inOut' }, 1.8);
+  // Hold, then hand off to the real interactive BookView behind
+  // (it's in the same position, so the cut is invisible).
+  tl.to({}, { duration: 0.5 });
 });
 </script>
 
@@ -80,6 +87,11 @@ onMounted(() => {
       <div class="ot-page"></div>
       <div class="ot-page"></div>
     </div>
+    <!-- The desk pushes up from the bottom, on top of the shelf.
+         Non-interactive visual; the real BookView takes over on handoff. -->
+    <div ref="deskRef" class="ot-desk-layer">
+      <BookView />
+    </div>
   </div>
 </template>
 
@@ -89,9 +101,7 @@ onMounted(() => {
   inset: 0;
   z-index: 60;
   overflow: hidden;
-  /* Transparent: the BookView (manuscript on desk) is mounted behind.
-     The shelf covers it until the room shifts up. */
-  background: transparent;
+  background: #0d0a06;
   pointer-events: none;
 }
 .ot-room {
@@ -101,6 +111,13 @@ onMounted(() => {
   top: 0;
   height: 100vh;
   will-change: transform;
+}
+/* The desk layer: slides up from below to cover the shelf. */
+.ot-desk-layer {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  pointer-events: none;
 }
 .ot-shelf {
   height: 100vh;
