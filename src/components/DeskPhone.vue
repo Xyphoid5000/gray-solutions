@@ -530,7 +530,7 @@ html[data-blacklight='on'] .desk-phone-btn {
 
 /* ---- picked-up modal ---- */
 .phone-modal {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1600;
   display: grid;

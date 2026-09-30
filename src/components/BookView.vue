@@ -241,9 +241,10 @@ async function paginateCurrentChapter() {
   const children = Array.from(wrap.children) as HTMLElement[];
   if (children.length === 0) return;
 
-  // Available height: page height (62vh) minus padding, with a conservative
-  // margin. Prefer more pages over cramming content to the edges.
-  const available = window.innerHeight * 0.62 - 96;
+  // Available height: page min-height (62vh) minus padding, with a
+  // conservative margin. Prefer more pages over cramming content.
+  // If a single element exceeds this, it gets its own page (min-height grows).
+  const available = window.innerHeight * 0.62 - 140;
 
   const pages: HTMLElement[][] = [];
   let current: HTMLElement[] = [];
