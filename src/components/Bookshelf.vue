@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { ref } from 'vue';
+import { gsap } from 'gsap';
 import { manuscriptBound } from '../lib/manuscript';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     /** The manuscript / spine can be clicked to open the book. */
     interactive?: boolean;
@@ -42,52 +43,106 @@ const SHELF_BOOKS: ShelfBook[] = [
 const shelfLeft = SHELF_BOOKS.slice(0, 3);
 const shelfRight = SHELF_BOOKS.slice(3);
 
-/** The currently selected book, by title. Null when none. */
+/** The currently selected (floating) book, by title. Null when none. */
 const selected = ref<string | null>(null);
-/** Hole position (px, relative to the shelf) for the overlay cutout. */
-const hole = ref({ x: 0, y: 0, w: 0, h: 0 });
-const shelfRef = ref<HTMLElement | null>(null);
+/** The floating book element, for the put-back animation. */
+let floatingEl: HTMLElement | null = null;
+/** The book's home position, to return it. */
 
-/** The selected book's data, or the Gray Solutions pseudo-book. */
-const selectedBook = computed<ShelfBook | null>(() => {
-  if (selected.value === '__ours') return null;
-  return SHELF_BOOKS.find((b) => b.title === selected.value) ?? null;
-});
-
-function pickBook(book: ShelfBook, ev: Event) {
-  if (!props.interactive) return;
-  if (selected.value === book.title) {
-    selected.value = null;
-    return;
-  }
-  if (selected.value) return;
-  const shelf = shelfRef.value;
-  const el = ev.currentTarget as HTMLElement;
-  if (!shelf) return;
-  const s = shelf.getBoundingClientRect();
+/** Pull a book off the shelf: reverse of the file-away — the spine
+    becomes 3D, turns to face you, and floats in the middle. */
+function pullOut(el: HTMLElement) {
   const r = el.getBoundingClientRect();
-  hole.value = { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
+  const isMobile = window.innerWidth < 640;
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  if (isMobile) {
+    // On phones the book stays near its slot — lift and turn to show
+    // the cover, but don't fly to screen center or it swallows the shelf.
+    gsap.to(el, {
+      x: 0,
+      y: -60,
+      z: 100,
+      rotationY: -68,
+      scale: 0.9,
+      duration: 0.9,
+      ease: 'power3.inOut',
+      transformPerspective: 900,
+    });
+  } else {
+    // Lift off the shelf and come to the middle, turning to show the
+    // front cover as it floats.
+    gsap.to(el, {
+      x: cx - (r.left + r.width / 2),
+      y: cy - (r.top + r.height / 2),
+      z: 220,
+      rotationY: -68,
+      scale: 1.35,
+      duration: 0.9,
+      ease: 'power3.inOut',
+      transformPerspective: 900,
+    });
+  }
+  // Gentle float once it's out.
+  gsap.to(el, {
+    y: '+=14',
+    duration: 1.6,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+    delay: 0.9,
+  });
+  el.classList.add('is-floating');
+}
+
+function selectBook(book: ShelfBook, el: HTMLElement) {
+  if (selected.value) return;
   selected.value = book.title;
+  floatingEl = el;
+  pullOut(el);
 }
 
-function pickOurs(ev: Event) {
-  if (!props.interactive) return;
-  if (selected.value === '__ours') {
+/** Slide the floating book back into its slot. */
+function deselectBook() {
+  const el = floatingEl;
+  if (!el) {
     selected.value = null;
     return;
   }
-  if (selected.value) return;
-  const shelf = shelfRef.value;
-  const el = ev.currentTarget as HTMLElement;
-  if (!shelf) return;
-  const s = shelf.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
-  hole.value = { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height };
-  selected.value = '__ours';
+  gsap.killTweensOf(el);
+  el.classList.remove('is-floating');
+  gsap.to(el, {
+    x: 0,
+    y: 0,
+    z: 0,
+    rotationY: 0,
+    scale: 1,
+    duration: 0.7,
+    ease: 'power3.inOut',
+    transformPerspective: 900,
+    onComplete: () => {
+      selected.value = null;
+      floatingEl = null;
+    },
+  });
 }
 
-function clearSelection() {
-  selected.value = null;
+function toggleBook(book: ShelfBook, ev: Event) {
+  const el = ev.currentTarget as HTMLElement;
+  if (selected.value === book.title) deselectBook();
+  else if (!selected.value) selectBook(book, el);
+}
+
+/** Gray Solutions, when bound: pull it out like the others, but it
+    can actually be opened. */
+function toggleOurs(ev: Event) {
+  const el = ev.currentTarget as HTMLElement;
+  if (selected.value === '__ours') deselectBook();
+  else if (!selected.value) {
+    selected.value = '__ours';
+    floatingEl = el;
+    pullOut(el);
+  }
 }
 </script>
 
@@ -130,90 +185,71 @@ function clearSelection() {
         </div>
       </template>
       <template v-else>
-      <div ref="shelfRef" class="bs-shelf">
+      <div class="bs-shelf">
         <div class="bs-books">
           <button
             v-for="b in shelfLeft"
             :key="b.title"
             type="button"
             class="bs-book"
-            :class="{ 'is-interactive': interactive }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
             :aria-label="b.title"
-            @click="pickBook(b, $event)"
+            @click="interactive && toggleBook(b, $event)"
           >
             <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
           </button>
           <div class="bs-slot" data-bind-slot>
             <button
               v-if="isBound"
               type="button"
               class="bs-ours"
-              :class="{ 'is-interactive': interactive }"
+              :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
               aria-label="Gray Solutions — open the book"
-              @click="pickOurs($event)"
+              @click="interactive && toggleOurs($event)"
             >
               <span>Gray Solutions</span>
+              <span class="bs-face bs-front" aria-hidden="true">
+                <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
+                <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
+              </span>
             </button>
-            <div v-else class="bs-slot-empty" aria-hidden="true"></div>
-          </div>
-          <button
-            v-for="b in shelfRight"
-            :key="b.title"
-            type="button"
-            class="bs-book"
-            :class="{ 'is-interactive': interactive }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
-            :aria-label="b.title"
-            @click="pickBook(b, $event)"
-          >
-            <span class="bs-spine-label">{{ b.title }}</span>
-          </button>
-        </div>
-        <div class="bs-plank"></div>
-        <!-- Selection overlay: blurs the shelf except for a hole over
-             the picked book's slot. The book shows through sharp. -->
-        <div
-          v-if="selected"
-          class="bs-overlay"
-          :style="{
-            '--hx': hole.x + 'px',
-            '--hy': hole.y + 'px',
-            '--hw': hole.w + 'px',
-            '--hh': hole.h + 'px',
-          }"
-          @click="clearSelection"
-        ></div>
-        <div
-          v-if="selected"
-          class="bs-hole-card"
-          :style="{
-            '--hx': hole.x + 'px',
-            '--hy': hole.y + 'px',
-            '--hw': hole.w + 'px',
-            '--hh': hole.h + 'px',
-          }"
-        >
-          <template v-if="selected === '__ours'">
-            <p class="bs-card-title">Gray<br />Solutions<em>.</em></p>
-            <p class="bs-card-tag"><em>Websites that tell stories.</em></p>
             <button
-              v-if="interactive"
+              v-if="isBound && interactive && selected === '__ours'"
               type="button"
               class="bs-open"
               @click="emit('open-book')"
             >
               Open the book <span aria-hidden="true">&rarr;</span>
             </button>
-          </template>
-          <template v-else-if="selectedBook">
-            <p class="bs-card-title">{{ selectedBook.title }}</p>
-            <p class="bs-card-text">{{ selectedBook.synopsis }}</p>
-          </template>
-          <button type="button" class="bs-card-close" @click="clearSelection" aria-label="Put the book back">
-            &times;
+            <div v-else-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
+          </div>
+          <button
+            v-for="b in shelfRight"
+            :key="b.title"
+            type="button"
+            class="bs-book"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :aria-label="b.title"
+            @click="interactive && toggleBook(b, $event)"
+          >
+            <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
           </button>
         </div>
+        <div class="bs-plank"></div>
       </div>
       </template>
       <div class="bs-base"></div>
@@ -627,66 +663,5 @@ function clearSelection() {
 }
 html[data-theme='dark'] .bookshelf-hero {
   filter: brightness(0.82);
-}
-/* Selection overlay: mostly transparent, blurs the shelf everywhere
-   except a hole punched over the picked book's slot. */
-.bs-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: rgba(10, 6, 3, 0.45);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  /* Punch the hole with an evenodd clip-path. */
-  clip-path: polygon(
-    evenodd,
-    0 0, 100% 0, 100% 100%, 0 100%,
-    var(--hx) var(--hy),
-    calc(var(--hx) + var(--hw)) var(--hy),
-    calc(var(--hx) + var(--hw)) calc(var(--hy) + var(--hh)),
-    var(--hx) calc(var(--hy) + var(--hh))
-  );
-}
-.bs-hole-card {
-  position: absolute;
-  left: calc(var(--hx) + var(--hw) / 2);
-  top: calc(var(--hy) + var(--hh) + 16px);
-  transform: translateX(-50%);
-  width: min(240px, 70vw);
-  background: var(--card, #1a120a);
-  border: 1px solid rgba(208, 138, 78, 0.35);
-  border-radius: 12px;
-  padding: 1.2rem 1.4rem;
-  color: var(--ink);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
-  z-index: 21;
-}
-.bs-card-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem;
-}
-.bs-card-title em {
-  color: var(--ember);
-}
-.bs-card-tag,
-.bs-card-text {
-  font-size: 0.9rem;
-  opacity: 0.85;
-  margin: 0 0 1rem;
-}
-.bs-card-close {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.6rem;
-  background: none;
-  border: none;
-  color: var(--faint);
-  font-size: 1.4rem;
-  cursor: pointer;
-  line-height: 1;
-}
-.bs-card-close:hover {
-  color: var(--ember);
 }
 </style>
