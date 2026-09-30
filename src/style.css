@@ -2061,6 +2061,9 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   border-radius: 0 0 6px 6px;
   background: linear-gradient(to bottom, var(--ember-deep), var(--ember));
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  /* Parked up inside the G until the entrance — the first paint must
+     already be hidden, or the full cord flashes before JS parks it. */
+  transform: translateY(-16px);
 }
 .cord-line {
   width: 3px;
@@ -2073,6 +2076,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   );
   border-radius: 2px;
   box-shadow: 0 0 6px rgba(208, 138, 78, 0.35);
+  /* Parked retracted until the entrance (see .cord-mount). */
+  transform: scaleY(0);
 }
 .cord-knob {
   pointer-events: auto;
@@ -2087,6 +2092,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   display: grid;
   place-items: center;
   padding: 0;
+  /* Parked up inside the G until the entrance (see .cord-mount). */
+  transform: translateY(-200px);
   box-shadow:
     0 4px 14px rgba(0, 0, 0, 0.45),
     0 0 12px rgba(208, 138, 78, 0.5);

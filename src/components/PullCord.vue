@@ -279,6 +279,12 @@ defineExpose({
 });
 
 onMounted(() => {
+  // Park everything inside the G before the first paint — the CSS above
+  // holds the parked pose until JS refines it; the entrance (or the
+  // reduced-motion settle) takes it from here.
+  parkBase();
+  parkLine();
+  parkBall();
   // App forces the opening theme; the cord just sways and reports yanks.
   startSway();
   window.addEventListener('pointermove', onPointerMove, { passive: true });
