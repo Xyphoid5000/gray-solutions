@@ -430,7 +430,7 @@ function matchGuyGag(level: 1 | 2 | 3) {
     guyX.value = -160;
     guyLine.value = GUY_LINES[level - 1];
     guyMounted.value = true;
-    walkGuyTo(vw + 160, 180, () => {
+    walkGuyTo(vw + 160, 110, () => {
       stopGuy();
       later(() => {
         // Back with a lit match, from the right this time — and he
@@ -440,7 +440,7 @@ function matchGuyGag(level: 1 | 2 | 3) {
         guyFacing.value = -1;
         guyX.value = vw + 160;
         guyMounted.value = true;
-        walkGuyTo(-160, 180, () => {
+        walkGuyTo(-160, 110, () => {
           stopGuy();
           later(() => {
             candleLit.value = true;
@@ -477,7 +477,7 @@ function matchGuyQuits() {
     guyX.value = vw + 160;
     guyLine.value = "That's it. I QUIT.";
     guyMounted.value = true;
-    walkGuyTo(wick.x + 34, 180, () => {
+    walkGuyTo(wick.x + 34, 110, () => {
       later(() => {
         // He takes the candle.
         guyLine.value = null;
@@ -486,7 +486,7 @@ function matchGuyQuits() {
         updateLights();
         later(() => {
           guyFacing.value = 1;
-          walkGuyTo(vw + 160, 180, () => {
+          walkGuyTo(vw + 160, 110, () => {
             stopGuy();
             later(() => {
               // The lights come back on. Just the flyer now.
@@ -525,7 +525,7 @@ function rehireMatchGuy() {
   guyX.value = vw + 160;
   guyLine.value = "Fine. I'm back.";
   guyMounted.value = true;
-  walkGuyTo(spotX + 34, 180, () => {
+  walkGuyTo(spotX + 34, 110, () => {
     later(() => {
       // He sets the candle down and the flyer comes with him.
       guyLine.value = null;
@@ -534,7 +534,7 @@ function rehireMatchGuy() {
       updateLights();
       later(() => {
         guyFacing.value = 1;
-        walkGuyTo(vw + 160, 180, () => {
+        walkGuyTo(vw + 160, 110, () => {
           stopGuy();
           gagRunning.value = false;
         });
@@ -647,17 +647,15 @@ function onLedColor(hex: string) {
 }
 
 /** The bonus switch on the back of the stack. On: the pull cord drops
-    itself from the header. Off: the cord folds back up first, then the
-    site goes back to its clean, lit self.
-    Lights always come back on here — otherwise toggling off while dark
-    would strand the site in the dark with no switch left to pull. */
+    itself from the header. Off: the cord draws back up into the header
+    first, then the bonus layer wipes — the room stays as it was, so a
+    dark page stays dark. */
 function toggleBonus() {
   if (!bonusContent.value) {
     bonusContent.value = true;
     return;
   }
   siteNavRef.value?.retractCord(() => {
-    setThemePlain(true);
     ledOn.value = false;
     candleLit.value = false;
     bonusContent.value = false;

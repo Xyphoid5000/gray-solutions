@@ -11,12 +11,16 @@ const emit = defineEmits<{
 }>();
 
 /** The cord lives here but only while bonus content is on. It mounts
-    folded up to the right of its base, out of sight; `dropCord` swings
-    it down around its mount like a pendulum unfolding, and
-    `retractCord` folds it back up before it unmounts. The swing plays on
-    the wrapper so it never fights the cord's own sway. */
+    with the ball parked up at the base behind the header; the drop is a
+    two-beat entrance — the line swings down slow and graceful, then the
+    ball falls to the line's end. Turning bonus off draws the whole cord
+    slowly straight up into the header. The swing plays on the wrapper so
+    it never fights the cord's own sway. */
 const cordWrap = ref<HTMLElement | null>(null);
+const pullCord = ref<InstanceType<typeof PullCord> | null>(null);
 let cordResting = false;
+let dropTl: gsap.core.Timeline | null = null;
+let riseTl: gsap.core.Timeline | null = null;
 /** Folded pose: tucked up to the right of the base, off-screen. */
 const FOLDED = -150;
 const reducedMotion = () =>
@@ -60,25 +64,40 @@ watch(
   { immediate: true },
 );
 
-/** Swing the cord down from the right side of its base and let it
-    settle into its sway. */
+/** Two-beat entrance: the line swings down slow and graceful first,
+    then the ball drops from up by the base to the line's end. */
 function dropCord() {
   const el = cordWrap.value;
   if (!el || cordResting) return;
+  riseTl?.kill();
+  riseTl = null;
+  foldUp();
+  pullCord.value?.parkBall();
   cordResting = true;
+  gsap.set(el, { y: 0, opacity: 1, visibility: 'visible' });
   if (reducedMotion()) {
-    gsap.set(el, { rotation: 0, visibility: 'visible' });
+    gsap.set(el, { rotation: 0 });
+    pullCord.value?.settleBall();
     return;
   }
-  gsap.set(el, { visibility: 'visible' });
-  gsap.fromTo(
-    el,
-    { rotation: FOLDED },
-    { rotation: 0, duration: 1.15, ease: 'elastic.out(1, 0.32)' },
-  );
+  dropTl?.kill();
+  // Beat one: a gravity-weighted descent — the line falls slowly at
+  // first, accelerating down like a real hanging cord. Beat two: a
+  // soft pendulum wobble as it settles. Then the ball drops.
+  dropTl = gsap
+    .timeline()
+    .fromTo(
+      el,
+      { rotation: FOLDED },
+      { rotation: 10, duration: 1.6, ease: 'power2.in' },
+      0,
+    )
+    .to(el, { rotation: 0, duration: 1.3, ease: 'elastic.out(1, 0.28)' }, 1.6)
+    .add(() => pullCord.value?.dropBall(), 2.1);
 }
 
-/** Fold the cord back up to the right of its base, then hand back. */
+/** The exit: the whole cord is drawn slowly straight up into the
+    header, fading as it goes, then hands back. */
 function retractCord(done: () => void) {
   const el = cordWrap.value;
   if (!el || !cordResting) {
@@ -86,19 +105,32 @@ function retractCord(done: () => void) {
     return;
   }
   cordResting = false;
+  dropTl?.kill();
+  dropTl = null;
   if (reducedMotion()) {
     done();
     return;
   }
-  gsap.to(el, {
-    rotation: FOLDED,
-    duration: 0.5,
-    ease: 'power2.in',
-    onComplete: () => {
-      gsap.set(el, { visibility: 'hidden' });
-      done();
-    },
-  });
+  // How far the wrap must rise to tuck the ball fully into the header.
+  const knob = el.querySelector('.cord-knob');
+  const wr = el.getBoundingClientRect();
+  const rise =
+    (knob ? knob.getBoundingClientRect().bottom - wr.top : 200) + 24;
+  riseTl?.kill();
+  riseTl = gsap
+    .timeline({
+      onComplete: () => {
+        gsap.set(el, { visibility: 'hidden', y: 0, opacity: 1 });
+        riseTl = null;
+        done();
+      },
+    })
+    // Straighten first — no fold, no swing toward the right.
+    .to(knob, { y: 0, duration: 0.35, ease: 'sine.out' }, 0)
+    .to(el, { rotation: 0, duration: 0.35, ease: 'sine.out' }, 0)
+    // Then the slow draw upward into the header.
+    .to(el, { y: -rise, duration: 1.8, ease: 'sine.inOut' }, 0.35)
+    .to(el, { opacity: 0, duration: 0.6, ease: 'sine.in' }, 1.55);
 }
 
 defineExpose({ dropCord, retractCord });
@@ -121,7 +153,7 @@ defineExpose({ dropCord, retractCord });
       </button>
     </div>
     <div v-if="bonusContent" ref="cordWrap" class="cord-drop-wrap">
-      <PullCord />
+      <PullCord ref="pullCord" />
     </div>
   </header>
 </template>

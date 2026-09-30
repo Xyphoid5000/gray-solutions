@@ -1855,34 +1855,36 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   color: rgba(60, 45, 30, 0.65);
   margin: 0;
 }
-/* Wax seal: bonus-only, pressed onto the manuscript's front page. */
+/* Wax seal: bonus-only, pressed onto the manuscript's front page.
+   Glossy bright-red wax, raised rim, drippy organic edge, embossed G. */
 .wax-seal {
-  width: 68px;
-  height: 68px;
-  /* Hand-poured edge: not quite round. */
-  border-radius: 47% 53% 51% 49% / 52% 46% 54% 48%;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255, 150, 120, 0.55), rgba(255, 150, 120, 0) 42%),
-    radial-gradient(circle at 50% 55%, #a93226, #7b1e14 78%);
-  box-shadow:
-    inset 0 2px 5px rgba(255, 190, 160, 0.35),
-    inset 0 -4px 8px rgba(40, 5, 0, 0.55),
-    0 3px 7px rgba(60, 20, 10, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(-9deg);
-  margin-top: 0.35rem;
+  width: 84px;
+  margin: 0.35rem auto 0;
+  transform: rotate(-7deg);
+  animation: seal-press 0.5s cubic-bezier(0.2, 1.4, 0.4, 1);
+  pointer-events: none;
 }
-.wax-seal span {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 1.7rem;
-  line-height: 1;
-  /* Debossed: dark letterpress with a faint lower-edge highlight. */
-  color: #5d130c;
-  text-shadow: 0 1px 1px rgba(255, 170, 140, 0.45);
-  transform: translateY(-1px);
+.wax-seal svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(60, 8, 2, 0.35));
+}
+@keyframes seal-press {
+  from {
+    transform: rotate(-7deg) scale(1.45);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-7deg) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wax-seal {
+    animation: none;
+  }
 }
 .b-mark {
   font-family: var(--serif);

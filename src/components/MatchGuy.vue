@@ -129,13 +129,14 @@ defineProps<{
   left: 50%;
   transform: translateX(-50%);
   min-width: 150px;
-  max-width: 235px;
+  max-width: 250px;
   background: #fffdf6;
   color: #2b2b2b;
   border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 13px;
-  line-height: 1.35;
+  padding: 9px 13px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
   text-align: center;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
   pointer-events: none;
@@ -163,10 +164,10 @@ defineProps<{
 }
 .mg-leg {
   transform-origin: 50% 8%;
-  animation: mg-step 0.5s ease-in-out infinite alternate;
+  animation: mg-step 0.85s ease-in-out infinite alternate;
 }
 .mg-leg-b {
-  animation-delay: -0.5s;
+  animation-delay: -0.425s;
 }
 @keyframes mg-step {
   from {
@@ -183,7 +184,7 @@ defineProps<{
 }
 .mg-arm-back {
   transform-origin: 50% 8%;
-  animation: mg-swing 0.5s ease-in-out infinite alternate;
+  animation: mg-swing 0.85s ease-in-out infinite alternate;
 }
 @keyframes mg-swing {
   from {

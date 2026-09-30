@@ -102,6 +102,8 @@ const onPointerDown = (e: PointerEvent) => {
   startY = e.clientY;
   pull = 0;
   stopSway();
+  // A grab always wins — stop any in-flight ball drop first.
+  if (knob.value) gsap.killTweensOf(knob.value);
   gsap.set(root.value, { rotation: 0 });
 };
 
@@ -140,6 +142,31 @@ const onClick = (e: MouseEvent) => {
     release();
   }, 130);
 };
+
+/** Park the ball up at the base, tucked behind the header — the staged
+    drop starts with the line alone, then the ball falls to the line's
+    end as if it had been sitting up by the base. */
+const parkBall = () => {
+  if (!knob.value || !line.value) return;
+  gsap.killTweensOf(knob.value);
+  gsap.set(knob.value, { y: -(line.value.offsetHeight || LINE_H) });
+};
+
+/** Let the parked ball fall from the base to the line's end. */
+const dropBall = () => {
+  if (!knob.value) return;
+  gsap.killTweensOf(knob.value);
+  gsap.to(knob.value, { y: 0, duration: 0.8, ease: 'bounce.out' });
+};
+
+/** Ball to the line's end, no animation (reduced motion). */
+const settleBall = () => {
+  if (!knob.value) return;
+  gsap.killTweensOf(knob.value);
+  gsap.set(knob.value, { y: 0 });
+};
+
+defineExpose({ parkBall, dropBall, settleBall });
 
 onMounted(() => {
   // App forces the opening theme; the cord just sways and reports yanks.
