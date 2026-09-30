@@ -2,8 +2,6 @@
 import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import Bookshelf from './Bookshelf.vue';
-import DeskClutter from './DeskClutter.vue';
-import DeskPencil from './DeskPencil.vue';
 
 const emit = defineEmits(['done']);
 
@@ -59,14 +57,11 @@ onMounted(() => {
     },
     1.6,
   );
-  // Then: the room shifts — shelf exits top, desk rises. Slow, seam visible.
-  // The desk arrives with the manuscript already laid out on it.
+  // Then: the shelf slides up, revealing the BookView (manuscript
+  // already on the desk) mounted behind. Slow, so the reveal feels
+  // like the room lifting away.
   tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 1.8);
-  // Hold on the desk with the manuscript open, then hand off.
-  tl.to({}, { duration: 0.7 });
-  // Fade the overlay; the BookView (manuscript desk) is already mounted
-  // behind, so this is a seamless crossfade, not a cut.
-  tl.to(overlay, { opacity: 0, duration: 0.9, ease: 'power1.inOut' });
+  // The overlay is transparent — no fade needed. Just hand off.
 });
 </script>
 
@@ -76,21 +71,14 @@ onMounted(() => {
       <div class="ot-shelf">
         <Bookshelf backdrop />
       </div>
-      <!-- The pages fall over the shelf (first phase), then ride the
-           room down to the desk. Must be a direct child of the room,
-           not inside the desk, or they're clipped during the fall. -->
-      <div ref="pagesRef" class="ot-pages">
-        <div class="ot-page"><span>Manuscript</span></div>
-        <div class="ot-page"></div>
-        <div class="ot-page"></div>
-        <div class="ot-page"></div>
-      </div>
-      <div class="ot-desk">
-        <div class="ot-desk-surface"></div>
-        <!-- The literal desk props. -->
-        <DeskClutter />
-        <DeskPencil />
-      </div>
+    </div>
+    <!-- Pages fall in the overlay (not the room) so the room shift
+         doesn't drag them back into view. -->
+    <div ref="pagesRef" class="ot-pages">
+      <div class="ot-page"><span>Manuscript</span></div>
+      <div class="ot-page"></div>
+      <div class="ot-page"></div>
+      <div class="ot-page"></div>
     </div>
   </div>
 </template>
@@ -101,26 +89,24 @@ onMounted(() => {
   inset: 0;
   z-index: 60;
   overflow: hidden;
-  background: #0d0a06;
+  /* Transparent: the BookView (manuscript on desk) is mounted behind.
+     The shelf covers it until the room shifts up. */
+  background: transparent;
+  pointer-events: none;
 }
 .ot-room {
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  height: 200vh;
+  height: 100vh;
   will-change: transform;
 }
-.ot-shelf,
-.ot-desk {
+.ot-shelf {
   height: 100vh;
   position: relative;
   overflow: hidden;
-}
-.ot-shelf {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #0d0a06;
 }
 /* The seam between shelf and desk. */
 .ot-shelf::after {
@@ -160,7 +146,7 @@ onMounted(() => {
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
