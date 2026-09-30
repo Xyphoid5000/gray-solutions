@@ -34,22 +34,34 @@ onMounted(() => {
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   });
-  // First: the pages float down (the manuscript coming to life).
+  // First: the pages float down THROUGH the frame and off the bottom —
+  // they don't land, they fall away. The manuscript is already waiting
+  // on the desk (BookView mounted behind the overlay).
   tl.to(
     pages.children,
     {
-      y: 0,
+      y: vh * 1.2,
       opacity: 1,
-      rotation: () => gsap.utils.random(-6, 6),
-      duration: 1.6,
-      ease: 'power2.out',
-      stagger: 0.15,
+      rotation: () => gsap.utils.random(-8, 8),
+      duration: 1.8,
+      ease: 'power2.in',
+      stagger: 0.12,
     },
     0.2,
   );
+  // Fade the falling pages as they exit.
+  tl.to(
+    pages.children,
+    {
+      opacity: 0,
+      duration: 0.4,
+      ease: 'power1.out',
+    },
+    1.6,
+  );
   // Then: the room shifts — shelf exits top, desk rises. Slow, seam visible.
-  // The pages ride the room down and land on the desk.
-  tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 1.6);
+  // The desk arrives with the manuscript already laid out on it.
+  tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 1.8);
   // Hold on the desk with the manuscript open, then hand off.
   tl.to({}, { duration: 0.7 });
   // Fade the overlay; the BookView (manuscript desk) is already mounted
