@@ -250,15 +250,40 @@ async function paginateCurrentChapter() {
   let current: HTMLElement[] = [];
   let height = 0;
 
-  for (const child of children) {
-    const h = (child as HTMLElement).offsetHeight || 120;
+  // Helper: push an element, starting a new page if it doesn't fit.
+  function pushEl(el: HTMLElement, h: number) {
     if (current.length > 0 && height + h > available) {
       pages.push(current);
       current = [];
       height = 0;
     }
-    current.push(child as HTMLElement);
+    current.push(el);
     height += h;
+  }
+
+  for (const child of children) {
+    const h = (child as HTMLElement).offsetHeight || 120;
+    // If a single element is taller than a page (e.g. a grid of cards),
+    // split its children across pages — one card per page if needed.
+    if (h > available && child.children.length > 0) {
+      // Flush current page first.
+      if (current.length > 0) {
+        pages.push(current);
+        current = [];
+        height = 0;
+      }
+      // Each grandchild gets its own page (or grouped if small).
+      Array.from(child.children).forEach((grandchild) => {
+        const gc = grandchild as HTMLElement;
+        const gh = gc.offsetHeight || 120;
+        // If the grid itself had styling, wrap the card to preserve it.
+        pushEl(gc, gh);
+      });
+      // The empty grid container is discarded (cards are moved out).
+      child.remove();
+    } else {
+      pushEl(child as HTMLElement, h);
+    }
   }
   if (current.length > 0) pages.push(current);
 
