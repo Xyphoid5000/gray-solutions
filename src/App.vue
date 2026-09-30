@@ -50,6 +50,11 @@ function noScroll(on: boolean) {
 /** Tilt down: the shelf glides up and away, the desk glides in from below. */
 async function openBook() {
   if (showBook.value || cameraMoving.value) return;
+  // Entering the book in the dark: the candle is already lit — no
+  // pitch-black beat, no lighting ceremony.
+  if (isDark() && bonusContent.value && !candleGone.value) {
+    candleLit.value = true;
+  }
   // The cord is purely bonus-gated: it only ever appears while bonus
   // content is on, and opening the book never triggers it.
   if (reducedMotion()) {
