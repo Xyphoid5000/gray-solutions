@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { gsap } from 'gsap';
+import Book from './Book.vue';
 import { manuscriptBound } from '../lib/manuscript';
 
 withDefaults(
@@ -45,104 +45,18 @@ const shelfRight = SHELF_BOOKS.slice(3);
 
 /** The currently selected (floating) book, by title. Null when none. */
 const selected = ref<string | null>(null);
-/** The floating book element, for the put-back animation. */
-let floatingEl: HTMLElement | null = null;
-/** The book's home position, to return it. */
 
-/** Pull a book off the shelf: reverse of the file-away — the spine
-    becomes 3D, turns to face you, and floats in the middle. */
-function pullOut(el: HTMLElement) {
-  const r = el.getBoundingClientRect();
-  const isMobile = window.innerWidth < 640;
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  if (isMobile) {
-    // On phones the book stays near its slot — lift and turn to show
-    // the cover, but don't fly to screen center or it swallows the shelf.
-    gsap.to(el, {
-      x: 0,
-      y: -60,
-      z: 100,
-      rotationY: -68,
-      scale: 0.9,
-      duration: 0.9,
-      ease: 'power3.inOut',
-      transformPerspective: 900,
-    });
-  } else {
-    // Lift off the shelf and come to the middle, turning to show the
-    // front cover as it floats.
-    gsap.to(el, {
-      x: cx - (r.left + r.width / 2),
-      y: cy - (r.top + r.height / 2),
-      z: 220,
-      rotationY: -68,
-      scale: 1.35,
-      duration: 0.9,
-      ease: 'power3.inOut',
-      transformPerspective: 900,
-    });
-  }
-  // Gentle float once it's out.
-  gsap.to(el, {
-    y: '+=14',
-    duration: 1.6,
-    ease: 'sine.inOut',
-    yoyo: true,
-    repeat: -1,
-    delay: 0.9,
-  });
-  el.classList.add('is-floating');
-}
-
-function selectBook(book: ShelfBook, el: HTMLElement) {
-  if (selected.value) return;
-  selected.value = book.title;
-  floatingEl = el;
-  pullOut(el);
-}
-
-/** Slide the floating book back into its slot. */
-function deselectBook() {
-  const el = floatingEl;
-  if (!el) {
-    selected.value = null;
-    return;
-  }
-  gsap.killTweensOf(el);
-  el.classList.remove('is-floating');
-  gsap.to(el, {
-    x: 0,
-    y: 0,
-    z: 0,
-    rotationY: 0,
-    scale: 1,
-    duration: 0.7,
-    ease: 'power3.inOut',
-    transformPerspective: 900,
-    onComplete: () => {
-      selected.value = null;
-      floatingEl = null;
-    },
-  });
-}
-
-function toggleBook(book: ShelfBook, ev: Event) {
-  const el = ev.currentTarget as HTMLElement;
-  if (selected.value === book.title) deselectBook();
-  else if (!selected.value) selectBook(book, el);
+/** Toggle a book: pull it out (CSS 3D) or slide it back. */
+function toggleBook(book: ShelfBook) {
+  if (selected.value === book.title) selected.value = null;
+  else if (!selected.value) selected.value = book.title;
 }
 
 /** Gray Solutions, when bound: pull it out like the others, but it
     can actually be opened. */
-function toggleOurs(ev: Event) {
-  const el = ev.currentTarget as HTMLElement;
-  if (selected.value === '__ours') deselectBook();
-  else if (!selected.value) {
-    selected.value = '__ours';
-    floatingEl = el;
-    pullOut(el);
-  }
+function toggleOurs() {
+  if (selected.value === '__ours') selected.value = null;
+  else if (!selected.value) selected.value = '__ours';
 }
 </script>
 
@@ -160,39 +74,31 @@ function toggleOurs(ev: Event) {
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
         <div class="bs-books">
-          <button
+          <Book
             v-for="b in shelfLeft"
             :key="b.title"
-            type="button"
-            class="bs-book"
-            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
-            :aria-label="b.title"
-            @click="interactive && toggleBook(b, $event)"
-          >
-            <span class="bs-spine-label">{{ b.title }}</span>
-            <span class="bs-face bs-front" aria-hidden="true">
-              <span class="bs-front-title">{{ b.title }}</span>
-            </span>
-            <span class="bs-face bs-back" aria-hidden="true">
-              <span class="bs-back-text">{{ b.synopsis }}</span>
-            </span>
-          </button>
+            :title="b.title"
+            :color="b.color"
+            :synopsis="b.synopsis"
+            :width="b.w"
+            :height="b.h"
+            :interactive="interactive"
+            :class="{ 'is-pulled': selected === b.title }"
+            @toggle="toggleBook(b)"
+          />
           <div class="bs-slot" data-bind-slot>
-            <button
-              v-if="isBound"
-              type="button"
-              class="bs-ours"
-              :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
-              aria-label="Gray Solutions — open the book"
-              @click="interactive && toggleOurs($event)"
-            >
-              <span>Gray Solutions</span>
-              <span class="bs-face bs-front" aria-hidden="true">
-                <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
-                <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
-              </span>
-            </button>
+            <template v-if="isBound">
+              <Book
+                title="Gray Solutions"
+                color="#1a1a1a"
+                synopsis="Websites that tell stories."
+                :width="52"
+                :height="230"
+                :interactive="interactive"
+                :class="{ 'is-pulled': selected === '__ours' }"
+                @toggle="toggleOurs()"
+              />
+            </template>
             <button
               v-if="isBound && interactive && selected === '__ours'"
               type="button"
@@ -203,24 +109,18 @@ function toggleOurs(ev: Event) {
             </button>
             <div v-else-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
-          <button
+          <Book
             v-for="b in shelfRight"
             :key="b.title"
-            type="button"
-            class="bs-book"
-            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
-            :aria-label="b.title"
-            @click="interactive && toggleBook(b, $event)"
-          >
-            <span class="bs-spine-label">{{ b.title }}</span>
-            <span class="bs-face bs-front" aria-hidden="true">
-              <span class="bs-front-title">{{ b.title }}</span>
-            </span>
-            <span class="bs-face bs-back" aria-hidden="true">
-              <span class="bs-back-text">{{ b.synopsis }}</span>
-            </span>
-          </button>
+            :title="b.title"
+            :color="b.color"
+            :synopsis="b.synopsis"
+            :width="b.w"
+            :height="b.h"
+            :interactive="interactive"
+            :class="{ 'is-pulled': selected === b.title }"
+            @toggle="toggleBook(b)"
+          />
         </div>
         <div class="bs-plank"></div>
       </div>
