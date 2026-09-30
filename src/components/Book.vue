@@ -174,6 +174,14 @@ function onClick(e: Event) {
 .book3d.is-interactive {
   cursor: pointer;
 }
+/* Pulled out: break out of the shelf row, center, and come forward. */
+.book3d.is-pulled {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 10;
+}
 /* The 3D book itself. */
 .book3d-inner {
   position: absolute;

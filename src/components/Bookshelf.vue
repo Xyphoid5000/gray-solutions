@@ -241,6 +241,7 @@ function toggleOurs() {
   gap: 7px;
   min-height: 244px;
   padding: 0 6px;
+  position: relative;
 }
 /* Interactive books: clickable, 3D. */
 .bs-book.is-interactive {
