@@ -15,30 +15,23 @@ withDefaults(
 
 const roomRef = ref<HTMLElement | null>(null);
 const pagesRef = ref<HTMLElement | null>(null);
-const overlayRef = ref<HTMLElement | null>(null);
-const deskRef = ref<HTMLElement | null>(null);
+const showBook = ref(false);
 
 onMounted(() => {
   const room = roomRef.value;
   const pages = pagesRef.value;
-  const overlay = overlayRef.value;
-  const desk = deskRef.value;
-  if (!room || !pages || !overlay || !desk) {
+  if (!room || !pages) {
     emit('done');
     return;
   }
   const vh = window.innerHeight;
-  // Start on the shelf. Pages begin above the frame. The desk (BookView)
-  // starts below the screen, ready to push up.
   gsap.set(room, { y: 0 });
-  gsap.set(desk, { y: vh });
   gsap.set(pages.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
 
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   });
-  // First: the pages float down THROUGH the frame and off the bottom —
-  // we're dropping the manuscript onto the desk.
+  // Pages fall through and off the bottom.
   tl.to(
     pages.children,
     {
@@ -51,46 +44,33 @@ onMounted(() => {
     },
     0.2,
   );
-  // Fade the falling pages as they exit.
-  tl.to(
-    pages.children,
-    {
-      opacity: 0,
-      duration: 0.4,
-      ease: 'power1.out',
-    },
-    1.6,
-  );
-  // Then: the desk pushes up from the bottom, on top of the bookshelf.
-  // We're sitting at the desk, looking down — the back of the desk
-  // arrives first, then the manuscript reveals as it settles.
-  // The BookView is already on it.
-  tl.to(desk, { y: 0, duration: 2.4, ease: 'power2.inOut' }, 1.8);
-  // Hold, then hand off to the real interactive BookView behind
-  // (it's in the same position, so the cut is invisible).
+  tl.to(pages.children, { opacity: 0, duration: 0.4 }, 1.6);
+  // BookView appears on the desk BEFORE the shift.
+  tl.call(() => { showBook.value = true; }, [], 1.8);
+  // The whole room shifts up: shelf exits top, desk (with BookView
+  // already on it) rises into view.
+  tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 2.0);
   tl.to({}, { duration: 0.5 });
 });
 </script>
 
 <template>
-  <div ref="overlayRef" class="open-transition" aria-hidden="true">
+  <div class="open-transition" aria-hidden="true">
     <div ref="roomRef" class="ot-room">
       <div class="ot-shelf">
         <Bookshelf backdrop />
       </div>
+      <div class="ot-desk">
+        <div v-if="showBook" class="ot-book">
+          <BookView />
+        </div>
+      </div>
     </div>
-    <!-- Pages fall in the overlay (not the room) so the room shift
-         doesn't drag them back into view. -->
     <div ref="pagesRef" class="ot-pages">
       <div class="ot-page"><span>Manuscript</span></div>
       <div class="ot-page"></div>
       <div class="ot-page"></div>
       <div class="ot-page"></div>
-    </div>
-    <!-- The desk pushes up from the bottom, on top of the shelf.
-         Non-interactive visual; the real BookView takes over on handoff. -->
-    <div ref="deskRef" class="ot-desk-layer">
-      <BookView />
     </div>
   </div>
 </template>
@@ -109,61 +89,32 @@ onMounted(() => {
   left: 0;
   right: 0;
   top: 0;
-  height: 100vh;
+  height: 200vh;
   will-change: transform;
 }
-/* The desk layer: slides up from below to cover the shelf. */
-.ot-desk-layer {
-  position: absolute;
-  inset: 0;
-  will-change: transform;
-  pointer-events: none;
-}
-.ot-shelf {
+.ot-shelf,
+.ot-desk {
   height: 100vh;
   position: relative;
   overflow: hidden;
-  background: #0d0a06;
 }
-/* The seam between shelf and desk. */
-.ot-shelf::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: rgba(0, 0, 0, 0.6);
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.5);
+.ot-shelf {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d0a06;
 }
 .ot-desk {
   background: #0d0a06;
 }
-.ot-desk-surface {
+.ot-book {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(120% 90% at 50% 20%, rgba(120, 70, 35, 0.35) 0%, transparent 60%),
-    linear-gradient(180deg, #3a2412 0%, #2a1a0d 40%, #1d1208 100%);
-}
-.ot-desk-surface::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    repeating-linear-gradient(
-      93deg,
-      rgba(0, 0, 0, 0.14) 0 2px,
-      transparent 2px 140px
-    );
-  opacity: 0.5;
+  pointer-events: none;
 }
 .ot-pages {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -180,15 +131,5 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-}
-.ot-page span {
-  font-family: var(--serif);
-  font-size: 1.1rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(120, 70, 40, 0.85);
-  border: 3px double rgba(120, 70, 40, 0.6);
-  padding: 0.35em 0.5em;
-  transform: rotate(-4deg);
 }
 </style>
