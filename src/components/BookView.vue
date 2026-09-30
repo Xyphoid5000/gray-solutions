@@ -262,9 +262,16 @@ async function paginateCurrentChapter() {
   }
 
   for (const child of children) {
+    // On mobile, remove card grids entirely (e.g. .craft-grid) — the
+    // chapter text is the content; cards don't fit the page format.
+    const isMobile = window.innerWidth < 640;
+    if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card')) {
+      child.remove();
+      continue;
+    }
     const h = (child as HTMLElement).offsetHeight || 120;
-    // If a single element is taller than a page (e.g. a grid of cards),
-    // split its children across pages — one card per page if needed.
+    // If a single element is taller than a page, split its children
+    // across pages — one per page if needed.
     if (h > available && child.children.length > 0) {
       // Flush current page first.
       if (current.length > 0) {
