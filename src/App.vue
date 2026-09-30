@@ -68,18 +68,23 @@ async function openBook() {
     updateLights();
     return;
   }
-  // The room shifts from shelf to desk, pages float down first, then
-  // the background moves. The BookView mounts behind the overlay so
-  // the handoff is a crossfade, not a cut.
+  // The desk (real BookView) mounts offscreen, fully rendered, then
+  // pulls into frame after the pages fall. No duplicate, no blank.
   cameraMoving.value = true;
   noScroll(true);
   showBook.value = true;
   bookMounted.value = true;
   await nextTick();
   window.scrollTo(0, 0);
+  const vh = window.innerHeight;
+  const home = document.querySelector('.view-home') as HTMLElement | null;
+  const book = document.querySelector('.view-book') as HTMLElement | null;
+  if (home && book) {
+    gsap.set(home, { y: 0 });
+    gsap.set(book, { y: vh });
+  }
+  // Pages fall first.
   showOpenTransition.value = true;
-  await nextTick();
-  // Wait for the transition to complete (it emits 'done' after fading).
   await new Promise<void>((resolve) => {
     const check = () => {
       if (!showOpenTransition.value) resolve();
@@ -87,8 +92,16 @@ async function openBook() {
     };
     check();
   });
+  // Pages are gone; pull the desk into frame, shelf exits top.
+  if (home && book) {
+    await Promise.all([
+      gsap.to(home, { y: -vh, duration: 1.6, ease: 'power2.inOut' }).then(),
+      gsap.to(book, { y: 0, duration: 1.6, ease: 'power2.inOut' }).then(),
+    ]);
+  }
   homeMounted.value = false;
   cameraMoving.value = false;
+  if (book) gsap.set(book, { y: 0 });
   noScroll(false);
   updateLights();
 }
@@ -782,34 +795,8 @@ onUnmounted(() => {
   />
   <OpenTransition
     v-if="showOpenTransition"
-    :bonus-content="bonusContent"
     @done="onOpenTransitionDone"
-  >
-    <template #desk-props>
-      <RemoteControl
-        v-if="bonusContent"
-        :led-on="ledOn"
-        :color="ledColor"
-        @power="onRemotePower"
-        @set-color="onLedColor"
-      />
-      <DeskCandle
-        v-if="bonusContent && !candleGone"
-        :lit="candleLit"
-        :smoking="candleSmoking"
-        @blow-out="onCandleBlowOut"
-      />
-      <div v-if="bonusContent && candleGone" class="help-wanted-flyer" aria-hidden="true">
-        <span class="hw-tape"></span>
-        <span class="hw-title">HELP<br />WANTED</span>
-        <span class="hw-sub">inquire within</span>
-      </div>
-      <DeskPencil />
-      <DeskClutter />
-      <FirstDraft v-if="bonusContent" />
-      <DeskPhone v-if="bonusContent" />
-    </template>
-  </OpenTransition>
+  />
   <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: pitchBlack }" aria-hidden="true"></div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
