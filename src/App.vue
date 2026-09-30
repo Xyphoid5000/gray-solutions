@@ -51,8 +51,9 @@ function noScroll(on: boolean) {
 /** Tilt down: the shelf glides up and away, the desk glides in from below. */
 async function openBook() {
   if (showBook.value || cameraMoving.value) return;
-  // The cord's drop shouldn't wait on a stack that's leaving the stage.
-  fireCordDrop();
+  // The cord's entrance is never tied to opening the book — it only
+  // ever swings down for bonus content, with the stack in view. An
+  // armed drop simply waits until the reader comes back home.
   if (reducedMotion()) {
     showBook.value = true;
     bookMounted.value = true;
