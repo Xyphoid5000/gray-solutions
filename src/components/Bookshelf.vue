@@ -49,11 +49,12 @@ const backdropBooks: ShelfBook[] = [
   ...bottomLeft,
   ...bottomRight,
 ];
-/** Backdrop mode: the SAME shelf, everywhere. No trimming — the only
-    difference is the visual treatment (dimmed, scaled). Split around
-    the binding slot. */
-const backdropLeft = backdropBooks.slice(0, 3);
-const backdropRight = backdropBooks.slice(3);
+/** Backdrop mode: the same shelf, cropped to fit the single-shelf
+    backdrop — outer two books removed so the row doesn't overflow
+    the bookcase. Split around the binding slot. */
+const backdropTrimmed = backdropBooks.slice(1, -1);
+const backdropLeft = backdropTrimmed.slice(0, 3);
+const backdropRight = backdropTrimmed.slice(3);
 
 /** The currently selected (floating) book, by title. Null when none. */
 const selected = ref<string | null>(null);
