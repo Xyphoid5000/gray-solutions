@@ -17,6 +17,7 @@ const props = defineProps<{
   height?: number;  // book height in px
   interactive?: boolean;
   pulled?: boolean;
+  flipped?: boolean;  // show the back cover
 }>();
 
 const emit = defineEmits<{
@@ -36,7 +37,8 @@ let dragMoved = false;
 
 const innerTransform = computed(() => {
   if (!props.pulled) return '';
-  return `translateY(-70px) translateZ(180px) rotateY(${-68 + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
+  const flip = props.flipped ? 180 : 0;
+  return `translateY(-70px) translateZ(180px) rotateY(${-68 + flip + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
 });
 
 function onPointerDown(e: PointerEvent) {

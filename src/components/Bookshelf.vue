@@ -51,6 +51,12 @@ function toggleBook(book: ShelfBook) {
   if (selected.value === book.title) selected.value = null;
   else if (!selected.value) selected.value = book.title;
 }
+
+/** The hero book: tap to flip it to the back cover (the one-liner). */
+const heroFlipped = ref(false);
+function toggleHero() {
+  heroFlipped.value = !heroFlipped.value;
+}
 </script>
 
 <template>
@@ -109,12 +115,13 @@ function toggleBook(book: ShelfBook) {
         <Book
           title="Gray Solutions"
           color="#1a1a1a"
-          synopsis="Websites that tell stories."
+          synopsis="Websites structured like stories, because nobody ever got emotional about a features list."
           :width="68"
           :height="300"
           :interactive="true"
           :pulled="true"
-          @toggle="emit('open-book')"
+          :flipped="heroFlipped"
+          @toggle="toggleHero()"
         />
       </div>
       <button
