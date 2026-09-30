@@ -2250,7 +2250,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 
 /* ---------- chapter modal ---------- */
 .chapter-modal-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1600;
   background: rgba(9, 7, 4, 0.72);
