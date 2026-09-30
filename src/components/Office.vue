@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
 import { useOfficeStore } from '../stores/office';
 
 const office = useOfficeStore();
+const bookViewRef = ref<InstanceType<typeof BookView> | null>(null);
 
 defineEmits(['open-book', 'back-to-cover', 'back-to-cover-section', 'finale-contact']);
+
+/** Expose the BookView for App.vue (e.g., tossCurrentToPile during binding). */
+defineExpose({ bookView: bookViewRef });
 
 /** The carousel track shifts up when the desk is active. */
 const trackClass = computed(() => ({
@@ -33,6 +37,7 @@ const trackClass = computed(() => ({
       <!-- Desk view: the manuscript BookView with all desk props. -->
       <div class="office-slide office-desk" aria-label="Desk">
         <BookView
+          ref="bookViewRef"
           @back-to-cover="$emit('back-to-cover')"
           @back-to-cover-section="$emit('back-to-cover-section', $event)"
           @finale-contact="$emit('finale-contact')"

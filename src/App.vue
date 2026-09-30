@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SiteNav from './components/SiteNav.vue';
 import Cover from './components/Cover.vue';
-import BookView from './components/BookView.vue';
+import CoverHero from './components/CoverHero.vue';
+import Office from './components/Office.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import OpenTransition from './components/OpenTransition.vue';
 import RemoteControl from './components/RemoteControl.vue';
@@ -31,9 +32,6 @@ const interactions = useInteractionsStore();
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
 const showOpenTransition = ref(false);
-/** Computed mount flags for the template (Office will replace these). */
-const homeMounted = computed(() => office.view === 'shelf');
-const bookMounted = computed(() => office.view === 'desk');
 /** Bonus content (candle, LEDs, first draft, UV light, phone, discount
     code) lives behind a toggle on the back of the cover. Off by
     default; session-scoped, like the bound state. */
@@ -172,12 +170,12 @@ async function closeBookToSection(section: 'about' | 'contact', after = 100) {
     contact form; so does the header's CONTACT ME while the book is
     open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
-const bookView = ref<InstanceType<typeof BookView> | null>(null);
+const officeRef = ref<InstanceType<typeof Office> | null>(null);
 /** The binding, from any trigger: the open page joins the pile first so
     the final page is really in the list, then the cinematic gathers it. */
 async function runBinding() {
-  if (manuscriptBound.value || !bindCinematic.value) return;
-  await bookView.value?.tossCurrentToPile();
+  if (office.manuscriptBound || !bindCinematic.value) return;
+  await officeRef.value?.bookView?.tossCurrentToPile();
   bindCinematic.value.start();
 }
 function onFinaleContact() {
@@ -717,21 +715,21 @@ onUnmounted(() => {
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn }">
   <div class="grain" aria-hidden="true"></div>
   <SiteNav :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
-  <div v-if="homeMounted" class="view view-home" :class="{ 'shelf-reveal': shelfReveal }">
-    <Cover
-      @open-book="openBook"
-      :book-drop-key="boundBookDrop"
-      :bonus-content="bonus.enabled"
-      @toggle-bonus="toggleBonus"
-    />
-  </div>
-  <div v-if="bookMounted" class="view view-book">
-  <BookView
-    ref="bookView"
+  <Office
+    ref="officeRef"
+    @open-book="openBook"
     @back-to-cover="tiltUp"
     @back-to-cover-section="closeBookToSection"
     @finale-contact="onFinaleContact"
   >
+    <template #cover>
+      <CoverHero
+        :book-drop-key="boundBookDrop"
+        :bonus-content="bonus.enabled"
+        @open-book="openBook"
+        @toggle-bonus="toggleBonus"
+      />
+    </template>
     <template #desk-props>
       <RemoteControl
         v-if="bonus.enabled"
@@ -757,7 +755,10 @@ onUnmounted(() => {
       <FirstDraft v-if="bonus.enabled" />
       <DeskPhone v-if="bonus.enabled" />
     </template>
-  </BookView>
+  </Office>
+  <!-- Contact/about sections (below the Office carousel, shelf view only). -->
+  <div v-if="office.view === 'shelf'" class="home-sections">
+    <Cover :bonus-content="bonus.enabled" />
   </div>
   <BindCinematic
     ref="bindCinematic"
