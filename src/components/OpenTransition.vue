@@ -2,6 +2,8 @@
 import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import Bookshelf from './Bookshelf.vue';
+import DeskClutter from './DeskClutter.vue';
+import DeskPencil from './DeskPencil.vue';
 
 const emit = defineEmits(['done']);
 
@@ -14,54 +16,61 @@ withDefaults(
 
 const roomRef = ref<HTMLElement | null>(null);
 const pagesRef = ref<HTMLElement | null>(null);
+const overlayRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
   const room = roomRef.value;
   const pages = pagesRef.value;
-  if (!room || !pages) {
+  const overlay = overlayRef.value;
+  if (!room || !pages || !overlay) {
     emit('done');
     return;
   }
   const vh = window.innerHeight;
-  // Start on the shelf (the home page is the bookshelf).
+  // Start on the shelf. Pages begin above the frame.
   gsap.set(room, { y: 0 });
-  gsap.set(pages.children, { y: -vh * 0.5, opacity: 0, rotation: 0 });
+  gsap.set(pages.children, { y: -vh * 0.6, opacity: 0, rotation: 0 });
 
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
   });
-  // The room slides up: shelf exits top, desk rises into view.
-  // Slow, so the seam is visible crossing the frame.
-  tl.to(room, { y: -vh, duration: 2.2, ease: 'power2.inOut' }, 0);
-  // Pages float down onto the desk as the camera settles.
+  // First: the pages float down (the manuscript coming to life).
   tl.to(
     pages.children,
     {
       y: 0,
       opacity: 1,
-      rotation: () => gsap.utils.random(-8, 8),
-      duration: 1.4,
+      rotation: () => gsap.utils.random(-6, 6),
+      duration: 1.6,
       ease: 'power2.out',
-      stagger: 0.18,
+      stagger: 0.15,
     },
-    1.4,
+    0.2,
   );
-  // Hold on the desk, then hand off.
-  tl.to({}, { duration: 0.6 });
-  tl.to(room.parentElement!, { opacity: 0, duration: 0.5, ease: 'power1.inOut' });
+  // Then: the room shifts — shelf exits top, desk rises. Slow, seam visible.
+  // The pages ride the room down and land on the desk.
+  tl.to(room, { y: -vh, duration: 2.4, ease: 'power2.inOut' }, 1.6);
+  // Hold on the desk with the manuscript open, then hand off.
+  tl.to({}, { duration: 0.7 });
+  // Fade the overlay; the BookView (manuscript desk) is already mounted
+  // behind, so this is a seamless crossfade, not a cut.
+  tl.to(overlay, { opacity: 0, duration: 0.9, ease: 'power1.inOut' });
 });
 </script>
 
 <template>
-  <div class="open-transition" aria-hidden="true">
+  <div ref="overlayRef" class="open-transition" aria-hidden="true">
     <div ref="roomRef" class="ot-room">
       <div class="ot-shelf">
         <Bookshelf backdrop />
       </div>
       <div class="ot-desk">
         <div class="ot-desk-surface"></div>
+        <!-- The literal desk props. -->
+        <DeskClutter />
+        <DeskPencil />
         <div ref="pagesRef" class="ot-pages">
-          <div class="ot-page"></div>
+          <div class="ot-page"><span>Manuscript</span></div>
           <div class="ot-page"></div>
           <div class="ot-page"></div>
           <div class="ot-page"></div>
@@ -137,6 +146,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
 }
 .ot-page {
   position: absolute;
@@ -145,9 +155,18 @@ onMounted(() => {
   background: var(--page, #f2ecdf);
   border: 1px solid rgba(120, 90, 60, 0.35);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.ot-page:nth-child(1) { transform: rotate(-4deg); }
-.ot-page:nth-child(2) { transform: rotate(3deg); }
-.ot-page:nth-child(3) { transform: rotate(-2deg); }
-.ot-page:nth-child(4) { transform: rotate(5deg); }
+.ot-page span {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(120, 70, 40, 0.85);
+  border: 3px double rgba(120, 70, 40, 0.6);
+  padding: 0.35em 0.5em;
+  transform: rotate(-4deg);
+}
 </style>

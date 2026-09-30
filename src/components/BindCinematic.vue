@@ -3,6 +3,8 @@ import { ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
 import Bookshelf from './Bookshelf.vue';
+import DeskClutter from './DeskClutter.vue';
+import DeskPencil from './DeskPencil.vue';
 
 defineProps<{ bonusContent?: boolean }>();
 
@@ -401,11 +403,13 @@ defineExpose({ start });
         <Bookshelf :interactive="false" :show-manuscript="false" />
       </div>
       <div class="bind-desk-half" :class="{ 'has-bonus': bonusContent }">
+        <!-- The literal desk: same mug, paper balls, and pencil as the
+             manuscript desk. Bonus pieces frame the action when on. -->
+        <DeskClutter />
+        <DeskPencil />
         <div v-if="bonusContent" class="bind-props" aria-hidden="true">
           <div class="bp-candle"><i></i></div>
-          <div class="bp-mug"></div>
           <div class="bp-phone"></div>
-          <div class="bp-pencil"></div>
           <div class="bp-draft"><i></i><i></i><i></i></div>
         </div>
       </div>
@@ -532,26 +536,6 @@ defineExpose({ start });
   border-radius: 50%;
   filter: blur(1px);
 }
-.bp-mug {
-  right: 7%;
-  top: 10%;
-  width: 44px;
-  height: 40px;
-  background: linear-gradient(180deg, #7a2d1a 0%, #4a1a0e 100%);
-  border-radius: 4px 4px 10px 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-}
-.bp-mug::after {
-  content: '';
-  position: absolute;
-  right: -12px;
-  top: 6px;
-  width: 16px;
-  height: 22px;
-  border: 5px solid #4a1a0e;
-  border-left: none;
-  border-radius: 0 10px 10px 0;
-}
 .bp-phone {
   right: 10%;
   bottom: 12%;
@@ -562,25 +546,6 @@ defineExpose({ start });
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   transform: rotate(-8deg);
-}
-.bp-pencil {
-  left: 8%;
-  bottom: 14%;
-  width: 90px;
-  height: 8px;
-  background: linear-gradient(180deg, #e8a83c 0%, #c07f1e 100%);
-  border-radius: 4px;
-  transform: rotate(18deg);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
-}
-.bp-pencil::after {
-  content: '';
-  position: absolute;
-  right: -14px;
-  top: 0;
-  border-left: 14px solid #e8d5a8;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
 }
 .bp-draft {
   left: 12%;

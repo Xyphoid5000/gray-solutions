@@ -68,13 +68,18 @@ async function openBook() {
     updateLights();
     return;
   }
-  // The room shifts from shelf to desk, pages float down, then the
-  // manuscript scene is revealed.
+  // The room shifts from shelf to desk, pages float down first, then
+  // the background moves. The BookView mounts behind the overlay so
+  // the handoff is a crossfade, not a cut.
   cameraMoving.value = true;
   noScroll(true);
+  showBook.value = true;
+  bookMounted.value = true;
+  await nextTick();
+  window.scrollTo(0, 0);
   showOpenTransition.value = true;
   await nextTick();
-  // Wait for the transition to complete (it emits 'done').
+  // Wait for the transition to complete (it emits 'done' after fading).
   await new Promise<void>((resolve) => {
     const check = () => {
       if (!showOpenTransition.value) resolve();
@@ -82,10 +87,6 @@ async function openBook() {
     };
     check();
   });
-  showBook.value = true;
-  bookMounted.value = true;
-  await nextTick();
-  window.scrollTo(0, 0);
   homeMounted.value = false;
   cameraMoving.value = false;
   noScroll(false);
