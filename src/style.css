@@ -1276,7 +1276,7 @@ body.has-book .chapter.book-page {
 
 /* The read pile: finished manuscript pages, in the left desk margin. */
 .read-pile {
-  position: fixed;
+  position: absolute;
   left: 20px;
   top: 22vh;
   width: 104px;

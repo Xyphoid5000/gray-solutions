@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
+import { onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -51,7 +51,7 @@ function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
 }
 
-/** Tilt down: the shelf glides up and away, the desk glides in from below. */
+/** Tilt down: pages fall first, then the office carousel slides shelf→desk. */
 async function openBook() {
   if ((office.view === 'desk') || office.transitioning) return;
   // Entering the book in the dark: the candle is already lit — no
@@ -59,29 +59,16 @@ async function openBook() {
   if (isDark() && bonus.enabled && !bonus.candleGone) {
     bonus.candleLit = true;
   }
-  // The cord is purely bonus-gated: it only ever appears while bonus
-  // content is on, and opening the book never triggers it.
   if (reducedMotion()) {
     office.showDesk();
     window.scrollTo(0, 0);
     updateLights();
     return;
   }
-  // The desk (real BookView) mounts offscreen, fully rendered, then
-  // pulls into frame after the pages fall. No duplicate, no blank.
   office.setTransitioning(true);
   noScroll(true);
-  office.showDesk();
-  await nextTick();
   window.scrollTo(0, 0);
-  const vh = window.innerHeight;
-  const home = document.querySelector('.view-home') as HTMLElement | null;
-  const book = document.querySelector('.view-book') as HTMLElement | null;
-  if (home && book) {
-    gsap.set(home, { y: 0 });
-    gsap.set(book, { y: vh });
-  }
-  // Pages fall first.
+  // Pages fall first, on the shelf view.
   showOpenTransition.value = true;
   await new Promise<void>((resolve) => {
     const check = () => {
@@ -90,15 +77,12 @@ async function openBook() {
     };
     check();
   });
-  // Pages are gone; pull the desk into frame, shelf exits top.
-  if (home && book) {
-    await Promise.all([
-      gsap.to(home, { y: -vh, duration: 1.6, ease: 'power2.inOut' }).then(),
-      gsap.to(book, { y: 0, duration: 1.6, ease: 'power2.inOut' }).then(),
-    ]);
-  }
+  // Pages are gone; now slide the office to the desk. The carousel's
+  // CSS transition handles the animation — await it before clearing
+  // the transitioning flag.
+  office.showDesk();
+  await new Promise((resolve) => setTimeout(resolve, 1700));
   office.setTransitioning(false);
-  if (book) gsap.set(book, { y: 0 });
   noScroll(false);
   updateLights();
 }
@@ -107,7 +91,7 @@ function onOpenTransitionDone() {
   showOpenTransition.value = false;
 }
 
-/** Tilt up: the desk slides away below, the shelf glides back in. */
+/** Tilt up: the office carousel slides desk→shelf. */
 async function tiltUp() {
   if (!(office.view === 'desk') || office.transitioning) return;
   if (reducedMotion()) {
@@ -118,29 +102,11 @@ async function tiltUp() {
   }
   office.setTransitioning(true);
   noScroll(true);
-  office.showShelf();
-  await nextTick();
-  const home = document.querySelector('.view-home') as HTMLElement | null;
-  const book = document.querySelector('.view-book') as HTMLElement | null;
-  const vh = window.innerHeight;
   window.scrollTo(0, 0);
-  if (home && book) {
-    gsap.set(home, { y: -vh * 0.35, opacity: 0, scale: 0.98 });
-    await gsap
-      .timeline()
-      .to(
-        book,
-        { y: vh * 0.6, opacity: 0, duration: 1.15, ease: 'power3.inOut' },
-        0,
-      )
-      .to(
-        home,
-        { y: 0, opacity: 1, scale: 1, duration: 1.15, ease: 'power3.inOut' },
-        0,
-      )
-      .then();
-    gsap.set(home, { clearProps: 'all' });
-  }
+  // Slide the office back to the shelf. The carousel's CSS transition
+  // handles the animation — await it before clearing the flag.
+  office.showShelf();
+  await new Promise((resolve) => setTimeout(resolve, 1700));
   office.setTransitioning(false);
   noScroll(false);
   clearLedScene();
