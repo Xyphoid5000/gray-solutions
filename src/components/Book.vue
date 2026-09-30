@@ -18,6 +18,9 @@ const props = defineProps<{
   interactive?: boolean;
   pulled?: boolean;
   flipped?: boolean;  // show the back cover
+  mark?: string;      // front-cover mark (e.g. "G.")
+  tagline?: string;   // front-cover tagline
+  author?: string;    // front-cover author
 }>();
 
 const emit = defineEmits<{
@@ -112,7 +115,10 @@ function onClick(e: Event) {
       </span>
       <!-- Front cover. -->
       <span class="book3d-front">
+        <span v-if="mark" class="book3d-front-mark">{{ mark }}</span>
         <span class="book3d-front-title">{{ title }}</span>
+        <span v-if="tagline" class="book3d-front-tag">{{ tagline }}</span>
+        <span v-if="author" class="book3d-front-author">{{ author }}</span>
       </span>
       <!-- Back cover with synopsis. -->
       <span class="book3d-back">
@@ -202,10 +208,19 @@ function onClick(e: Event) {
   background: linear-gradient(145deg, rgba(0,0,0,0.25), rgba(0,0,0,0.45)), var(--bc);
   border: 1px solid rgba(232, 205, 150, 0.25);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   padding: 1.2rem;
   text-align: center;
+}
+.book3d-front-mark {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: rgba(232, 205, 150, 0.95);
+  line-height: 1;
 }
 .book3d-front-title {
   font-family: var(--serif);
@@ -213,6 +228,20 @@ function onClick(e: Event) {
   font-weight: 600;
   color: rgba(232, 205, 150, 0.95);
   line-height: 1.3;
+}
+.book3d-front-tag {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(232, 205, 150, 0.7);
+  line-height: 1.4;
+}
+.book3d-front-author {
+  font-family: var(--serif);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(232, 205, 150, 0.6);
 }
 /* Back cover: to the left of the spine. */
 .book3d-back {

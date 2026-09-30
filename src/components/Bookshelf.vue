@@ -121,6 +121,9 @@ function toggleHero() {
           :interactive="true"
           :pulled="true"
           :flipped="heroFlipped"
+          mark="G."
+          tagline="Websites that tell stories."
+          author="Chris Gray"
           @toggle="toggleHero()"
         />
       </div>
