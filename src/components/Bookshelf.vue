@@ -426,6 +426,15 @@ function toggleBook(book: ShelfBook) {
   align-items: center;
   gap: 0.6rem;
   z-index: 2;
+  /* Let taps pass through to the shelf books behind, except on the
+     actual hero/buttons. */
+  pointer-events: none;
+}
+.bs-foreground .bs-hero-book,
+.bs-foreground .bs-manuscript,
+.bs-foreground .bs-reopen,
+.bs-foreground .bs-hint {
+  pointer-events: auto;
 }
 /* The bound book as hero, mirroring the manuscript pre-bind. */
 .bs-hero-book {

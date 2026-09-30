@@ -69,14 +69,10 @@ function onPointerUp(e: PointerEvent) {
   if (e.pointerId !== dragPointerId) return;
   dragPointerId = null;
   dragging.value = false;
-  // If it was a drag, don't toggle. If it was a tap, toggle.
+  // If it was a tap (not a drag), toggle. Drags leave the book where
+  // the user left it, like the manuscript.
   if (!dragMoved && props.interactive) {
     emit('toggle');
-  }
-  // Ease the spin back to the resting pose after a drag.
-  if (dragMoved) {
-    dragRotY.value = 0;
-    dragRotX.value = 0;
   }
 }
 
@@ -141,6 +137,8 @@ function onClick(e: Event) {
   background: none;
   perspective: 900px;
   cursor: default;
+  /* Horizontal drags spin the book; vertical drags scroll the page. */
+  touch-action: pan-y;
 }
 .book3d.is-interactive {
   cursor: pointer;
