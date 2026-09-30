@@ -78,10 +78,31 @@ async function openBook() {
     check();
   });
   // Pages are gone; now slide the office to the desk. The carousel's
-  // CSS transition handles the animation — await it before clearing
-  // the transitioning flag.
+  // CSS transition handles the animation — await its transitionend
+  // before clearing the transitioning flag.
   office.showDesk();
-  await new Promise((resolve) => setTimeout(resolve, 1700));
+  await new Promise<void>((resolve) => {
+    const track = document.querySelector('.office-track');
+    if (!track) {
+      resolve();
+      return;
+    }
+    const onEnd = (e: Event) => {
+      if ((e as TransitionEvent).propertyName === 'transform') {
+        track.removeEventListener('transitionend', onEnd);
+        resolve();
+      }
+    };
+    track.addEventListener('transitionend', onEnd);
+    // Fallback: if transitionend never fires, don't hang.
+    setTimeout(() => {
+      track.removeEventListener('transitionend', onEnd);
+      resolve();
+    }, 2000);
+  });
+  // The desk mounted offscreen, so ScrollTrigger never saw its content
+  // enter the viewport. Refresh now that it's in place.
+  ScrollTrigger.refresh();
   office.setTransitioning(false);
   noScroll(false);
   updateLights();

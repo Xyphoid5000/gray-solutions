@@ -154,37 +154,10 @@ function toggleOurs(ev: Event) {
     aria-label="Bookshelf"
   >
     <div class="bs-vignette" aria-hidden="true"></div>
-    <p v-if="!backdrop" class="bs-kicker">A portfolio &middot; by Chris Gray</p>
+    <p class="bs-kicker">A portfolio &middot; by Chris Gray</p>
 
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
-      <template v-if="backdrop">
-        <div class="bs-shelf">
-          <div class="bs-books">
-            <div
-              v-for="b in shelfLeft"
-              :key="'bg-' + b.title"
-              class="bs-book"
-              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
-            >
-              <span>{{ b.title }}</span>
-            </div>
-            <div class="bs-slot" data-bind-slot>
-              <div class="bs-ours"><span>Gray Solutions</span></div>
-            </div>
-            <div
-              v-for="b in shelfRight"
-              :key="'bg-' + b.title"
-              class="bs-book"
-              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
-            >
-              <span>{{ b.title }}</span>
-            </div>
-          </div>
-          <div class="bs-plank"></div>
-        </div>
-      </template>
-      <template v-else>
       <div class="bs-shelf">
         <div class="bs-books">
           <button
@@ -251,7 +224,6 @@ function toggleOurs(ev: Event) {
         </div>
         <div class="bs-plank"></div>
       </div>
-      </template>
       <div class="bs-base"></div>
     </div>
     <div v-if="backdrop" class="bs-blur-veil" aria-hidden="true"></div>

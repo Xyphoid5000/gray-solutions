@@ -30,7 +30,11 @@ const trackClass = computed(() => ({
           @open-book="$emit('open-book')"
         />
         <!-- Cover manuscript overlay (home page hero) when not bound. -->
-        <div v-if="!office.manuscriptBound" class="office-cover">
+        <div
+          v-if="!office.manuscriptBound"
+          class="office-cover"
+          :class="{ 'is-hiding': office.transitioning }"
+        >
           <slot name="cover" />
         </div>
       </div>
@@ -80,8 +84,16 @@ const trackClass = computed(() => ({
   position: absolute;
   inset: 0;
   pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.office-cover.is-hiding {
+  opacity: 0;
+  pointer-events: none;
 }
 .office-cover > * {
   pointer-events: auto;
+}
+.office-cover.is-hiding > * {
+  pointer-events: none;
 }
 </style>
