@@ -409,12 +409,22 @@ function prev() {
 const modalIndex = ref<number | null>(null);
 
 /** Re-paginate when the chapter changes. Reset to first page. */
-watch(currentIndex, () => {
+watch(currentIndex, async () => {
+  await nextTick();
   paginateCurrentChapter();
 });
 
-onMounted(() => {
+onMounted(async () => {
+  // Wait for the chapter DOM to settle before measuring.
+  await nextTick();
   paginateCurrentChapter();
+  // Re-paginate once fonts load — first-load measurements can be wrong
+  // if the serif hasn't rendered yet, causing cut-off pages.
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => paginateCurrentChapter());
+  }
+  // Safety: re-paginate after async content settles.
+  setTimeout(() => paginateCurrentChapter(), 1000);
 });
 
 function onTabClick(i: number) {
