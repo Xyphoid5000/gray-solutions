@@ -8,6 +8,7 @@
  * Props: title, color, synopsis (back-cover text), dimensions.
  */
 import { ref, computed } from 'vue';
+import { useBonusStore } from '../stores/bonus';
 
 const props = defineProps<{
   title: string;
@@ -17,15 +18,17 @@ const props = defineProps<{
   height?: number;  // book height in px
   interactive?: boolean;
   pulled?: boolean;
-  flipped?: boolean;  // show the back cover
   mark?: string;      // front-cover mark (e.g. "G.")
   tagline?: string;   // front-cover tagline
   author?: string;    // front-cover author
+  showBonusToggle?: boolean;  // back cover shows bonus toggle instead of synopsis
 }>();
 
 const emit = defineEmits<{
   (e: 'toggle'): void;
 }>();
+
+const bonus = useBonusStore();
 
 /* Drag-to-spin when pulled, like the manuscript. */
 const dragRotY = ref(0);
@@ -40,8 +43,7 @@ let dragMoved = false;
 
 const innerTransform = computed(() => {
   if (!props.pulled) return '';
-  const flip = props.flipped ? 180 : 0;
-  return `translateY(-70px) translateZ(180px) rotateY(${-68 + flip + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
+  return `translateY(-70px) translateZ(180px) rotateY(${-68 + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
 });
 
 function onPointerDown(e: PointerEvent) {
@@ -120,9 +122,23 @@ function onClick(e: Event) {
         <span v-if="tagline" class="book3d-front-tag">{{ tagline }}</span>
         <span v-if="author" class="book3d-front-author">{{ author }}</span>
       </span>
-      <!-- Back cover with synopsis. -->
+      <!-- Back cover: synopsis, or bonus toggle for Gray Solutions. -->
       <span class="book3d-back">
-        <span class="book3d-back-text">{{ synopsis }}</span>
+        <span v-if="showBonusToggle" class="book3d-bonus">
+          <span class="book3d-bonus-label">Bonus content</span>
+          <button
+            type="button"
+            class="book3d-bonus-switch"
+            :class="{ 'is-on': bonus.enabled }"
+            :aria-pressed="bonus.enabled"
+            aria-label="Toggle bonus content"
+            @click.stop="bonus.enabled = !bonus.enabled"
+            @pointerdown.stop
+          >
+            <span class="book3d-bonus-knob"></span>
+          </button>
+        </span>
+        <span v-else class="book3d-back-text">{{ synopsis }}</span>
       </span>
       <!-- Page edges. -->
       <span class="book3d-pages"></span>
@@ -264,6 +280,47 @@ function onClick(e: Event) {
   font-size: 0.9rem;
   color: rgba(232, 205, 150, 0.85);
   line-height: 1.5;
+}
+/* Bonus toggle on the Gray Solutions back cover. */
+.book3d-bonus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+.book3d-bonus-label {
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(232, 205, 150, 0.85);
+}
+.book3d-bonus-switch {
+  width: 56px;
+  height: 30px;
+  border-radius: 15px;
+  border: 1px solid rgba(232, 205, 150, 0.4);
+  background: rgba(0, 0, 0, 0.5);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.25s ease;
+}
+.book3d-bonus-switch.is-on {
+  background: rgba(47, 107, 255, 0.6);
+}
+.book3d-bonus-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(232, 205, 150, 0.9);
+  transition: transform 0.25s ease;
+}
+.book3d-bonus-switch.is-on .book3d-bonus-knob {
+  transform: translateX(26px);
 }
 /* Page block: the fore-edge (opposite the spine). */
 .book3d-pages {

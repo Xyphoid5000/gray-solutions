@@ -52,10 +52,13 @@ function toggleBook(book: ShelfBook) {
   else if (!selected.value) selected.value = book.title;
 }
 
-/** The hero book: tap to flip it to the back cover (the one-liner). */
-const heroFlipped = ref(false);
-function toggleHero() {
-  heroFlipped.value = !heroFlipped.value;
+/** Gray Solutions: first tap pulls it out; tap again (when pulled) opens it. */
+function toggleOurs() {
+  if (selected.value === '__ours') {
+    emit('open-book');
+  } else if (!selected.value) {
+    selected.value = '__ours';
+  }
 }
 </script>
 
@@ -86,7 +89,22 @@ function toggleHero() {
             @toggle="toggleBook(b)"
           />
           <div class="bs-slot" data-bind-slot>
-            <div class="bs-slot-empty" aria-hidden="true"></div>
+            <template v-if="isBound">
+              <Book
+                title="Gray Solutions"
+                color="#1a1a1a"
+                :width="52"
+                :height="230"
+                :interactive="interactive"
+                :pulled="selected === '__ours'"
+                :show-bonus-toggle="true"
+                mark="G."
+                tagline="Websites that tell stories."
+                author="Chris Gray"
+                @toggle="toggleOurs()"
+              />
+            </template>
+            <div v-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
           <Book
             v-for="b in shelfRight"
@@ -108,25 +126,6 @@ function toggleHero() {
     <div v-if="backdrop" class="bs-blur-veil" aria-hidden="true"></div>
 
     <div v-if="!backdrop" class="bs-foreground">
-      <div
-        v-if="isBound && interactive"
-        class="bs-hero-book"
-      >
-        <Book
-          title="Gray Solutions"
-          color="#1a1a1a"
-          synopsis="Websites structured like stories, because nobody ever got emotional about a features list."
-          :width="68"
-          :height="300"
-          :interactive="true"
-          :pulled="true"
-          :flipped="heroFlipped"
-          mark="G."
-          tagline="Websites that tell stories."
-          author="Chris Gray"
-          @toggle="toggleHero()"
-        />
-      </div>
       <button
         v-if="showManuscript && !isBound"
         type="button"
@@ -440,21 +439,10 @@ function toggleHero() {
      actual hero/buttons. */
   pointer-events: none;
 }
-.bs-foreground .bs-hero-book,
 .bs-foreground .bs-manuscript,
 .bs-foreground .bs-reopen,
 .bs-foreground .bs-hint {
   pointer-events: auto;
-}
-/* The bound book as hero, mirroring the manuscript pre-bind. */
-.bs-hero-book {
-  display: flex;
-  justify-content: center;
-  pointer-events: auto;
-}
-.bs-hero-book .book3d {
-  /* Larger hero size is set via props; ensure it's above the shelf. */
-  z-index: 3;
 }
 .bs-manuscript {
   background: none;
