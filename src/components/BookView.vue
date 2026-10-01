@@ -284,8 +284,8 @@ async function paginateCurrentChapter() {
   for (const child of Array.from(wrap.children) as HTMLElement[]) {
     // On mobile, card grids don't fit the page format — show each card's
     // content as its own plain text block, not wrapped in a card.
-    if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card, .proof-panel')) {
-      Array.from(child.querySelectorAll('.craft-card, .service-card, .chapter-card, .proof-panel')).forEach((card) => {
+    if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card, .proof-panel, .premise-point')) {
+      Array.from(child.querySelectorAll('.craft-card, .service-card, .chapter-card, .proof-panel, .premise-point')).forEach((card) => {
         const c = card as HTMLElement;
         const plain = document.createElement('div');
         plain.className = 'card-plain';

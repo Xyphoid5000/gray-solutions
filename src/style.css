@@ -2952,9 +2952,9 @@ html[data-theme='dark'] body.has-book .chapter {
   max-width: 640px;
   margin-inline: auto;
   pointer-events: auto;
-  /* Center vertically on the desk: page is ~62svh, desk is 100svh. */
-  margin-top: 14svh;
-  margin-bottom: 14svh;
+  /* Air above/below the page on the desk. */
+  margin-top: 8svh;
+  margin-bottom: 8svh;
 }
 /* Pages you're not on are fully rendered behind the current one; clip
    their paper to the wrap so a tall hidden chapter can't stretch the
