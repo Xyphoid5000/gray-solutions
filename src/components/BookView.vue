@@ -267,14 +267,14 @@ async function paginateCurrentChapter() {
   // Clear any previous pagination.
   paper.querySelectorAll('.book-page').forEach((p) => {
     // Move children back to the wrap before removing the page div.
-    const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
+    const wrap = paper.querySelector(':scope > :is(.chapter, .prologue) > .wrap') as HTMLElement | null;
     if (wrap) {
       Array.from(p.children).forEach((c) => wrap.appendChild(c));
     }
     p.remove();
   });
 
-  const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
+  const wrap = paper.querySelector(':scope > :is(.chapter, .prologue) > .wrap') as HTMLElement | null;
   if (!wrap) return;
 
   const isMobile = window.innerWidth < 640;
@@ -294,9 +294,41 @@ async function paginateCurrentChapter() {
         const copy = c.querySelector('p')?.textContent || '';
         const tags = Array.from(c.querySelectorAll('li')).map((li) => li.textContent).join(', ');
         plain.innerHTML = `<h3>${title}</h3><p>${copy}</p>${tags ? `<p class="card-plain-tags">${tags}</p>` : ''}`;
+        // Keep any call-to-action button — move the real node so its
+        // click handler survives.
+        const btn = c.querySelector('button');
+        if (btn) plain.appendChild(btn);
         blocks.push(plain);
       });
       // The original grid (with cards) is discarded.
+      child.remove();
+      continue;
+    }
+    // Swipe hints are desktop affordances — they don't get their own page.
+    if (isMobile && child.classList.contains('proof-hint')) {
+      child.remove();
+      continue;
+    }
+    // The arc stage is a desktop composition (SVG + act grid + scroll
+    // spine). On mobile the line gets its own page, then each act gets
+    // its own page — the arc is drawn across the pages.
+    if (isMobile && child.classList.contains('arc-stage')) {
+      const svgWrap = child.querySelector('.arc-svg-wrap');
+      if (svgWrap) blocks.push(svgWrap as HTMLElement);
+      child.querySelectorAll('.arc-act').forEach((act) => {
+        blocks.push(act as HTMLElement);
+      });
+      // The spine is a scroll-progress indicator — meaningless in pages.
+      child.querySelector('.arc-spine')?.remove();
+      child.remove();
+      continue;
+    }
+    // The finale's closing block groups heading + copy + CTA — split them
+    // so each gets its own page.
+    if (isMobile && child.classList.contains('fin')) {
+      Array.from(child.children).forEach((c) => {
+        blocks.push(c as HTMLElement);
+      });
       child.remove();
       continue;
     }
