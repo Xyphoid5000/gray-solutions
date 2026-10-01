@@ -92,6 +92,18 @@ function prevPage() {
   }
 }
 
+/** Swipe through draft pages. */
+let swipeStartX = 0;
+function onSwipeStart(e: TouchEvent) {
+  swipeStartX = e.touches[0].clientX;
+}
+function onSwipeEnd(e: TouchEvent) {
+  const dx = e.changedTouches[0].clientX - swipeStartX;
+  if (Math.abs(dx) < 40) return;
+  if (dx < 0) nextPage();
+  else prevPage();
+}
+
 function toggleUV() {
   uvOn.value = !uvOn.value;
 }
@@ -115,7 +127,11 @@ function toggleUV() {
       <div class="draft-modal-backdrop" @click="closeDraft"></div>
       <div class="draft-modal-card">
         <div class="draft-modal-title">FIRST DRAFT</div>
-        <div class="draft-pages-area">
+        <div
+          class="draft-pages-area"
+          @touchstart.passive="onSwipeStart"
+          @touchend.passive="onSwipeEnd"
+        >
           <!-- The current page with red-pen markup. -->
           <div class="draft-page" :class="{ uv: uvOn }">
             <span class="draft-page-num" :class="page().mark" :aria-label="`Page ${page().num}`">
