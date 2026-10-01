@@ -262,10 +262,29 @@ async function paginateCurrentChapter() {
   }
 
   for (const child of children) {
-    // On mobile, remove card grids entirely (e.g. .craft-grid) — the
-    // chapter text is the content; cards don't fit the page format.
+    // On mobile, card grids (e.g. .craft-grid) don't fit the page format —
+    // unpack them so each card gets its own page instead of deleting them.
     const isMobile = window.innerWidth < 640;
     if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card')) {
+      // Flush current page first.
+      if (current.length > 0) {
+        pages.push(current);
+        current = [];
+        height = 0;
+      }
+      // Each card gets its own page.
+      Array.from(child.children).forEach((card) => {
+        const c = card as HTMLElement;
+        const ch = c.offsetHeight || 200;
+        pushEl(c, ch);
+        // Force a page break after each card.
+        if (current.length > 0) {
+          pages.push(current);
+          current = [];
+          height = 0;
+        }
+      });
+      // The empty grid container is discarded (cards are moved out).
       child.remove();
       continue;
     }
