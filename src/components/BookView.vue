@@ -251,8 +251,12 @@ function pileToss(index: number): { rotation: number; x: number; y: number } {
 }
 
 /** Paginate the current chapter's content into screen-sized pages.
-    Groups the .wrap's block children by measured height. Moves the actual
-    elements (no clones) into .book-page divs. */
+    No height measurements: the .wrap's block children are the chapter's
+    block array. Mobile gets one block per page; larger screens group
+    blocks together. Moves the actual elements (no clones) into
+    .book-page divs. */
+/** Blocks per page on larger screens — one block per page on mobile. */
+const DESKTOP_BLOCKS_PER_PAGE = 3;
 async function paginateCurrentChapter() {
   await nextTick();
   const paper = document.querySelector(
@@ -273,41 +277,14 @@ async function paginateCurrentChapter() {
   const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
   if (!wrap) return;
 
-  const children = Array.from(wrap.children) as HTMLElement[];
-  if (children.length === 0) return;
+  const isMobile = window.innerWidth < 640;
 
-  // Available height: page min-height (62vh) minus padding, with a
-  // conservative margin. Prefer more pages over cramming content.
-  // If a single element exceeds this, it gets its own page (min-height grows).
-  const available = window.innerHeight * 0.62 - 140;
-
-  const pages: HTMLElement[][] = [];
-  let current: HTMLElement[] = [];
-  let height = 0;
-
-  // Helper: push an element, starting a new page if it doesn't fit.
-  function pushEl(el: HTMLElement, h: number) {
-    if (current.length > 0 && height + h > available) {
-      pages.push(current);
-      current = [];
-      height = 0;
-    }
-    current.push(el);
-    height += h;
-  }
-
-  for (const child of children) {
-    // On mobile, card grids (e.g. .craft-grid) don't fit the page format —
-    // show the card content as plain text blocks, not wrapped in cards.
-    const isMobile = window.innerWidth < 640;
+  // The chapter array: the wrap's top-level blocks, in order.
+  const blocks: HTMLElement[] = [];
+  for (const child of Array.from(wrap.children) as HTMLElement[]) {
+    // On mobile, card grids don't fit the page format — show each card's
+    // content as its own plain text block, not wrapped in a card.
     if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card, .proof-panel')) {
-      // Flush current page first.
-      if (current.length > 0) {
-        pages.push(current);
-        current = [];
-        height = 0;
-      }
-      // Convert each card to a plain content block (no card styling).
       Array.from(child.querySelectorAll('.craft-card, .service-card, .chapter-card, .proof-panel')).forEach((card) => {
         const c = card as HTMLElement;
         const plain = document.createElement('div');
@@ -317,36 +294,23 @@ async function paginateCurrentChapter() {
         const copy = c.querySelector('p')?.textContent || '';
         const tags = Array.from(c.querySelectorAll('li')).map((li) => li.textContent).join(', ');
         plain.innerHTML = `<h3>${title}</h3><p>${copy}</p>${tags ? `<p class="card-plain-tags">${tags}</p>` : ''}`;
-        pushEl(plain, c.offsetHeight || 200);
+        blocks.push(plain);
       });
       // The original grid (with cards) is discarded.
       child.remove();
       continue;
     }
-    const h = (child as HTMLElement).offsetHeight || 120;
-    // If a single element is taller than a page, split its children
-    // across pages — one per page if needed.
-    if (h > available && child.children.length > 0) {
-      // Flush current page first.
-      if (current.length > 0) {
-        pages.push(current);
-        current = [];
-        height = 0;
-      }
-      // Each grandchild gets its own page (or grouped if small).
-      Array.from(child.children).forEach((grandchild) => {
-        const gc = grandchild as HTMLElement;
-        const gh = gc.offsetHeight || 120;
-        // If the grid itself had styling, wrap the card to preserve it.
-        pushEl(gc, gh);
-      });
-      // The empty grid container is discarded (cards are moved out).
-      child.remove();
-    } else {
-      pushEl(child as HTMLElement, h);
-    }
+    blocks.push(child);
   }
-  if (current.length > 0) pages.push(current);
+  if (blocks.length === 0) return;
+
+  // Group blocks into pages: one per page on mobile, several per page
+  // on larger screens. No measuring — deterministic by count.
+  const perPage = isMobile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
+  const pages: HTMLElement[][] = [];
+  for (let i = 0; i < blocks.length; i += perPage) {
+    pages.push(blocks.slice(i, i + perPage));
+  }
 
   pageCount.value = pages.length;
   currentPage.value = 0;
