@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
+import { motionReduced } from '../utils/a11y';
 
 const emit = defineEmits(['open-book', 'toggle-bonus']);
 const props = defineProps<{ bookDropKey?: number; bonusContent?: boolean }>();
@@ -54,7 +55,7 @@ interface Mote {
 let motes: Mote[] = [];
 
 const reducedMotion = () =>
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  motionReduced();
 
 // --- Rotatable book -------------------------------------------------
 // The book can be spun by dragging it (front, back, sides). Scrolling

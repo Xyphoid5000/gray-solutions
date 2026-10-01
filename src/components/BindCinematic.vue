@@ -10,6 +10,7 @@ import DeskCandle from './DeskCandle.vue';
 import DeskPhone from './DeskPhone.vue';
 import FirstDraft from './FirstDraft.vue';
 import RemoteControl from './RemoteControl.vue';
+import { motionReduced } from '../utils/a11y';
 
 defineProps<{ bonusContent?: boolean }>();
 
@@ -93,8 +94,7 @@ function start() {
   const b3d = book3d.value;
   const msc = msCover.value;
   if (!ov || !rm || !st || !cv || !b3d || !msc) return;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
-    .matches;
+  const reduced = motionReduced();
   if (reduced) {
     // No animation: mark it bound and hand off, same end state.
     emit('blackout');

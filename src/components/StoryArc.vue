@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ChapterHeading from './ChapterHeading.vue';
+import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -39,7 +40,7 @@ let st: ScrollTrigger | undefined;
 let spineTriggers: ScrollTrigger[] = [];
 
 onMounted(() => {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (motionReduced()) {
     litCount.value = acts.length;
     spineProgress.value = 1;
     return;

@@ -22,6 +22,7 @@ import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
 import { useInteractionsStore } from './stores/interactions';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
+import { motionReduced } from './utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -230,7 +231,7 @@ const isDark = () => document.documentElement.dataset.theme === 'dark';
 /** Light rituals: pitch-black beat, match hand, breeze. */
 let ritualTimers: ReturnType<typeof setTimeout>[] = [];
 const reducedMotion = () =>
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  motionReduced();
 
 function later(fn: () => void, ms: number) {
   ritualTimers.push(setTimeout(fn, ms));
@@ -684,7 +685,7 @@ onMounted(() => {
   window.addEventListener('gs:lights-on', onLightsOn);
   window.addEventListener('gs:cord-pulled', onCordPulled);
 
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!motionReduced()) {
     lenis = new Lenis({ duration: 1.25, smoothWheel: true });
     setLenis(lenis);
     lenis.on('scroll', ScrollTrigger.update);

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
+import { motionReduced } from '../utils/a11y';
 
 const props = defineProps<{ active?: boolean }>();
 
@@ -51,7 +52,7 @@ function startTyping() {
   bodyText.value = '';
   activeField.value = 0;
   typingDone.value = false;
-  if (manuscriptBound.value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (manuscriptBound.value || motionReduced()) {
     showFullText();
     return;
   }

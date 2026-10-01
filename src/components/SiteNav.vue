@@ -2,6 +2,7 @@
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import PullCord from './PullCord.vue';
+import { a11yModeOn, setA11yMode, initA11yMode, motionReduced } from '../utils/a11y';
 
 const props = defineProps<{ bonusContent?: boolean }>();
 
@@ -26,7 +27,7 @@ let riseTl: gsap.core.Timeline | null = null;
 /** The switch flips instantly; the cord mounts/unmounts on its own beat. */
 const cordMounted = ref(false);
 const reducedMotion = () =>
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  motionReduced();
 
 /** A grab during the entrance wins — stop the scheduled ball drop so it
     never fights the user's hand. */
@@ -35,7 +36,18 @@ const onCordGrabbed = () => {
   dropTl = null;
 };
 
-onMounted(() => window.addEventListener('gs:cord-grabbed', onCordGrabbed));
+/** Accessibility toggle: hidden checkbox that forces off animations. */
+const a11yChecked = ref(false);
+
+function onA11yToggle() {
+  setA11yMode(a11yChecked.value);
+}
+
+onMounted(() => {
+  initA11yMode();
+  a11yChecked.value = a11yModeOn();
+  window.addEventListener('gs:cord-grabbed', onCordGrabbed);
+});
 onUnmounted(() =>
   window.removeEventListener('gs:cord-grabbed', onCordGrabbed),
 );
@@ -144,6 +156,16 @@ function retractCord(done: () => void) {
       <button class="nav-contact" @click="emit('contact')">
         Contact me
       </button>
+      <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
+      <label class="a11y-toggle">
+        <input
+          type="checkbox"
+          v-model="a11yChecked"
+          @change="onA11yToggle"
+          aria-label="Reduce motion and disable animations"
+        />
+        <span class="a11y-toggle-text" aria-hidden="true">Calm mode</span>
+      </label>
     </div>
     <div v-if="cordMounted" ref="cordWrap" class="cord-drop-wrap">
       <PullCord ref="pullCord" />

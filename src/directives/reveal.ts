@@ -1,12 +1,13 @@
 import type { Directive } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const reducedMotion = () =>
   typeof window !== 'undefined' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  motionReduced();
 
 /**
  * v-reveal — restrained scroll-in animation.

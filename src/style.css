@@ -3369,3 +3369,38 @@ html[data-theme='dark'] .page-tab {
   color: var(--muted);
   font-style: italic;
 }
+
+/* Accessibility toggle: visually hidden checkbox, revealed on focus. */
+.a11y-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.a11y-toggle:focus-within {
+  position: static;
+  width: auto;
+  height: auto;
+  clip: auto;
+  overflow: visible;
+  white-space: normal;
+}
+.a11y-toggle-text {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--accent, #c9a86a);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* Accessibility mode: force off animations, transitions, and motion. */
+.a11y-mode *,
+.a11y-mode *::before,
+.a11y-mode *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}

@@ -5,6 +5,7 @@ import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
 import { manuscriptBound } from '../lib/manuscript';
 import ChapterModal from './ChapterModal.vue';
+import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(Flip);
 
@@ -100,7 +101,7 @@ async function goTo(target: number) {
 
 /** Single page-turn for multi-chapter jumps — one animation, not one per chapter. */
 async function animatePageTurn(): Promise<void> {
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = motionReduced();
   if (reduced) return;
   const paper = document.querySelector(
     `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
@@ -118,7 +119,7 @@ async function tossToPile(i: number): Promise<void> {
   const pileEl = document.querySelector('.read-pile') as HTMLElement | null;
 
   // If we can't animate (reduced motion, missing elements), just update the pile.
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = motionReduced();
   if (!paper || !pileEl || reduced) {
     pile.value.push(i);
     await nextTick();
@@ -177,7 +178,7 @@ defineExpose({ tossCurrentToPile });
 
 async function bringBack(i: number): Promise<void> {
   const card = pileCardEl(i);
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = motionReduced();
 
   if (!card || reduced) {
     pile.value = pile.value.filter((x) => x !== i);
@@ -521,7 +522,7 @@ function scatterCards(): HTMLElement[] {
   return Array.from(document.querySelectorAll('.pile-scatter-card'));
 }
 const reduceMotion = () =>
-  matchMedia('(prefers-reduced-motion: reduce)').matches;
+  motionReduced();
 /** Pages fly out of the pile and land scattered over the open page. */
 function scatterOut() {
   if (reduceMotion()) return;
