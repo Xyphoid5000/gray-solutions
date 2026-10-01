@@ -279,12 +279,11 @@ function toggleOurs() {
 }
 /* Pulled out: lift, come forward, turn to show the front cover. */
 .bs-book.is-selected {
-  transform: translateY(-60px) translateZ(100px) rotateY(-68deg) scale(0.9);
+  transform: translateY(-40px) scale(1.15);
   z-index: 10;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
 }
 .bs-book .bs-spine-label {
-  transform: translateZ(100px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -293,29 +292,28 @@ function toggleOurs() {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Front and back covers: edge-on until the book turns. */
+/* Book info card: appears above the pulled-out book. Replaces fragile 3D faces. */
 .bs-face {
   position: absolute;
-  top: 0;
-  height: 100%;
-  width: 200px;
+  bottom: calc(100% + 12px);
   left: 50%;
-  margin-left: -100px;
-  backface-visibility: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 1.2rem;
+  transform: translateX(-50%);
+  width: 200px;
+  background: rgba(20, 14, 8, 0.95);
+  border: 1px solid rgba(232, 205, 150, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
   box-sizing: border-box;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 20;
 }
 .bs-book.is-selected .bs-face {
   opacity: 1;
+  pointer-events: auto;
 }
 .bs-front {
-  transform: rotateY(90deg) translateZ(calc(var(--bw, 46px) / 2));
   background: linear-gradient(145deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 100%), var(--bc, #333);
   border: 1px solid rgba(232, 205, 150, 0.25);
 }
@@ -329,9 +327,7 @@ function toggleOurs() {
   white-space: normal;
 }
 .bs-back {
-  transform: rotateY(-90deg) translateZ(calc(var(--bw, 46px) / 2));
-  background: linear-gradient(145deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 100%), var(--bc, #333);
-  border: 1px solid rgba(232, 205, 150, 0.2);
+  display: none;
 }
 .bs-back-text {
   font-family: var(--serif);
@@ -389,7 +385,6 @@ function toggleOurs() {
   display: flex;
   align-items: center;
   justify-content: center;
-  transform-style: preserve-3d;
   font-family: var(--serif);
   font-size: 0.68rem;
   letter-spacing: 0.12em;
