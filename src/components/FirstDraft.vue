@@ -19,6 +19,7 @@ interface DraftPage {
   num: number;
   mark: 'circle' | 'box' | 'triangle' | 'underline';
   lines: string[];
+  uvText: string;
 }
 
 const PAGES: DraftPage[] = [
@@ -30,6 +31,8 @@ const PAGES: DraftPage[] = [
       'a paperclip dreamed of being a staple and woke up tired,',
       'do not fold, spindle, or interrogate this paragraph,',
     ],
+    uvText:
+      'The circle is the second mark in the row above. Every page wears a mark in red pen — match them up. The order matters.',
   },
   {
     num: 2,
@@ -39,6 +42,8 @@ const PAGES: DraftPage[] = [
       'the ink ran out halfway through a very important —',
       'the footnotes filed a complaint with the header and won,',
     ],
+    uvText:
+      'The box is the last mark. Four pages, four marks — line the pages up by the symbols, not the page numbers.',
   },
   {
     num: 3,
@@ -48,6 +53,8 @@ const PAGES: DraftPage[] = [
       'the draft you are looking for was never written, only intended,',
       'the eraser dust has formed a union and demands better hours,',
     ],
+    uvText:
+      'The triangle sits third in the row. You\u2019re assembling a sequence — and the phone on my desk is waiting for it.',
   },
   {
     num: 4,
@@ -57,13 +64,13 @@ const PAGES: DraftPage[] = [
       'the coffee ring on page two is load-bearing, do not remove it,',
       'this sentence ends exactly where it began,',
     ],
+    uvText:
+      'The underline leads the row. Read the pages in mark order — _ ○ △ □ — and the way in is hiding in plain sight.',
   },
 ];
 
 /** Marks in PIN order: underline (p4) circle (p1) triangle (p3) box (p2) → 4-1-3-2. */
 const UV_MARKS = ['_', '○', '△', '□'];
-const UV_TEXT =
-  'Ah — you found the secret. I love tucking little extras into corners for people who poke around. I do the same for my clients\u2019 sites, by the way. And since you\u2019re clearly the curious type: the phone on my desk is locked \u2014 and the way in is hiding in plain sight.';
 
 const page = () => PAGES[pageIndex.value];
 
@@ -81,14 +88,12 @@ function closeDraft() {
 function nextPage() {
   if (pageIndex.value < PAGES.length - 1) {
     pageIndex.value++;
-    uvOn.value = false;
   }
 }
 
 function prevPage() {
   if (pageIndex.value > 0) {
     pageIndex.value--;
-    uvOn.value = false;
   }
 }
 
@@ -140,7 +145,7 @@ function toggleUV() {
             <p v-for="(line, i) in page().lines" :key="i" class="draft-nonsense">{{ line }}</p>
             <div v-if="uvOn" class="uv-secret">
               <div class="uv-secret-marks" aria-hidden="true">{{ UV_MARKS.join(' ') }}</div>
-              <p>{{ UV_TEXT }}</p>
+              <p>{{ page().uvText }}</p>
             </div>
           </div>
 
