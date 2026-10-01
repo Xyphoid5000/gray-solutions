@@ -166,7 +166,7 @@ onUnmounted(() => {
       />
       <p v-reveal class="lede" style="margin-bottom: 3rem">
         Stories have run on the same shape for three thousand years &mdash;
-        so does my process. Watch the pen.
+        so does my process.
       </p>
       <div v-reveal class="arc-stage">
         <div class="arc-svg-wrap">

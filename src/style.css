@@ -3453,10 +3453,14 @@ html[data-theme='dark'] .page-tab {
 }
 
 /* Paginated manuscript pages: plain wrapper, no bound-book chrome. */
-/* Paginated manuscript pages: plain wrapper, consistent height like real paper. */
+/* Paginated manuscript pages: plain wrapper, consistent height like real paper.
+   Content is vertically centered in the page. */
 .paginate-page {
   position: relative;
   min-height: 60svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Desk props (candle glow, etc.) hide when the shelf is showing —
