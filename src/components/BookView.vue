@@ -267,14 +267,14 @@ async function paginateCurrentChapter() {
   // Clear any previous pagination.
   paper.querySelectorAll('.book-page').forEach((p) => {
     // Move children back to the wrap before removing the page div.
-    const wrap = paper.querySelector(':scope > :is(.chapter, .prologue) > .wrap') as HTMLElement | null;
+    const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
     if (wrap) {
       Array.from(p.children).forEach((c) => wrap.appendChild(c));
     }
     p.remove();
   });
 
-  const wrap = paper.querySelector(':scope > :is(.chapter, .prologue) > .wrap') as HTMLElement | null;
+  const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
   if (!wrap) return;
 
   const isMobile = window.innerWidth < 640;
@@ -320,15 +320,6 @@ async function paginateCurrentChapter() {
       });
       // The spine is a scroll-progress indicator — meaningless in pages.
       child.querySelector('.arc-spine')?.remove();
-      child.remove();
-      continue;
-    }
-    // The finale's closing block groups heading + copy + CTA — split them
-    // so each gets its own page.
-    if (isMobile && child.classList.contains('fin')) {
-      Array.from(child.children).forEach((c) => {
-        blocks.push(c as HTMLElement);
-      });
       child.remove();
       continue;
     }
