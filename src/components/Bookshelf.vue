@@ -388,8 +388,6 @@ function toggleOurs() {
   box-shadow: none;
 }
 .bs-ours {
-  position: absolute;
-  inset: 0;
   writing-mode: vertical-rl;
   display: flex;
   align-items: center;
