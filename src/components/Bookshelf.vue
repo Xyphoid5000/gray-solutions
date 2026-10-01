@@ -94,33 +94,30 @@ function toggleOurs() {
               <span class="bs-back-text">{{ b.synopsis }}</span>
             </span>
           </div>
-          <div class="bs-slot" :class="{ 'is-filled': isBound }" data-bind-slot>
-            <template v-if="isBound">
-              <div
-                role="button"
-                tabindex="0"
-                class="bs-book bs-ours"
-                :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
-                :style="{ height: '230px', width: '52px', background: '#1a1a1a', '--bw': '52px', '--bc': '#1a1a1a' }"
-                aria-label="Gray Solutions — open the book"
-                @click="interactive && toggleOurs()"
-                @keydown.enter="interactive && toggleOurs()"
-                @keydown.space.prevent="interactive && toggleOurs()"
-              >
-                <span class="bs-spine-label">Gray Solutions</span>
-                <span class="bs-face bs-front" aria-hidden="true">
-                  <span class="bs-front-mark">G.</span>
-                  <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
-                  <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
-                  <span class="bs-front-author">Chris Gray</span>
-                </span>
-                <span class="bs-face bs-back" aria-hidden="true">
-                  <span class="bs-back-text">Bonus content toggle</span>
-                </span>
-              </div>
-            </template>
-            <div v-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
-          </div>
+          <template v-if="isBound">
+            <div
+              role="button"
+              tabindex="0"
+              class="bs-book bs-ours"
+              :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
+              :style="{ height: '230px', width: '52px', background: '#1a1a1a', '--bw': '52px', '--bc': '#1a1a1a' }"
+              aria-label="Gray Solutions — open the book"
+              @click="interactive && toggleOurs()"
+              @keydown.enter="interactive && toggleOurs()"
+              @keydown.space.prevent="interactive && toggleOurs()"
+            >
+              <span class="bs-spine-label">Gray Solutions</span>
+              <span class="bs-face bs-front" aria-hidden="true">
+                <span class="bs-front-mark">G.</span>
+                <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
+                <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
+                <span class="bs-front-author">Chris Gray</span>
+              </span>
+            </div>
+          </template>
+          <template v-else>
+            <div class="bs-slot-empty" aria-hidden="true"></div>
+          </template>
           <div
             v-for="b in shelfRight"
             :key="b.title"
@@ -392,7 +389,6 @@ function toggleOurs() {
   border-radius: 3px 3px 0 0;
   padding: 16px 0;
   white-space: nowrap;
-  overflow: hidden;
   box-shadow:
     inset -4px 0 7px rgba(0, 0, 0, 0.4),
     inset 2px 0 3px rgba(255, 235, 200, 0.06);
