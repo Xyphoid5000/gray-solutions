@@ -3456,3 +3456,9 @@ html[data-theme='dark'] .page-tab {
 .paginate-page {
   position: relative;
 }
+
+/* Desk props (candle glow, etc.) hide when the shelf is showing —
+   the sticky stage was leaking its glow onto the shelf view. */
+.office-track:not(.show-desk) .desk-stage {
+  display: none;
+}

@@ -568,4 +568,13 @@ function toggleOurs() {
 html[data-theme='dark'] .bookshelf-hero {
   filter: brightness(0.82);
 }
+/* Gray Solutions front cover G. mark. */
+.bs-front-mark {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: rgba(232, 205, 150, 0.95);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
 </style>
