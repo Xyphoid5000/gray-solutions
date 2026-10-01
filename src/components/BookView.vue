@@ -355,6 +355,11 @@ async function paginateCurrentChapter() {
   }
   if (blocks.length === 0) return;
 
+  // The source chapter is now empty (children moved to pages) — hide it
+  // so its padding doesn't create dead space above the paginated pages.
+  const chapter = wrap.closest('.chapter') as HTMLElement | null;
+  if (chapter) chapter.style.display = 'none';
+
   // Group blocks into pages: one per page on mobile, several per page
   // on larger screens. No measuring — deterministic by count.
   const perPage = isMobile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
