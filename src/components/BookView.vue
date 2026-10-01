@@ -62,6 +62,25 @@ async function goTo(target: number) {
   pileOpen.value = false;
   target = Math.max(0, Math.min(chapters.length - 1, target));
 
+  const distance = Math.abs(target - currentIndex.value);
+  if (distance > 1) {
+    // Multi-chapter jump: one transition, not one per chapter passed.
+    // Update the pile state directly for all intermediate chapters.
+    if (target > currentIndex.value) {
+      for (let i = currentIndex.value; i < target; i++) {
+        if (!pile.value.includes(i)) pile.value.push(i);
+      }
+    } else {
+      pile.value = pile.value.filter((i) => i < target || i >= currentIndex.value);
+    }
+    currentIndex.value = target;
+    await nextTick();
+    // Single page-turn animation for the whole jump.
+    await animatePageTurn();
+    document.querySelector('.manuscript-desk')?.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+
   if (target > currentIndex.value) {
     // Forward: pages from current to target-1 get tossed to the pile.
     for (let i = currentIndex.value; i < target; i++) {
@@ -77,6 +96,21 @@ async function goTo(target: number) {
   // Let the new top page settle, then scroll it into view.
   await nextTick();
   document.querySelector('.manuscript-desk')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+/** Single page-turn for multi-chapter jumps — one animation, not one per chapter. */
+async function animatePageTurn(): Promise<void> {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) return;
+  const paper = document.querySelector(
+    `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
+  ) as HTMLElement | null;
+  if (!paper) return;
+  await gsap.fromTo(
+    paper,
+    { opacity: 0, x: 40 },
+    { opacity: 1, x: 0, duration: 0.35, ease: 'power2.out' },
+  ).then();
 }
 
 async function tossToPile(i: number): Promise<void> {
