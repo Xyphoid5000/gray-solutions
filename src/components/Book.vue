@@ -7,8 +7,9 @@
  *
  * Props: title, color, synopsis (back-cover text), dimensions.
  */
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useBonusStore } from '../stores/bonus';
+import { useDeviceStore } from '../stores/device';
 
 const props = defineProps<{
   title: string;
@@ -30,6 +31,7 @@ const emit = defineEmits<{
 }>();
 
 const bonus = useBonusStore();
+const device = useDeviceStore();
 
 /* Drag-to-spin when pulled, like the manuscript. */
 const dragRotY = ref(0);
@@ -41,6 +43,26 @@ let dragStartY = 0;
 let dragLastX = 0;
 let dragLastY = 0;
 let dragMoved = false;
+
+/* Wheel-to-spin (non-touch only): when the pulled-out book has focus,
+   the wheel spins it instead of scrolling the page. */
+const bookEl = ref<HTMLElement | null>(null);
+const focused = ref(false);
+
+function onWheel(e: WheelEvent) {
+  if (device.isTouch || !focused.value || !props.pulled) return;
+  e.preventDefault();
+  e.stopPropagation();
+  dragRotY.value += (e.deltaX + e.deltaY) * 0.25;
+}
+
+onMounted(() => {
+  // Non-passive so we can preventDefault the page scroll (Lenis).
+  bookEl.value?.addEventListener('wheel', onWheel, { passive: false });
+});
+onUnmounted(() => {
+  bookEl.value?.removeEventListener('wheel', onWheel);
+});
 
 const innerTransform = computed(() => {
   if (props.front) {
@@ -104,6 +126,11 @@ function onClick(e: Event) {
 
 /** Keyboard activation for the book (outer is role="button"). */
 function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && focused.value) {
+    // Release focus so the wheel scrolls the page again.
+    (e.currentTarget as HTMLElement).blur();
+    return;
+  }
   if (e.key === 'Enter' || e.key === ' ') {
     // Let the inner bonus switch handle its own keypresses.
     if ((e.target as HTMLElement).closest('.book3d-bonus-switch')) return;
@@ -116,6 +143,7 @@ function onKeyDown(e: KeyboardEvent) {
 <template>
   <div
     class="book3d"
+    ref="bookEl"
     :class="{ 'is-interactive': interactive, 'is-pulled': pulled, 'is-dragging': dragging }"
     :style="{
       '--bw': (width ?? 46) + 'px',
@@ -127,6 +155,8 @@ function onKeyDown(e: KeyboardEvent) {
     :aria-label="title"
     @click="onClick"
     @keydown="onKeyDown"
+    @focus="focused = true"
+    @blur="focused = false"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -189,6 +219,14 @@ function onKeyDown(e: KeyboardEvent) {
   cursor: default;
   /* Horizontal drags spin the book; vertical drags scroll the page. */
   touch-action: pan-y;
+  /* Book text is never selectable — drags can't highlight it. */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.book3d:focus-visible {
+  outline: 2px solid rgba(255, 196, 110, 0.55);
+  outline-offset: 8px;
+  border-radius: 4px;
 }
 .book3d.is-interactive {
   cursor: pointer;
