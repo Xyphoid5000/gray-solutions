@@ -350,23 +350,26 @@ function start() {
   T.to(b3d, { y: '-=30', duration: 2.2, ease: 'power2.inOut' }, b6 + 0.15);
   const b7 = b6 + 2.5;
 
-  // Beat 8 — the book files itself into the shelf slot: flies to it
-  // and fades out, revealing the shelf's book underneath. The slot is
-  // measured live from the room's shelf.
+  // Beat 8 — the book files itself into the shelf slot: flies to it,
+  // scales to match, and fades out, revealing the shelf's book underneath.
+  // The slot is measured live from the room's shelf.
   T.call(
     () => {
       const slot = rm.querySelector('[data-bind-slot]') as HTMLElement | null;
       let dx = 0;
       let dy = 0;
+      let s = 0.7;
       if (slot) {
         const r = slot.getBoundingClientRect();
         dx = r.left + r.width / 2 - cx;
         dy = r.top + r.height / 2 - cy;
+        s = Math.min(0.75, (r.height - 10) / 340);
       }
       const file = gsap.timeline();
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
-      file.to(b3d, { opacity: 0, duration: 0.4, ease: 'power1.inOut' }, 1.0);
-      file.set(b3d, { display: 'none' }, 1.5);
+      file.to(b3d, { scale: s, duration: 0.5, ease: 'power2.inOut' }, 0.7);
+      file.to(b3d, { opacity: 0, duration: 0.4, ease: 'power1.inOut' }, 1.2);
+      file.set(b3d, { display: 'none' }, 1.7);
     },
     [],
     b7,
