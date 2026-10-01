@@ -662,6 +662,14 @@ onMounted(() => {
   } catch {
     /* ignore */
   }
+  // A refresh always restarts at the manuscript cover — never restore the
+  // browser's saved scroll position (which could land on contact/about).
+  try {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  } catch {
+    /* ignore */
+  }
+  window.scrollTo(0, 0);
   updateLights();
   themeObs = new MutationObserver(updateLights);
   themeObs.observe(document.documentElement, {
