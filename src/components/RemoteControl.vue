@@ -70,7 +70,7 @@ const COLORS = [
      starts after the desk's left padding, so the lane offset is
      subtracted back out to land on the real wooden lane. */
   left: calc(38px - var(--desk-pl));
-  top: 52svh;
+  top: calc(var(--desk-h) * 0.57);
   width: 54px;
   z-index: 850;
   display: flex;
