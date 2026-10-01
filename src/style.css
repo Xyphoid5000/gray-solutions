@@ -3348,3 +3348,24 @@ html[data-theme='dark'] .page-tab {
   font-style: italic;
   color: #6b5f4c;
 }
+
+/* Mobile: card content without the card wrapper — plain text blocks. */
+.card-plain {
+  margin-bottom: 2rem;
+}
+.card-plain h3 {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  margin: 0 0 0.5rem 0;
+  color: var(--ink);
+}
+.card-plain p {
+  margin: 0 0 0.5rem 0;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.card-plain-tags {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-style: italic;
+}

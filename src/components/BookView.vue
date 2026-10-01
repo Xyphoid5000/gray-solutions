@@ -296,10 +296,29 @@ async function paginateCurrentChapter() {
   }
 
   for (const child of children) {
-    // On mobile, remove card grids entirely (e.g. .craft-grid) — the
-    // chapter text is the content; cards don't fit the page format.
+    // On mobile, card grids (e.g. .craft-grid) don't fit the page format —
+    // show the card content as plain text blocks, not wrapped in cards.
     const isMobile = window.innerWidth < 640;
     if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card')) {
+      // Flush current page first.
+      if (current.length > 0) {
+        pages.push(current);
+        current = [];
+        height = 0;
+      }
+      // Convert each card to a plain content block (no card styling).
+      Array.from(child.querySelectorAll('.craft-card, .service-card, .chapter-card')).forEach((card) => {
+        const c = card as HTMLElement;
+        const plain = document.createElement('div');
+        plain.className = 'card-plain';
+        // Extract title, copy, and tags as plain text.
+        const title = c.querySelector('h3')?.textContent || '';
+        const copy = c.querySelector('p')?.textContent || '';
+        const tags = Array.from(c.querySelectorAll('li')).map((li) => li.textContent).join(', ');
+        plain.innerHTML = `<h3>${title}</h3><p>${copy}</p>${tags ? `<p class="card-plain-tags">${tags}</p>` : ''}`;
+        pushEl(plain, c.offsetHeight || 200);
+      });
+      // The original grid (with cards) is discarded.
       child.remove();
       continue;
     }
