@@ -436,7 +436,7 @@ defineExpose({ start });
     <div ref="backdrop" class="bind-desk" aria-hidden="true">
       <DeskClutter />
       <DeskPencil />
-      <DeskCandle :lit="true" :smoking="false" />
+      <DeskCandle v-if="bonusContent" :lit="true" :smoking="false" />
       <DeskPhone v-if="bonusContent" />
       <FirstDraft v-if="bonusContent" />
       <RemoteControl v-if="bonusContent" :ledOn="false" color="#ff0000" />
@@ -520,6 +520,16 @@ defineExpose({ start });
       #241610 100%
     );
   overflow: hidden;
+  /* Match the manuscript desk's layout variables so props position correctly. */
+  --desk-h: 100svh;
+  --desk-pl: 120px;
+  --desk-pr: 60px;
+}
+@media (max-width: 640px) {
+  .bind-desk {
+    --desk-pl: 70px;
+    --desk-pr: 44px;
+  }
 }
 /* Clone shelf: sits behind the desk, revealed when the desk fades.
    1-for-1 match with the Office shelf for a seamless handoff. */
@@ -840,13 +850,14 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 44px;
-  height: 340px;
+  width: 52px;
+  height: 230px;
   display: none;
   opacity: 0;
   z-index: 3;
-  background: linear-gradient(145deg, #1a120b 0%, #0f0a06 100%);
-  border: 1px solid rgba(208, 138, 78, 0.35);
+  background: linear-gradient(to bottom, #1d140c 0%, #100c07 100%);
+  border-left: 1px solid rgba(208, 138, 78, 0.4);
+  border-radius: 3px 3px 0 0;
   align-items: center;
   justify-content: center;
 }

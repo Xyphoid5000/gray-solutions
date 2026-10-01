@@ -198,6 +198,12 @@ function onKeyDown(e: KeyboardEvent) {
   bottom: 0;
   transform: translateX(-50%);
   z-index: 10;
+  /* Float the whole book as a rigid unit (outer, not the 3D inner). */
+  animation: book-float 3.2s ease-in-out infinite 0.9s;
+}
+@keyframes book-float {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-14px); }
 }
 /* The 3D book itself. */
 .book3d-inner {
@@ -380,12 +386,6 @@ function onKeyDown(e: KeyboardEvent) {
   background: #e8dcc0;
   border: 1px solid rgba(0, 0, 0, 0.3);
 }
-/* Gentle float when pulled. */
-.book3d.is-pulled .book3d-inner {
-  animation: book-float 3.2s ease-in-out infinite 0.9s;
-}
-@keyframes book-float {
-  0%, 100% { margin-top: 0; }
-  50% { margin-top: -14px; }
-}
+/* Gentle float when pulled is handled on the outer (.is-pulled) so the
+   3D inner keeps all faces rigid. */
 </style>

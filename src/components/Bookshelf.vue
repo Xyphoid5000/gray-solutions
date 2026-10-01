@@ -578,6 +578,7 @@ html[data-theme='dark'] .bookshelf-hero {
 }
 .bs-book-drop {
   position: relative;
+  width: 100%;
   animation: bs-drop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
   display: flex;
   flex-direction: column;
