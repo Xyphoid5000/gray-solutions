@@ -89,7 +89,7 @@
 }
 .clutter-ball1 {
   right: calc(24px - var(--desk-pr));
-  top: calc(var(--desk-h) * 0.51);
+  top: calc(var(--desk-h) * 0.62);
   width: 44px;
   transform: rotate(-20deg);
 }

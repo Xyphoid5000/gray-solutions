@@ -49,9 +49,9 @@ const emit = defineEmits<{
 <style scoped>
 .desk-candle {
   position: absolute;
-  /* Left lane of the desk, below the remote. */
+  /* Left lane of the desk, below the remote but clear of the First Draft. */
   left: calc(38px - var(--desk-pl));
-  top: calc(var(--desk-h) * 0.76);
+  top: calc(var(--desk-h) * 0.76 - 78px);
   width: 44px;
   height: 66px;
   z-index: 850;
@@ -65,7 +65,7 @@ const emit = defineEmits<{
 @media (max-width: 640px) {
   .desk-candle {
     left: calc(24px - var(--desk-pl));
-    top: calc(var(--desk-h) * 0.75);
+    top: calc(var(--desk-h) * 0.76 - 66px);
     width: 36px;
     height: 54px;
   }

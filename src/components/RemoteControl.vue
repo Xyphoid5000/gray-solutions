@@ -70,7 +70,7 @@ const COLORS = [
      starts after the desk's left padding, so the lane offset is
      subtracted back out to land on the real wooden lane. */
   left: calc(38px - var(--desk-pl));
-  top: calc(var(--desk-h) * 0.57);
+  top: calc(var(--desk-h) * 0.5);
   width: 54px;
   z-index: 850;
   display: flex;
@@ -153,7 +153,7 @@ html[data-blacklight='on'] .remote-control {
 @media (max-width: 640px) {
   .remote-control {
     left: calc(17px - var(--desk-pl));
-    top: 48svh;
+    top: 40svh;
     width: 42px;
     gap: 5px;
     padding: 7px 5px 9px;
