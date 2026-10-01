@@ -167,7 +167,6 @@ function onKeyDown(e: KeyboardEvent) {
       <!-- Page edges. -->
       <span class="book3d-pages"></span>
       <span class="book3d-top"></span>
-      <span class="book3d-bottom"></span>
     </span>
   </div>
 </template>
@@ -218,8 +217,7 @@ function onKeyDown(e: KeyboardEvent) {
 .book3d-front,
 .book3d-back,
 .book3d-pages,
-.book3d-top,
-.book3d-bottom {
+.book3d-top {
   position: absolute;
   backface-visibility: hidden;
   box-sizing: border-box;
@@ -379,16 +377,6 @@ function onKeyDown(e: KeyboardEvent) {
   top: 50%;
   margin-top: calc(var(--bd) / -2);
   transform: rotateX(90deg) translateZ(calc(var(--bh) / 2));
-  background: #e8dcc0;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-}
-.book3d-bottom {
-  width: var(--bw);
-  height: var(--bd);
-  left: 0;
-  top: 50%;
-  margin-top: calc(var(--bd) / -2);
-  transform: rotateX(90deg) translateZ(calc(var(--bh) / -2));
   background: #e8dcc0;
   border: 1px solid rgba(0, 0, 0, 0.3);
 }
