@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ChapterHeading from './ChapterHeading.vue';
-import { siteConfig } from '../config';
 
 const emit = defineEmits<{
   (e: 'go', index: number): void;
@@ -37,14 +36,6 @@ const emit = defineEmits<{
               <li>GSAP</li>
             </ul>
           </div>
-          <a
-            class="proof-link"
-            href="https://github.com/Xyphoid5000/Brag"
-            target="_blank"
-            rel="noopener"
-          >
-            View the build <span class="arrow" aria-hidden="true">&rarr;</span>
-          </a>
         </article>
         <article class="proof-panel">
           <div>
@@ -62,14 +53,6 @@ const emit = defineEmits<{
               <li>GSAP</li>
             </ul>
           </div>
-          <a
-            class="proof-link"
-            :href="siteConfig.github"
-            target="_blank"
-            rel="noopener"
-          >
-            Browse the code <span class="arrow" aria-hidden="true">&rarr;</span>
-          </a>
         </article>
         <article class="proof-panel cta-panel">
           <div>

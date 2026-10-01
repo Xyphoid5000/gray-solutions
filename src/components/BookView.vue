@@ -299,7 +299,7 @@ async function paginateCurrentChapter() {
     // On mobile, card grids (e.g. .craft-grid) don't fit the page format —
     // show the card content as plain text blocks, not wrapped in cards.
     const isMobile = window.innerWidth < 640;
-    if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card')) {
+    if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card, .proof-panel')) {
       // Flush current page first.
       if (current.length > 0) {
         pages.push(current);
@@ -307,7 +307,7 @@ async function paginateCurrentChapter() {
         height = 0;
       }
       // Convert each card to a plain content block (no card styling).
-      Array.from(child.querySelectorAll('.craft-card, .service-card, .chapter-card')).forEach((card) => {
+      Array.from(child.querySelectorAll('.craft-card, .service-card, .chapter-card, .proof-panel')).forEach((card) => {
         const c = card as HTMLElement;
         const plain = document.createElement('div');
         plain.className = 'card-plain';
