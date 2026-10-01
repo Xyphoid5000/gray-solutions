@@ -48,7 +48,9 @@ const innerTransform = computed(() => {
     return `rotateY(${-90 + dragRotY.value}deg) rotateX(${dragRotX.value}deg)`;
   }
   if (!props.pulled) return '';
-  return `translateY(-70px) translateZ(180px) rotateY(${-68 + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
+  // No vertical lift: the 3D projection is vertically symmetric about the
+  // box, so the box center is the visual center (the overlay centers it).
+  return `translateZ(180px) rotateY(${-68 + dragRotY.value}deg) rotateX(${dragRotX.value}deg) scale(1.15)`;
 });
 
 function onPointerDown(e: PointerEvent) {
@@ -217,7 +219,7 @@ function onKeyDown(e: KeyboardEvent) {
   transition: none;
 }
 /* Pulled out: transform is set inline (drag-to-spin). Base pose is
-   translateY(-70px) translateZ(180px) rotateY(-68deg) scale(1.15). */
+   translateZ(180px) rotateY(-68deg) scale(1.15), vertically centered on the box. */
 /* All faces. */
 .book3d-spine,
 .book3d-front,

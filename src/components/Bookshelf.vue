@@ -191,22 +191,24 @@ function toggleOurs() {
           :pulled="true"
           :interactive="true"
         />
-        <button
-          v-if="selectedBook === 'ours'"
-          type="button"
-          class="bs-overlay-open"
-          @click="emit('open-book')"
-        >
-          Open the book <span aria-hidden="true">&rarr;</span>
-        </button>
-        <button
-          type="button"
-          class="bs-overlay-close"
-          @click="selectedBook = null"
-          aria-label="Put the book back"
-        >
-          &times;
-        </button>
+        <div class="bs-book-buttons">
+          <button
+            v-if="selectedBook === 'ours'"
+            type="button"
+            class="bs-overlay-open"
+            @click="emit('open-book')"
+          >
+            Open the book <span aria-hidden="true">&rarr;</span>
+          </button>
+          <button
+            type="button"
+            class="bs-overlay-close"
+            @click="selectedBook = null"
+            aria-label="Put the book back"
+          >
+            &times;
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -579,20 +581,35 @@ html[data-theme='dark'] .bookshelf-hero {
 .bs-book-drop {
   position: relative;
   width: 100%;
+  height: 100%;
   animation: bs-drop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  justify-items: center;
+}
+/* The pulled book lives in the middle row, so its visual center lands
+   exactly at the overlay's vertical center. (The old -70px pose lift was
+   removed in Book.vue: it only compensated the old bottom anchor, and the
+   3D projection is vertically symmetric about the box.) */
+.bs-book-drop .book3d.is-pulled {
+  grid-row: 2;
+  position: relative;
+  left: auto;
+  top: auto;
+  bottom: auto;
+  transform: none;
+  margin: 0; /* shelf-row spacing must not throw off the centering */
+}
+/* Buttons ride the bottom row, just under the book. The margin clears the
+   3D book's visual overhang below its box, then leaves breathing room. */
+.bs-book-buttons {
+  grid-row: 3;
+  align-self: start;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2.5rem;
-  /* Reserved room for the floating 3D book above the buttons. */
-  padding-top: 230px;
-}
-/* The pulled book is pinned to the top of that reserved space. It used to
-   anchor at the bottom and overlap the buttons. Horizontal centering is
-   untouched: the resting pose measures dead-center over the case. */
-.bs-book-drop .book3d.is-pulled {
-  top: 0;
-  bottom: auto;
+  margin-top: 5rem;
 }
 @keyframes bs-drop-in {
   from { transform: translateY(-60vh); opacity: 0; }
