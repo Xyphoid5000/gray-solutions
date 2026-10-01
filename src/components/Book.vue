@@ -223,7 +223,9 @@ function onKeyDown(e: KeyboardEvent) {
   user-select: none;
   -webkit-user-select: none;
 }
-.book3d:focus-visible {
+/* Focus ring shows on any focus (mouse or keyboard): focus puts the
+   wheel in spin mode, so the mode must be visible. */
+.book3d:focus {
   outline: 2px solid rgba(255, 196, 110, 0.55);
   outline-offset: 8px;
   border-radius: 4px;
