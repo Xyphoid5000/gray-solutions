@@ -713,7 +713,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn }">
+  <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn, 'binding-active': bindingActive }">
   <a href="#main-content" class="skip-link">Skip to content</a>
   <div class="grain" aria-hidden="true"></div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />

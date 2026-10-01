@@ -58,22 +58,37 @@ const trackClass = computed(() => ({
 <style scoped>
 .office {
   position: relative;
-  height: 100vh;
+  height: calc(100vh - var(--nav-h));
+  margin-top: var(--nav-h);
   overflow: hidden;
   background: #0d0a06;
 }
 .office-track {
-  height: 200vh;
+  height: calc(200vh - var(--nav-h) * 2);
   transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1);
   will-change: transform;
 }
 .office-track.show-desk {
-  transform: translateY(-100vh);
+  transform: translateY(calc(-100vh + var(--nav-h)));
 }
 .office-slide {
-  height: 100vh;
+  height: calc(100vh - var(--nav-h));
   position: relative;
   overflow: hidden;
+}
+/* During binding the header hides — the office takes the full viewport. */
+.binding-active .office {
+  height: 100vh;
+  margin-top: 0;
+}
+.binding-active .office-track {
+  height: 200vh;
+}
+.binding-active .office-track.show-desk {
+  transform: translateY(-100vh);
+}
+.binding-active .office-slide {
+  height: 100vh;
 }
 .office-desk {
   overflow: hidden;
