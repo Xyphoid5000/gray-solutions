@@ -493,6 +493,13 @@ defineExpose({ start });
   display: none;
   overflow: hidden;
 }
+/* Block all taps during the cinematic except Skip. */
+.bind-overlay > *:not(.bind-skip) {
+  pointer-events: none;
+}
+.bind-skip {
+  pointer-events: auto;
+}
 /* The room: two viewports tall. Shelf on top, desk on bottom.
    We start translated up so the desk fills the frame; the tilt-up
    slides the shelf in. The seam between them crosses the frame. */
