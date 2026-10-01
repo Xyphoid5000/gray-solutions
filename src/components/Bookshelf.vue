@@ -73,15 +73,18 @@ function toggleOurs() {
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
         <div class="bs-books">
-          <button
+          <div
             v-for="b in shelfLeft"
             :key="b.title"
-            type="button"
+            role="button"
+            tabindex="0"
             class="bs-book"
             :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
             :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
             :aria-label="b.title"
             @click="interactive && toggleBook(b)"
+            @keydown.enter="interactive && toggleBook(b)"
+            @keydown.space.prevent="interactive && toggleBook(b)"
           >
             <span class="bs-spine-label">{{ b.title }}</span>
             <span class="bs-face bs-front" aria-hidden="true">
@@ -90,16 +93,19 @@ function toggleOurs() {
             <span class="bs-face bs-back" aria-hidden="true">
               <span class="bs-back-text">{{ b.synopsis }}</span>
             </span>
-          </button>
+          </div>
           <div class="bs-slot" :class="{ 'is-filled': isBound }" data-bind-slot>
             <template v-if="isBound">
-              <button
-                type="button"
+              <div
+                role="button"
+                tabindex="0"
                 class="bs-book bs-ours"
                 :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
                 :style="{ height: '230px', width: '52px', background: '#1a1a1a', '--bw': '52px', '--bc': '#1a1a1a' }"
                 aria-label="Gray Solutions — open the book"
                 @click="interactive && toggleOurs()"
+                @keydown.enter="interactive && toggleOurs()"
+                @keydown.space.prevent="interactive && toggleOurs()"
               >
                 <span class="bs-spine-label">Gray Solutions</span>
                 <span class="bs-face bs-front" aria-hidden="true">
@@ -111,19 +117,22 @@ function toggleOurs() {
                 <span class="bs-face bs-back" aria-hidden="true">
                   <span class="bs-back-text">Bonus content toggle</span>
                 </span>
-              </button>
+              </div>
             </template>
             <div v-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
-          <button
+          <div
             v-for="b in shelfRight"
             :key="b.title"
-            type="button"
+            role="button"
+            tabindex="0"
             class="bs-book"
             :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
             :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
             :aria-label="b.title"
             @click="interactive && toggleBook(b)"
+            @keydown.enter="interactive && toggleBook(b)"
+            @keydown.space.prevent="interactive && toggleBook(b)"
           >
             <span class="bs-spine-label">{{ b.title }}</span>
             <span class="bs-face bs-front" aria-hidden="true">
@@ -132,7 +141,7 @@ function toggleOurs() {
             <span class="bs-face bs-back" aria-hidden="true">
               <span class="bs-back-text">{{ b.synopsis }}</span>
             </span>
-          </button>
+          </div>
         </div>
         <div class="bs-plank"></div>
       </div>
