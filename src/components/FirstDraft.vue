@@ -195,7 +195,7 @@ function toggleUV() {
 .draft-stack {
   position: absolute;
   left: calc(10px - var(--desk-pl));
-  top: 76svh;
+  top: calc(var(--desk-h) * 0.76);
   width: 120px;
   background: none;
   border: none;
@@ -495,7 +495,7 @@ function toggleUV() {
 @media (max-width: 640px) {
   .draft-stack {
     left: calc(10px - var(--desk-pl));
-    top: 79svh;
+    top: calc(var(--desk-h) * 0.79);
     width: 96px;
   }
   .draft-stack-papers { height: 68px; }

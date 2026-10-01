@@ -75,6 +75,9 @@ const trackClass = computed(() => ({
   height: calc(100svh - var(--nav-h));
   position: relative;
   overflow: hidden;
+  /* The desk's real height — props position themselves against this,
+     not the viewport, so they survive the header offset. */
+  --desk-h: calc(100svh - var(--nav-h));
 }
 /* During binding the header hides — the office takes the full viewport. */
 .binding-active .office {
@@ -89,6 +92,7 @@ const trackClass = computed(() => ({
 }
 .binding-active .office-slide {
   height: 100svh;
+  --desk-h: 100svh;
 }
 .office-desk {
   overflow: hidden;

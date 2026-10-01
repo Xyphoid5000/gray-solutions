@@ -75,12 +75,12 @@
 /* ---- placement: same lane math as the remote ---- */
 .clutter-mug {
   left: calc(30px - var(--desk-pl));
-  top: 30svh;
+  top: calc(var(--desk-h) * 0.3);
   width: 110px;
 }
 .clutter-ball2 {
   left: calc(18px - var(--desk-pl));
-  top: 72svh;
+  top: calc(var(--desk-h) * 0.72);
   width: 44px;
   transform: rotate(14deg);
 }
@@ -89,7 +89,7 @@
 }
 .clutter-ball1 {
   right: calc(24px - var(--desk-pr));
-  top: 430px;
+  top: calc(var(--desk-h) * 0.51);
   width: 44px;
   transform: rotate(-20deg);
 }
@@ -158,24 +158,24 @@ html[data-blacklight='on'] .clutter {
 @media (max-width: 640px) {
   .clutter-mug {
     left: calc(8px - var(--desk-pl));
-    top: 33svh;
+    top: calc(var(--desk-h) * 0.33);
     width: 76px;
   }
   .clutter-ball2 {
     left: calc(12px - var(--desk-pl));
-    top: 73svh;
+    top: calc(var(--desk-h) * 0.73);
     width: 32px;
   }
   .clutter-ball3 {
     display: block;
     left: calc(28px - var(--desk-pl));
-    top: 88svh;
+    top: calc(var(--desk-h) * 0.88);
     width: 28px;
     transform: rotate(28deg);
   }
   .clutter-ball1 {
     right: calc(8px - var(--desk-pr));
-    top: 430px;
+    top: calc(var(--desk-h) * 0.51);
     width: 32px;
   }
 }

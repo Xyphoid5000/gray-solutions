@@ -40,7 +40,7 @@
     visibility 0.4s;
   /* Desktop: on the desk, right of the page, below the candle. */
   right: 56px;
-  top: 58svh;
+  top: calc(var(--desk-h) * 0.58);
 }
 .desk-pencil svg {
   width: 100%;
@@ -71,7 +71,7 @@
   .desk-pencil {
     width: 110px;
     right: 36px;
-    top: 80svh;
+    top: calc(var(--desk-h) * 0.8);
     bottom: auto;
     transform:
       translate(var(--pencil-dx, 0px), var(--pencil-dy, 0px))

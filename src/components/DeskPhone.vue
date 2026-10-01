@@ -481,7 +481,7 @@ onUnmounted(() => {
   position: absolute;
   z-index: 845;
   right: calc(0px - var(--desk-pr));
-  top: 620px;
+  top: calc(var(--desk-h) * 0.735);
   width: 80px;
   padding: 0;
   border: 0;
@@ -931,7 +931,7 @@ html[data-blacklight='on'] .desk-phone-btn {
 @media (max-width: 640px) {
   .desk-phone-btn {
     right: calc(4px - var(--desk-pr));
-    top: 545px;
+    top: calc(var(--desk-h) * 0.72);
     width: 60px;
   }
 }
