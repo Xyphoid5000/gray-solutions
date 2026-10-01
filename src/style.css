@@ -1206,6 +1206,15 @@ body.has-book .book-viewport {
   -webkit-backface-visibility: hidden;
   padding-bottom: clamp(7rem, 16vh, 10rem); /* air above the page-turner */
 }
+/* Dark mode: the book pages are warm candlelit paper, not black —
+   so the ink stays dark and readable. */
+html[data-theme='dark'] .book-page {
+  --ink: #1c1712;
+  --muted: #6d6455;
+  --faint: #a39c8a;
+  background: #d9cbb0;
+  color: #1c1712;
+}
 .chapter.book-page {
   padding-top: clamp(6rem, 12vw, 10rem);
 }
