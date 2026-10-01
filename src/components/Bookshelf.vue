@@ -583,7 +583,16 @@ html[data-theme='dark'] .bookshelf-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 2.5rem;
+  /* Reserved room for the floating 3D book above the buttons. */
+  padding-top: 230px;
+}
+/* The pulled book is pinned to the top of that reserved space. It used to
+   anchor at the bottom and overlap the buttons. Horizontal centering is
+   untouched: the resting pose measures dead-center over the case. */
+.bs-book-drop .book3d.is-pulled {
+  top: 0;
+  bottom: auto;
 }
 @keyframes bs-drop-in {
   from { transform: translateY(-60vh); opacity: 0; }
@@ -600,9 +609,8 @@ html[data-theme='dark'] .bookshelf-hero {
   cursor: pointer;
 }
 .bs-overlay-close {
-  position: absolute;
-  top: -2.5rem;
-  right: 0;
+  /* In-flow: centered below the book and its buttons. */
+  position: static;
   font-size: 2rem;
   line-height: 1;
   background: none;
