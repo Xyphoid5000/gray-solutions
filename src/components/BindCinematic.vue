@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
-import Bookshelf from './Bookshelf.vue';
-import Book from './Book.vue';
-import DeskClutter from './DeskClutter.vue';
-import DeskPencil from './DeskPencil.vue';
-import DeskCandle from './DeskCandle.vue';
-import DeskPhone from './DeskPhone.vue';
-import FirstDraft from './FirstDraft.vue';
-import RemoteControl from './RemoteControl.vue';
-import { motionReduced } from '../utils/a11y';
-
-defineProps<{ bonusContent?: boolean }>();
 
 const emit = defineEmits<{
   done: [];
-  /** Fired when the shelf is revealed so the home page can mount behind. */
+  /** Fired at full black so the home page can swap in the finished book. */
   blackout: [];
   /** Fired when the shelf beat starts so the home page (and its real
    * bookshelf) can be mounted behind the cinematic. */
@@ -24,12 +13,13 @@ const emit = defineEmits<{
 }>();
 
 const overlay = ref<HTMLElement | null>(null);
-const room = ref<HTMLElement | null>(null);
+const backdrop = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const book3d = ref<HTMLElement | null>(null);
 const flatSpine = ref<HTMLElement | null>(null);
 const msCover = ref<HTMLElement | null>(null);
+const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
 const titled = ref(false);
@@ -43,7 +33,6 @@ function finish() {
   titleTyped.value = TITLE;
   titled.value = true;
   if (ov) gsap.set(ov, { display: 'none', opacity: 0 });
-  if (room.value) gsap.set(room.value, { clearProps: 'all' });
   if (stack.value) {
     stack.value.innerHTML = '';
     gsap.set(stack.value, { clearProps: 'all' });
@@ -54,8 +43,8 @@ function finish() {
     gsap.set(book3d.value, { clearProps: 'all', display: 'none', opacity: 0 });
   if (msCover.value)
     gsap.set(msCover.value, { clearProps: 'all', display: 'none', opacity: 0 });
-  if (flatSpine.value)
-    gsap.set(flatSpine.value, { clearProps: 'all', display: 'none', opacity: 0 });
+  if (backdrop.value) gsap.set(backdrop.value, { opacity: 1 });
+  if (veil.value) gsap.set(veil.value, { opacity: 0 });
   playing.value = false;
   tl = null;
   emit('done');
@@ -66,43 +55,32 @@ function skip() {
   if (tl) tl.progress(1);
 }
 
-/** Escape skips the cinematic too. */
-function onKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && playing.value) skip();
-}
-
-onMounted(() => document.addEventListener('keydown', onKeyDown));
-onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
-
 /**
- * The binding, beat by beat (no hands — everything moves on its own).
- * The room is a tall div: bookshelf on top, desk on bottom. We start
- * on the desk; after the book shows its 3D, the room tilts up to
- * reveal the shelf (the seam crosses the frame — one space, no cut).
+ * The binding, beat by beat (no hands — everything moves on its own):
  * 1. page 5 drops into the pile with a bounce;
  * 2. the pages fan out and shuffle themselves into order, chapter 1 on top;
  * 3. the stamped MANUSCRIPT cover drops onto the stack, then gets thrown
  *    off to the side, leaving chapter 1;
  * 4. the dark cover drops from above and the pages tuck inside;
  * 5. the title is written on;
- * 6. the finished book rises as a 3D object and shows its thickness;
- * 7. the room tilts up — the desk slides away below, the shelf glides
- *    in from above, seam visible;
- * 8. the book files itself into its waiting slot, staying as the 3D
- *    model, then the overlay melts away onto the home page shelf.
+ * 6. the finished book rises as a 3D object; the dark backdrop dissolves
+ *    to reveal the home page's real bookshelf, and the book files itself
+ *    into its waiting slot, staying as the 3D model;
+ * 7. fade to black, fade back in on the home page with the finished book.
  *
  * App tosses the open page into the pile before calling start(), so
  * page 5 is always the real page, never a stand-in.
  */
 function start() {
   const ov = overlay.value;
-  const rm = room.value;
   const st = stack.value;
   const cv = coverEl.value;
   const b3d = book3d.value;
   const msc = msCover.value;
-  if (!ov || !rm || !st || !cv || !b3d || !msc) return;
-  const reduced = motionReduced();
+  const vl = veil.value;
+  if (!ov || !st || !cv || !b3d || !msc || !vl) return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
+    .matches;
   if (reduced) {
     // No animation: mark it bound and hand off, same end state.
     emit('blackout');
@@ -115,9 +93,10 @@ function start() {
   const cx = vw / 2;
   const cy = vh / 2;
 
-  // Reset. The room starts on the desk (bottom half in view).
+  // Reset. Centering is pinned explicitly (xPercent/yPercent) rather
+  // than trusting the CSS transform parse. The stack starts centered —
+  // nothing to drag in from the pile anymore.
   gsap.set(ov, { display: 'block', opacity: 0 });
-  gsap.set(rm, { y: -vh });
   gsap.set(cv, {
     display: 'none',
     opacity: 0,
@@ -158,6 +137,7 @@ function start() {
     yPercent: -50,
     scaleY: 1,
   });
+  gsap.set(vl, { opacity: 0 });
   titleTyped.value = '';
   titled.value = false;
   st.innerHTML = '';
@@ -166,6 +146,11 @@ function start() {
   // The stack, bottom to top: chapters 1-5. Clones from the real pile
   // where present; numbered blanks stand in for the rest. Page 5 is
   // real — App tossed the open page into the pile before start().
+  // The stamped MANUSCRIPT cover is its own element (msCover) and sits
+  // in front of the stack, facing the viewer.
+  // Build six pages: the five chapters plus the stamped MANUSCRIPT page.
+  // All six fan and shuffle together; the manuscript ends on top, then
+  // gets thrown, leaving chapter 1 for the binding.
   const chCards: HTMLElement[] = [];
   for (let i = 0; i < 5; i++) {
     const ch = chapters[i];
@@ -182,9 +167,13 @@ function start() {
     card.appendChild(label);
     chCards.push(card);
   }
+  // The manuscript stamped page is the sixth card.
   const mscCard = msCover.value!;
   mscCard.classList.add('bind-page');
   chCards.push(mscCard);
+  // Initial stack: manuscript at the bottom, chapters 1-5 on top.
+  // Page 5 (chCards[4]) drops in from above; the shuffle will bring
+  // the manuscript to the top.
   [chCards[5], ...chCards.slice(0, 5)].forEach((c) => st.appendChild(c));
   const allCards = [...st.children] as HTMLElement[];
   allCards.forEach((c) =>
@@ -212,6 +201,7 @@ function start() {
     { y: 0, opacity: 1, rotation: 0, duration: 0.7, ease: 'power2.in' },
     0.45,
   );
+  // Landing bounce and settle — page five has arrived.
   T.to(ch5, { y: -22, duration: 0.18, ease: 'power2.out' }, 1.17);
   T.to(ch5, { y: 0, duration: 0.34, ease: 'bounce.out' }, 1.35);
   const b1 = 1.78;
@@ -231,6 +221,7 @@ function start() {
   const shuffleAt = fanAt + 0.75;
   T.call(
     () => {
+      // Final order bottom->top: 5,4,3,2,1, manuscript on top.
       [...chCards.slice(0, 5).reverse(), chCards[5]].forEach((c) =>
         st.appendChild(c),
       );
@@ -273,6 +264,7 @@ function start() {
   // Beat 4 — the dark cover drops from above, dead-center, and seals
   // over the pages; the pages tuck inside.
   const dropAt = b3 + 0.15;
+  // Pin the stack dead-center under the falling cover.
   T.set(st, { x: 0, y: 0, xPercent: -50, yPercent: -50 }, dropAt);
   T.set(
     cv,
@@ -289,6 +281,7 @@ function start() {
     dropAt,
   );
   T.to(cv, { y: 0, duration: 1.05, ease: 'power2.out' }, dropAt);
+  // Landing squash — the cover seals shut over the pages.
   T.to(
     cv,
     { scaleY: 0.92, scaleX: 1.03, duration: 0.14, ease: 'power2.in' },
@@ -332,33 +325,38 @@ function start() {
   );
   const b5 = titledAt + 0.9;
 
-  // Beat 6 — the flat cover becomes a real 3D book and lifts itself
-  // off the desk. The book turns to show its thickness.
+  // Beat 6a — the flat cover becomes a real 3D book and lifts itself
+  // off the desk. The book turns to show its thickness — the 3D
+  // moment reads clearly.
   const grabAt = b5 + 0.15;
   T.to(cv, { opacity: 0, duration: 0.25, ease: 'power1.in' }, grabAt);
   T.set(cv, { display: 'none' }, grabAt + 0.3);
   T.set(b3d, { display: 'block' }, grabAt);
   T.to(b3d, { opacity: 1, duration: 0.25, ease: 'power1.in' }, grabAt);
+  // Turn to show it's a real object with thickness.
   T.to(b3d, { rotationY: -38, duration: 0.55, ease: 'power2.out' }, grabAt + 0.25);
   T.to(b3d, { rotationY: -18, duration: 0.45, ease: 'power2.inOut' }, grabAt + 0.8);
+  // Lift off the desk.
   T.to(b3d, { y: '-=46', duration: 0.5, ease: 'power2.out' }, grabAt + 0.2);
   const b6 = grabAt + 1.3;
 
-  // Beat 7 — the room tilts up: the desk slides away below, the shelf
-  // glides in from above. Slow, and the seam crosses the frame — one
-  // continuous space, no cut. App mounts the home page on 'shelf'.
+  // Beat 6b — the dark backdrop dissolves, revealing the home page's
+  // real bookshelf behind the cinematic while the book hovers, waiting.
+  // App mounts the home page on the 'shelf' emit.
+  const bd = backdrop.value!;
   T.call(() => emit('shelf'), [], b6);
-  T.to(rm, { y: 0, duration: 2.2, ease: 'power2.inOut' }, b6 + 0.15);
-  // The book hovers, waiting, while the room moves.
-  T.to(b3d, { y: '-=30', duration: 2.2, ease: 'power2.inOut' }, b6 + 0.15);
-  const b7 = b6 + 2.5;
+  T.to(bd, { opacity: 0, duration: 1.1, ease: 'power2.inOut' }, b6 + 0.15);
+  const b7 = b6 + 1.35;
 
-  // Beat 8 — the book files itself into the shelf slot: flies to it,
-  // turns spine-out, and seats as the flat spine. The slot is measured
-  // live from the room's shelf.
+  // Beat 6c — the book flies itself to the home page shelf's slot,
+  // turns so the spine faces the reader, and files itself among the
+  // classics as the 3D model. The slot is measured live, once the
+  // home page has settled.
   T.call(
     () => {
-      const slot = rm.querySelector('[data-bind-slot]') as HTMLElement | null;
+      const slot = document.querySelector(
+        '.view-home [data-bind-slot]',
+      ) as HTMLElement | null;
       let dx = 0;
       let dy = 0;
       let s = 0.7;
@@ -379,24 +377,33 @@ function start() {
         yPercent: -50,
         scale: 1,
       });
+      // Fly to the front of the slot as the 3D book.
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
+      // Turn fully sideways.
       file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.9);
+      // After the turn: go 2D again — crossfade to the flat spine at the
+      // same spot, then scale it down to fit the gap.
       file.to(b3d, { opacity: 0, duration: 0.25, ease: 'power1.in' }, 1.6);
       file.set(b3d, { display: 'none' }, 1.9);
       file.set(spine, { display: 'flex', x: dx, y: dy }, 1.6);
       file.to(spine, { opacity: 1, duration: 0.25, ease: 'power1.out' }, 1.6);
-      file.to(spine, { scale: s, duration: 0.6, ease: 'power2.inOut' }, 1.85);
+      file.to(
+        spine,
+        { scale: s, duration: 0.6, ease: 'power2.inOut' },
+        1.85,
+      );
+      // The flat spine seats into the gap, in line with the other books.
     },
     [],
     b7,
   );
   const b8 = b7 + 2.7;
 
-  // Beat 9 — hold on the completed shelf, then melt the overlay away
-  // onto the home page (which has the book in its slot by now). No
-  // fade to black — one smooth handoff.
-  T.call(() => emit('blackout'), [], b8 + 0.4);
-  T.to(ov, { opacity: 0, duration: 1.2, ease: 'power1.inOut' }, b8 + 0.6);
+  // Beat 7 — hold on the completed shelf; fade to black; behind it the
+  // home page takes the bound shelf; fade back in on it.
+  T.to(vl, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, b8);
+  T.call(() => emit('blackout'), [], b8 + 0.85);
+  T.to(ov, { opacity: 0, duration: 1.0, ease: 'power1.inOut' }, b8 + 1.35);
 }
 
 defineExpose({ start });
@@ -407,33 +414,16 @@ defineExpose({ start });
     ref="overlay"
     class="bind-overlay"
     role="dialog"
-    aria-modal="true"
     aria-label="Binding the manuscript"
   >
-    <!-- The room: bookshelf on top, desk on bottom. We start on the
-         desk; the tilt-up slides the shelf into view. -->
-    <div ref="room" class="bind-room" aria-hidden="true">
-      <div class="bind-shelf-half">
-        <Bookshelf :interactive="false" :show-manuscript="false" />
-      </div>
-      <div class="bind-desk-half" :class="{ 'has-bonus': bonusContent }">
-        <!-- The literal desk: same mug, paper balls, and pencil as the
-             manuscript desk. Bonus pieces frame the action when on. -->
-        <DeskClutter />
-        <DeskPencil />
-        <div v-if="bonusContent" class="bind-bonus" aria-hidden="true">
-          <DeskCandle :lit="true" :smoking="false" />
-          <RemoteControl :led-on="false" color="#ffd9a0" />
-          <FirstDraft />
-          <DeskPhone />
-        </div>
-      </div>
-    </div>
+    <!-- The dark cinematic backdrop; dissolves for the shelf beat. -->
+    <div ref="backdrop" class="bind-backdrop" aria-hidden="true"></div>
 
-    <!-- The neat stack forms here, on the desk. -->
+    <!-- The neat stack forms here. -->
     <div ref="stack" class="bind-stack" aria-hidden="true"></div>
 
-    <!-- The stamped MANUSCRIPT cover. -->
+    <!-- The stamped MANUSCRIPT cover: drops in front of the stack,
+         stamp facing the viewer, then flies away on its own. -->
     <div ref="msCover" class="bind-mscover" aria-hidden="true">
       <div class="bind-mscover-frame">
         <p class="bind-mscover-stamp">Manuscript</p>
@@ -454,25 +444,28 @@ defineExpose({ start });
       </div>
     </div>
 
-    <!-- The finished book as a 3D object. -->
+    <!-- The finished book as a 3D object: lifts and files itself. -->
     <div ref="book3d" class="bind-book3d" aria-hidden="true">
-      <Book
-        title="Gray Solutions"
-        color="#1a1a1a"
-        :width="200"
-        :height="300"
-        :front="true"
-        :interactive="false"
-        mark="G."
-        tagline="Websites that tell stories."
-        author="Chris Gray"
-      />
+      <div class="b3d-face b3d-front">
+        <div class="b3d-frame">
+          <span class="b3d-mark">G.</span>
+          <p class="b3d-title">Gray<br />Solutions<em>.</em></p>
+          <p class="b3d-tag"><em>Websites that tell stories.</em></p>
+          <p class="b3d-by">Chris Gray</p>
+        </div>
+      </div>
+      <div class="b3d-face b3d-spine"><span>Gray Solutions</span></div>
+      <div class="b3d-face b3d-pages"></div>
     </div>
 
-    <!-- Flat spine: seats into the shelf gap. -->
+    <!-- Flat spine: after the 3D turn, the book goes 2D again and
+         scales to fit the shelf gap. -->
     <div ref="flatSpine" class="bind-flat-spine" aria-hidden="true">
       <span>Gray Solutions</span>
     </div>
+
+    <!-- Fade-to-black veil for the final beat. -->
+    <div ref="veil" class="bind-veil" aria-hidden="true"></div>
 
     <button
       v-if="playing"
@@ -493,51 +486,16 @@ defineExpose({ start });
   display: none;
   overflow: hidden;
 }
-/* The room: two viewports tall. Shelf on top, desk on bottom.
-   We start translated up so the desk fills the frame; the tilt-up
-   slides the shelf in. The seam between them crosses the frame. */
-.bind-room {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 200vh;
-}
-.bind-shelf-half,
-.bind-desk-half {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-  /* The desk props position against these — without them the calc()
-     positions collapse and everything piles in the top-left corner. */
-  --desk-h: 100svh;
-  --desk-pl: 120px;
-  --desk-pr: 60px;
-}
-@media (max-width: 640px) {
-  .bind-desk-half {
-    --desk-pl: 70px;
-  }
-}
-/* Bonus props are dressing in the binding — never interactive. */
-.bind-bonus {
+.bind-backdrop {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-}
-/* The desk: same mahogany as the manuscript desk. */
-.bind-desk-half {
-  background-color: #2a140c;
-  background-image:
-    repeating-linear-gradient(
-      94deg,
-      rgba(10, 4, 2, 0.18) 0px,
-      rgba(10, 4, 2, 0.18) 1px,
-      transparent 1px,
-      transparent 7px
-    ),
-    linear-gradient(180deg, #341a10 0%, #2a140c 60%, #1e0e08 100%);
+  background:
+    radial-gradient(
+      120% 90% at 50% 10%,
+      rgba(58, 36, 22, 0.98) 0%,
+      rgba(32, 19, 12, 0.99) 55%,
+      rgba(18, 11, 7, 1) 100%
+    );
 }
 .bind-skip {
   position: absolute;
@@ -557,7 +515,6 @@ defineExpose({ start });
 .bind-skip:active {
   background: rgba(235, 225, 210, 0.12);
 }
-/* ... (rest of the existing styles for stack, cover, book3d, etc.) ... */
 .bind-stack {
   position: absolute;
   left: 50%;
@@ -567,6 +524,8 @@ defineExpose({ start });
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
+/* These cards are built with document.createElement, so they never get
+   the scoped attribute — :deep() lets the styles reach them. */
 .bind-stack :deep(.bind-page),
 .bind-stack :deep(.pile-page) {
   position: absolute;
@@ -575,11 +534,13 @@ defineExpose({ start });
   border: 1px solid var(--line-soft);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
+/* In dark mode the pages stay light paper so the stamped numbers read. */
 html[data-theme='dark'] .bind-stack :deep(.bind-page),
 html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   background: #e8dcc2;
   border-color: rgba(60, 45, 10, 0.35);
 }
+/* Numbered stand-ins for pages not in the pile. */
 :deep(.bind-page) {
   display: flex;
   flex-direction: column;
@@ -603,6 +564,8 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   user-select: none;
   line-height: 1.3;
 }
+/* The stamped MANUSCRIPT cover: paper, big stamp, sits in front of
+   the stack facing the viewer, then flies away on its own. */
 .bind-mscover {
   position: absolute;
   left: 50%;
@@ -663,6 +626,8 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
     0 24px 60px rgba(0, 0, 0, 0.6),
     inset 0 0 40px rgba(0, 0, 0, 0.5);
 }
+/* The finished cover, matching the bound book on the home page:
+   G. mark, Gray Solutions., tagline, byline. */
 .bind-cover-frame {
   flex: 1;
   margin: 13px;
@@ -696,9 +661,12 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   color: #d08a4e;
   font-weight: 400;
 }
+/* While the title is being written it types on one line; once done it
+   settles into the two-line treatment above. */
 .bind-title-typing {
   font-size: 1.8rem;
 }
+/* The mark, tagline and byline fade in once the title is written. */
 .bind-mark,
 .bind-tag,
 .bind-by {
@@ -725,15 +693,19 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   color: #6f6a5e;
   margin: auto 0 0;
 }
+/* The finished book as a 3D object: front, spine, page block. */
 .bind-book3d {
+  --t: 36px;
   position: absolute;
   left: 50%;
   top: 50%;
+  width: 260px;
+  height: 340px;
+  transform-style: preserve-3d;
   display: none;
   opacity: 0;
   z-index: 3;
-  perspective: 900px;
-  /* The Book component sizes itself; GSAP handles position/scale. */
+  /* No filter here — filter flattens preserve-3d into a flat card. */
 }
 .b3d-face {
   position: absolute;
@@ -829,6 +801,7 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
     #a68f63 2px 3px
   );
 }
+/* Flat spine: the 2D book that seats into the shelf gap. */
 .bind-flat-spine {
   position: absolute;
   left: 50%;
@@ -850,6 +823,15 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   font-size: 1rem;
   letter-spacing: 0.08em;
   white-space: nowrap;
+}
+/* Fade-to-black veil for the final beat. */
+.bind-veil {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
 }
 .bind-skip {
   z-index: 6;
