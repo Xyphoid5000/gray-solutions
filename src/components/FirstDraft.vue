@@ -22,6 +22,8 @@ interface DraftPage {
   uvText: string;
 }
 
+/** The secret, broken across the four pages. Read the fragments in the
+    order of the marks above (_ ○ △ □) to reassemble it. */
 const PAGES: DraftPage[] = [
   {
     num: 1,
@@ -32,7 +34,7 @@ const PAGES: DraftPage[] = [
       'do not fold, spindle, or interrogate this paragraph,',
     ],
     uvText:
-      'The circle is the second mark in the row above. Every page wears a mark in red pen — match them up. The order matters.',
+      'for people who poke around. I do the same for my clients\u2019 sites, by the way.',
   },
   {
     num: 2,
@@ -42,8 +44,7 @@ const PAGES: DraftPage[] = [
       'the ink ran out halfway through a very important —',
       'the footnotes filed a complaint with the header and won,',
     ],
-    uvText:
-      'The box is the last mark. Four pages, four marks — line the pages up by the symbols, not the page numbers.',
+    uvText: 'and the way in is hiding in plain sight.',
   },
   {
     num: 3,
@@ -54,7 +55,7 @@ const PAGES: DraftPage[] = [
       'the eraser dust has formed a union and demands better hours,',
     ],
     uvText:
-      'The triangle sits third in the row. You\u2019re assembling a sequence — and the phone on my desk is waiting for it.',
+      'And since you\u2019re clearly the curious type: the phone on my desk is locked \u2014',
   },
   {
     num: 4,
@@ -65,7 +66,7 @@ const PAGES: DraftPage[] = [
       'this sentence ends exactly where it began,',
     ],
     uvText:
-      'The underline leads the row. Read the pages in mark order — _ ○ △ □ — and the way in is hiding in plain sight.',
+      'Ah \u2014 you found the secret. I love tucking little extras into corners',
   },
 ];
 
