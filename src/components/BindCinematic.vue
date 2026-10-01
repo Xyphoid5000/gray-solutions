@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
+import Bookshelf from './Bookshelf.vue';
 import DeskClutter from './DeskClutter.vue';
 import DeskPencil from './DeskPencil.vue';
 import DeskCandle from './DeskCandle.vue';
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 
 const overlay = ref<HTMLElement | null>(null);
 const backdrop = ref<HTMLElement | null>(null);
+const shelfClone = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const book3d = ref<HTMLElement | null>(null);
@@ -362,8 +364,8 @@ function start() {
   // home page has settled.
   T.call(
     () => {
-      const slot = document.querySelector(
-        '.view-home [data-bind-slot]',
+      const slot = shelfClone.value?.querySelector(
+        '[data-bind-slot]',
       ) as HTMLElement | null;
       let dx = 0;
       let dy = 0;
@@ -424,6 +426,12 @@ defineExpose({ start });
     role="dialog"
     aria-label="Binding the manuscript"
   >
+    <!-- The clone shelf: 1-for-1 match for slotting. Hidden behind the desk
+         until the shelf beat. -->
+    <div ref="shelfClone" class="bind-shelf-clone" aria-hidden="true">
+      <Bookshelf :backdrop="true" :interactive="false" :show-manuscript="false" />
+    </div>
+
     <!-- The desk: binding happens here, same desk all the time. -->
     <div ref="backdrop" class="bind-desk" aria-hidden="true">
       <DeskClutter />
@@ -512,6 +520,16 @@ defineExpose({ start });
       #241610 100%
     );
   overflow: hidden;
+}
+/* Clone shelf: sits behind the desk, revealed when the desk fades.
+   1-for-1 match with the Office shelf for a seamless handoff. */
+.bind-shelf-clone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1210;
 }
 .bind-skip {
   position: absolute;
