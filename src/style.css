@@ -3451,3 +3451,8 @@ html[data-theme='dark'] .page-tab {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Paginated manuscript pages: plain wrapper, no bound-book chrome. */
+.paginate-page {
+  position: relative;
+}

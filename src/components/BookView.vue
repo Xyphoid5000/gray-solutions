@@ -262,7 +262,7 @@ function pileToss(index: number): { rotation: number; x: number; y: number } {
     No height measurements: the .wrap's block children are the chapter's
     block array. Mobile gets one block per page; larger screens group
     blocks together. Moves the actual elements (no clones) into
-    .book-page divs. */
+    .paginate-page divs. */
 /** Blocks per page on larger screens — one block per page on mobile. */
 const DESKTOP_BLOCKS_PER_PAGE = 3;
 async function paginateCurrentChapter() {
@@ -273,7 +273,7 @@ async function paginateCurrentChapter() {
   if (!paper) return;
 
   // Clear any previous pagination.
-  paper.querySelectorAll('.book-page').forEach((p) => {
+  paper.querySelectorAll('.paginate-page').forEach((p) => {
     // Move children back to the wrap before removing the page div.
     const wrap = paper.querySelector(':scope > .chapter > .wrap') as HTMLElement | null;
     if (wrap) {
@@ -357,24 +357,10 @@ async function paginateCurrentChapter() {
 
   // Group blocks into pages: one per page on mobile, several per page
   // on larger screens. No measuring — deterministic by count.
-  // Exception: a chapter heading (.ch-head) never stands alone — it
-  // joins the block that follows so the page isn't mostly empty.
   const perPage = isMobile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
   const pages: HTMLElement[][] = [];
   for (let i = 0; i < blocks.length; i += perPage) {
-    const page = blocks.slice(i, i + perPage);
-    // If this page is just a chapter heading and there's a next block,
-    // pull the next block in too.
-    if (
-      isMobile &&
-      page.length === 1 &&
-      page[0].classList.contains('ch-head') &&
-      i + 1 < blocks.length
-    ) {
-      page.push(blocks[i + 1]);
-      i += 1; // Skip the block we just absorbed.
-    }
-    pages.push(page);
+    pages.push(blocks.slice(i, i + perPage));
   }
 
   pageCount.value = pages.length;
@@ -383,7 +369,7 @@ async function paginateCurrentChapter() {
   // Create page divs and move elements.
   pages.forEach((els, idx) => {
     const pageDiv = document.createElement('div');
-    pageDiv.className = 'book-page';
+    pageDiv.className = 'paginate-page';
     pageDiv.dataset.page = String(idx);
     if (idx !== 0) pageDiv.style.display = 'none';
     els.forEach((el) => pageDiv.appendChild(el));
@@ -410,7 +396,7 @@ function showPage(n: number) {
   ) as HTMLElement | null;
   if (!paper) return;
 
-  const pages = paper.querySelectorAll('.book-page');
+  const pages = paper.querySelectorAll('.paginate-page');
   pages.forEach((p, idx) => {
     (p as HTMLElement).style.display = idx === n ? '' : 'none';
   });
@@ -426,8 +412,8 @@ function next() {
       `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
     ) as HTMLElement | null;
     if (paper) {
-      const current = paper.querySelector(`.book-page[data-page="${currentPage.value}"]`) as HTMLElement | null;
-      const next = paper.querySelector(`.book-page[data-page="${nextPage}"]`) as HTMLElement | null;
+      const current = paper.querySelector(`.paginate-page[data-page="${currentPage.value}"]`) as HTMLElement | null;
+      const next = paper.querySelector(`.paginate-page[data-page="${nextPage}"]`) as HTMLElement | null;
       if (current && next) {
         gsap.to(current, {
           x: '-30%',
@@ -460,8 +446,8 @@ function prev() {
       `.manuscript-desk [data-page-index="${currentIndex.value}"] .page-paper`,
     ) as HTMLElement | null;
     if (paper) {
-      const current = paper.querySelector(`.book-page[data-page="${currentPage.value}"]`) as HTMLElement | null;
-      const prevEl = paper.querySelector(`.book-page[data-page="${prevPage}"]`) as HTMLElement | null;
+      const current = paper.querySelector(`.paginate-page[data-page="${currentPage.value}"]`) as HTMLElement | null;
+      const prevEl = paper.querySelector(`.paginate-page[data-page="${prevPage}"]`) as HTMLElement | null;
       if (current && prevEl) {
         gsap.to(current, {
           x: '30%',

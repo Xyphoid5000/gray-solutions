@@ -103,6 +103,7 @@ function toggleOurs() {
               >
                 <span class="bs-spine-label">Gray Solutions</span>
                 <span class="bs-face bs-front" aria-hidden="true">
+                  <span class="bs-front-mark">G.</span>
                   <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
                   <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
                   <span class="bs-front-author">Chris Gray</span>
@@ -379,6 +380,7 @@ function toggleOurs() {
   display: flex;
   align-items: center;
   justify-content: center;
+  transform-style: preserve-3d;
   font-family: var(--serif);
   font-size: 0.68rem;
   letter-spacing: 0.12em;
