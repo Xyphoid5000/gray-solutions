@@ -25,7 +25,7 @@ const trackClass = computed(() => ({
       <div class="office-slide office-shelf" aria-label="Bookshelf">
         <Bookshelf
           :backdrop="!office.manuscriptBound"
-          :interactive="office.manuscriptBound"
+          :interactive="true"
           :show-manuscript="!office.manuscriptBound"
           @open-book="$emit('open-book')"
         />
