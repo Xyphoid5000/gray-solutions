@@ -194,7 +194,7 @@ function toggleUV() {
 .draft-stack {
   position: absolute;
   left: calc(10px - var(--desk-pl));
-  top: calc(var(--desk-h) * 0.76);
+  top: calc(var(--desk-h) * 0.83);
   width: 120px;
   background: none;
   border: none;

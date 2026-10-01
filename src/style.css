@@ -3106,7 +3106,10 @@ html[data-theme='dark'] .page-paper .proof-panel {
   z-index: 20;
   /* Completely off the paper — attached at its right edge. */
   right: -52px;
-  top: calc(100px + var(--tab-row, 0) * 58px);
+  /* The five-tab stack is vertically centered in the visible desk
+     (the desk is 100svh minus the nav). 278px = four 58px strides +
+     the last tab's 46px height. */
+  top: calc((100svh - var(--nav-h) - 278px) / 2 + var(--tab-row, 0) * 58px);
   width: 52px;
   height: 46px;
   display: grid;
@@ -3136,6 +3139,12 @@ html[data-theme='dark'] .page-tab {
 .page-tab.is-piled {
   opacity: 0.6;
 }
+/* The current page's wrap sits 8svh below the desk top — pull its tab
+   back up so every tab shares the desk's coordinate system and the
+   active tab never slides under its neighbor. */
+.page-wrap.is-current .page-tab {
+  top: calc((100svh - var(--nav-h) - 278px) / 2 + var(--tab-row, 0) * 58px - 8svh);
+}
 @media (max-width: 640px) {
   .manuscript-desk {
     --desk-pl: 70px;
@@ -3143,9 +3152,13 @@ html[data-theme='dark'] .page-tab {
   }
   .page-tab {
     right: -40px;
+    top: calc(100px + var(--tab-row, 0) * 58px);
     width: 40px;
     height: 38px;
     font-size: 0.85rem;
+  }
+  .page-wrap.is-current .page-tab {
+    top: calc(100px + var(--tab-row, 0) * 58px - 8svh);
   }
   .read-pile {
     left: 10px;

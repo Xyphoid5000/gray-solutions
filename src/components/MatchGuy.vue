@@ -15,11 +15,13 @@ defineProps<{
   facing: 1 | -1;
   /** Speech bubble text; null hides the bubble. */
   line: string | null;
+  /** Exiting through the invisible doorway: fade out while walking. */
+  fading?: boolean;
 }>();
 </script>
 
 <template>
-  <div class="match-guy" :style="{ left: `${x}px` }" aria-hidden="true">
+  <div class="match-guy" :style="{ left: `${x}px`, opacity: fading ? 0 : 1 }" aria-hidden="true">
     <div v-if="line" class="mg-bubble">{{ line }}</div>
     <div class="mg-aura"></div>
     <svg viewBox="0 0 120 120" :class="{ flip: facing === -1 }">
@@ -90,6 +92,8 @@ defineProps<{
   margin-left: -55px;
   z-index: 2100;
   pointer-events: none;
+  /* The invisible doorway: he fades out mid-stride. */
+  transition: opacity 0.7s ease;
 }
 @media (max-width: 640px) {
   .match-guy {

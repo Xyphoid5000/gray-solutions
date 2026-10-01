@@ -21,6 +21,9 @@ export const useInteractionsStore = defineStore('interactions', () => {
   const guyMode = ref<'flashlight' | 'match' | 'carry' | 'empty'>('flashlight');
   const guyFacing = ref<1 | -1>(1);
   const guyLine = ref<string | null>(null);
+  /** The guy is exiting through the invisible doorway (large screens):
+      he keeps walking while fading out. */
+  const guyFading = ref(false);
 
   function setRitual(running: boolean) {
     ritualRunning.value = running;
@@ -47,6 +50,7 @@ export const useInteractionsStore = defineStore('interactions', () => {
     guyMode,
     guyFacing,
     guyLine,
+    guyFading,
     setRitual,
     setMatch,
     setGag,
