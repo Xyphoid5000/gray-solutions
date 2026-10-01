@@ -21,6 +21,7 @@ import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
 import { useInteractionsStore } from './stores/interactions';
+import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
 import { motionReduced } from './utils/a11y';
 
@@ -29,6 +30,10 @@ gsap.registerPlugin(ScrollTrigger);
 const office = useOfficeStore();
 const bonus = useBonusStore();
 const interactions = useInteractionsStore();
+// Device capabilities (touch / screen size). Instantiated here so it's
+// live from startup; components read it when they need touch-vs-desktop
+// behavior. Changes nothing on its own.
+useDeviceStore();
 
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
