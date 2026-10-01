@@ -557,14 +557,13 @@ html[data-theme='dark'] .bookshelf-hero {
 }
 /* 3D book overlay: dims the shelf, drops the real Book.vue in. */
 .bs-book-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 6, 3, 0.75);
-  backdrop-filter: blur(4px);
+  background: rgba(10, 6, 3, 0.85);
   animation: bs-overlay-in 0.25s ease;
 }
 @keyframes bs-overlay-in {
