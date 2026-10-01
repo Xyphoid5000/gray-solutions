@@ -387,6 +387,14 @@ function toggleOurs() {
   background: transparent;
   box-shadow: none;
 }
+/* Empty slot placeholder — matches the bound book dimensions so the
+   binding has a target to fly to. */
+.bs-slot-empty {
+  flex-shrink: 0;
+  width: 52px;
+  height: 230px;
+  align-self: flex-end;
+}
 .bs-ours {
   writing-mode: vertical-rl;
   display: flex;
