@@ -194,6 +194,8 @@ function onBindDone() {
 function onBindBlackout() {
   shelfReveal.value = false;
   markManuscriptBound();
+  // Reset the book view so reopening starts fresh, not at the old desk state.
+  officeRef.value?.bookView?.resetBookView();
   closeBook();
 }
 /** The binding's shelf beat: mount the home page behind the cinematic

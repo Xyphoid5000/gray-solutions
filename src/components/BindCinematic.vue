@@ -459,8 +459,8 @@ defineExpose({ start });
       <Book
         title="Gray Solutions"
         color="#1a1a1a"
-        :width="36"
-        :height="340"
+        :width="200"
+        :height="300"
         :front="true"
         :interactive="false"
         mark="G."
@@ -509,6 +509,16 @@ defineExpose({ start });
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  /* The desk props position against these — without them the calc()
+     positions collapse and everything piles in the top-left corner. */
+  --desk-h: 100svh;
+  --desk-pl: 120px;
+  --desk-pr: 60px;
+}
+@media (max-width: 640px) {
+  .bind-desk-half {
+    --desk-pl: 70px;
+  }
 }
 /* Bonus props are dressing in the binding — never interactive. */
 .bind-bonus {

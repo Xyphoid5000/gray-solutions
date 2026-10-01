@@ -174,7 +174,15 @@ async function tossCurrentToPile(): Promise<void> {
   }
 }
 
-defineExpose({ tossCurrentToPile });
+/** Reset the book view after binding: clear the pile and return to
+    the first chapter, so reopening starts fresh. */
+function resetBookView() {
+  currentIndex.value = 0;
+  pile.value = [];
+  pileOpen.value = false;
+}
+
+defineExpose({ tossCurrentToPile, resetBookView });
 
 async function bringBack(i: number): Promise<void> {
   const card = pileCardEl(i);

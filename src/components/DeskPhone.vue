@@ -480,7 +480,7 @@ onUnmounted(() => {
 .desk-phone-btn {
   position: absolute;
   z-index: 845;
-  right: calc(0px - var(--desk-pr));
+  right: calc(28px - var(--desk-pr));
   top: calc(var(--desk-h) * 0.735);
   width: 80px;
   padding: 0;

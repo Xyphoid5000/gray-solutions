@@ -24,8 +24,8 @@ interface DraftPage {
   uvText: string;
 }
 
-/** The secret, broken across the four pages. Read the fragments in the
-    order of the marks above (_ ○ △ □) to reassemble it. */
+/** The secret, broken across the four pages. Fragments read in page
+    order (1-2-3-4); the mark header (_ ○ △ □) is the PIN hint. */
 const PAGES: DraftPage[] = [
   {
     num: 1,
@@ -36,7 +36,7 @@ const PAGES: DraftPage[] = [
       'do not fold, spindle, or interrogate this paragraph,',
     ],
     uvText:
-      'for people who poke around. I do the same for my clients\u2019 sites, by the way.',
+      'Ah \u2014 you found the secret. I love tucking little extras into corners',
   },
   {
     num: 2,
@@ -46,7 +46,7 @@ const PAGES: DraftPage[] = [
       'the ink ran out halfway through a very important —',
       'the footnotes filed a complaint with the header and won,',
     ],
-    uvText: 'and the way in is hiding in plain sight.',
+    uvText: 'for people who poke around. I do the same for my clients\u2019 sites, by the way.',
   },
   {
     num: 3,
@@ -67,8 +67,7 @@ const PAGES: DraftPage[] = [
       'the coffee ring on page two is load-bearing, do not remove it,',
       'this sentence ends exactly where it began,',
     ],
-    uvText:
-      'Ah \u2014 you found the secret. I love tucking little extras into corners',
+    uvText: 'and the way in is hiding in plain sight.',
   },
 ];
 
