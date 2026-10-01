@@ -91,7 +91,7 @@ function toggleOurs() {
               <span class="bs-back-text">{{ b.synopsis }}</span>
             </span>
           </button>
-          <div class="bs-slot" data-bind-slot>
+          <div class="bs-slot" :class="{ 'is-filled': isBound }" data-bind-slot>
             <template v-if="isBound">
               <button
                 type="button"
@@ -401,13 +401,22 @@ function toggleOurs() {
 .bs-slot {
   flex-shrink: 0;
   width: 54px;
-  align-self: stretch;
+  align-self: flex-end;
   border-radius: 3px 3px 0 0;
   background: rgba(0, 0, 0, 0.35);
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.7);
   outline: 1px dashed rgba(232, 205, 150, 0.22);
   outline-offset: -5px;
   position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+/* When the bound book fills the slot, hide the placeholder outline. */
+.bs-slot.is-filled {
+  outline: none;
+  background: transparent;
+  box-shadow: none;
 }
 .bs-ours {
   position: absolute;
