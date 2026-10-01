@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
 import Bookshelf from './Bookshelf.vue';
@@ -65,6 +65,14 @@ function finish() {
 function skip() {
   if (tl) tl.progress(1);
 }
+
+/** Escape skips the cinematic too. */
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && playing.value) skip();
+}
+
+onMounted(() => document.addEventListener('keydown', onKeyDown));
+onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
 
 /**
  * The binding, beat by beat (no hands — everything moves on its own).
@@ -399,6 +407,7 @@ defineExpose({ start });
     ref="overlay"
     class="bind-overlay"
     role="dialog"
+    aria-modal="true"
     aria-label="Binding the manuscript"
   >
     <!-- The room: bookshelf on top, desk on bottom. We start on the

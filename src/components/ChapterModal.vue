@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import type { Chapter } from '../lib/chapters';
+import { useModalA11y } from '../composables/useModalA11y';
 
 defineProps<{
   chapter: Chapter;
@@ -11,6 +12,11 @@ const emit = defineEmits<{
   close: [];
   go: [index: number];
 }>();
+
+const dialogEl = ref<HTMLElement | null>(null);
+// The modal is v-if'd by the parent, so mounted means open.
+const openRef = ref(true);
+useModalA11y(dialogEl, openRef, () => emit('close'));
 
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close');
@@ -23,10 +29,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey));
 <template>
   <div class="chapter-modal-backdrop" @click.self="emit('close')">
     <div
+      ref="dialogEl"
       class="chapter-modal"
       role="dialog"
       aria-modal="true"
       :aria-label="chapter.label"
+      tabindex="-1"
     >
       <button
         class="chapter-modal-close"

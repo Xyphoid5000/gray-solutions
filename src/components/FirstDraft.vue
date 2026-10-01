@@ -10,8 +10,10 @@
  * phone PIN (4132).
  */
 import { ref } from 'vue';
+import { useModalA11y } from '../composables/useModalA11y';
 
 const open = ref(false);
+const dialogEl = ref<HTMLElement | null>(null);
 const pageIndex = ref(0);
 const uvOn = ref(false);
 
@@ -86,6 +88,8 @@ function closeDraft() {
   uvOn.value = false;
 }
 
+useModalA11y(dialogEl, open, closeDraft);
+
 function nextPage() {
   if (pageIndex.value < PAGES.length - 1) {
     pageIndex.value++;
@@ -129,7 +133,15 @@ function toggleUV() {
 
   <!-- Open: the draft modal with the UV flashlight right there. -->
   <Teleport to="body">
-    <div v-if="open" class="draft-modal" role="dialog" aria-label="First draft">
+    <div
+      v-if="open"
+      ref="dialogEl"
+      class="draft-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="First draft"
+      tabindex="-1"
+    >
       <div class="draft-modal-backdrop" @click="closeDraft"></div>
       <div class="draft-modal-card">
         <div class="draft-modal-title">FIRST DRAFT</div>

@@ -127,8 +127,8 @@ const COLORS = [
   gap: 6px;
 }
 .swatch {
-  width: 15px;
-  height: 15px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.16);
   padding: 0;

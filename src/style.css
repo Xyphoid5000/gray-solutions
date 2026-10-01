@@ -13,7 +13,7 @@
   --page: #10141f;
   --ink: #f2ecdf;
   --muted: #a7a192;
-  --faint: #6f6a5e;
+  --faint: #8a857a;
   --ember: #d08a4e;
   --ember-deep: #9e5f2b;
   --ember-bright: #f2b355;
@@ -35,7 +35,7 @@
   --page: #fffdf6;
   --ink: #1a1510;
   --muted: #6d6455;
-  --faint: #a39c8a;
+  --faint: #6b655a;
   --ember: #b06a2a;
   --ember-deep: #8a4f1c;
   --ember-bright: #c9853f;
@@ -1210,8 +1210,8 @@ body.has-book .book-viewport {
    so the ink stays dark and readable. */
 html[data-theme='dark'] .book-page {
   --ink: #1c1712;
-  --muted: #6d6455;
-  --faint: #a39c8a;
+  --muted: #57503f;
+  --faint: #6b655a;
   background: #d9cbb0;
   color: #1c1712;
 }
@@ -2871,7 +2871,7 @@ html[data-theme='dark'] body.has-book .chapter {
   --page: #d9cbb0;
   --ink: #1c1712;
   --muted: #57503f;
-  --faint: #857768;
+  --faint: #5f584c;
   --line: rgba(28, 23, 18, 0.16);
   --line-soft: rgba(28, 23, 18, 0.09);
   background: var(--page);
@@ -3141,7 +3141,7 @@ html[data-theme='dark'] .page-tab {
 }
 .page-tab.active {
   background: var(--ember);
-  color: #fff;
+  color: #1a1510;
   border-color: var(--ember-deep);
 }
 .page-tab.is-piled {
@@ -3403,4 +3403,38 @@ html[data-theme='dark'] .page-tab {
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
+}
+
+/* WCAG 2.4.7: visible focus indicator on all interactive elements. */
+:focus-visible {
+  outline: 2px solid var(--ember, #d08a4e);
+  outline-offset: 2px;
+}
+
+/* WCAG 2.4.1: skip link, visible on focus. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 16px;
+  z-index: 10000;
+  padding: 0.6rem 1.2rem;
+  background: var(--ember, #d08a4e);
+  color: #1a1510;
+  border-radius: 0 0 8px 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* Visually hidden but available to screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

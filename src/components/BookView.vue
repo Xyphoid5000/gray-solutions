@@ -656,7 +656,16 @@ function onTouchEnd(e: TouchEvent) {
     </div>
 
     <!-- Left lane: the read pile, a messy stack. Click to scatter / restack. -->
-    <div class="read-pile" aria-label="Finished pages" @click="togglePile">
+    <div
+      class="read-pile"
+      :role="pileOpen ? 'group' : 'button'"
+      :tabindex="pileOpen ? -1 : 0"
+      aria-label="Finished pages"
+      :aria-expanded="pileOpen"
+      @click="togglePile"
+      @keydown.enter="togglePile"
+      @keydown.space.prevent="togglePile"
+    >
       <!-- The cover: stamped MANUSCRIPT until bound, then the finished book. -->
       <button
         type="button"
@@ -664,7 +673,7 @@ function onTouchEnd(e: TouchEvent) {
         :class="{ 'is-bound': manuscriptBound }"
         :style="pileCardStyle(-1)"
         aria-label="Open finished pages"
-        tabindex="-1"
+        :tabindex="pileOpen ? 0 : -1"
       >
         <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
         <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
@@ -677,7 +686,7 @@ function onTouchEnd(e: TouchEvent) {
         :data-pile-index="i"
         :style="pileCardStyle(i)"
         :aria-label="`Open finished pages`"
-        tabindex="-1"
+        :tabindex="pileOpen ? 0 : -1"
       >
         <span class="pile-num" aria-hidden="true">{{ chapters[i].num }}</span>
         <span class="pile-tab-mark" aria-hidden="true">{{ chapters[i].num }}</span>

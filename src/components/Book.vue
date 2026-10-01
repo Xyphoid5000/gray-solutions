@@ -99,11 +99,20 @@ function onClick(e: Event) {
   // Click is handled by pointerup (to distinguish drag from tap).
   e.preventDefault();
 }
+
+/** Keyboard activation for the book (outer is role="button"). */
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    // Let the inner bonus switch handle its own keypresses.
+    if ((e.target as HTMLElement).closest('.book3d-bonus-switch')) return;
+    e.preventDefault();
+    if (props.interactive) emit('toggle');
+  }
+}
 </script>
 
 <template>
-  <button
-    type="button"
+  <div
     class="book3d"
     :class="{ 'is-interactive': interactive, 'is-pulled': pulled, 'is-dragging': dragging }"
     :style="{
@@ -111,8 +120,11 @@ function onClick(e: Event) {
       '--bh': (height ?? 220) + 'px',
       '--bc': color,
     }"
+    role="button"
+    tabindex="0"
     :aria-label="title"
     @click="onClick"
+    @keydown="onKeyDown"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -156,7 +168,7 @@ function onClick(e: Event) {
       <span class="book3d-pages"></span>
       <span class="book3d-top"></span>
     </span>
-  </button>
+  </div>
 </template>
 
 <style scoped>

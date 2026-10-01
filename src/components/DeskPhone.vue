@@ -8,6 +8,7 @@
  */
 import { computed, inject, ref, onUnmounted, nextTick, type Ref } from 'vue';
 import { activeDiscountCode } from '../lib/discount';
+import { useModalA11y } from '../composables/useModalA11y';
 
 const PIN = '4132';
 const MAX_ATTEMPTS = 3;
@@ -40,6 +41,9 @@ function putDown() {
     callTimer = null;
   }
 }
+
+const phoneDialogEl = ref<HTMLElement | null>(null);
+useModalA11y(phoneDialogEl, held, putDown);
 
 function pressDigit(d: string) {
   if (screen.value !== 'pin' || pinEntry.value.length >= 4) return;
@@ -335,7 +339,15 @@ onUnmounted(() => {
   </button>
 
   <!-- Picked up: the phone in hand. -->
-  <div v-if="held" class="phone-modal" role="dialog" aria-label="Chris's phone">
+  <div
+    v-if="held"
+    ref="phoneDialogEl"
+    class="phone-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Chris's phone"
+    tabindex="-1"
+  >
     <div class="phone-backdrop" @click="putDown"></div>
     <div class="phone-device">
       <div class="phone-notch"></div>
@@ -346,7 +358,7 @@ onUnmounted(() => {
           <div class="pin-dots" aria-hidden="true">
             <span v-for="i in 4" :key="i" :class="{ on: pinEntry.length >= i }"></span>
           </div>
-          <p v-if="pinError" class="pin-hint">
+          <p v-if="pinError" class="pin-hint" role="alert">
             Wrong code. {{ MAX_ATTEMPTS - pinAttempts }} tries left.
           </p>
           <div class="pin-pad">

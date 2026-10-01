@@ -714,8 +714,11 @@ onUnmounted(() => {
 
 <template>
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn }">
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <div class="grain" aria-hidden="true"></div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
+  <main id="main-content">
+  <h1 class="sr-only">Gray Solutions — websites that tell stories</h1>
   <Office
     ref="officeRef"
     @open-book="openBook"
@@ -757,6 +760,7 @@ onUnmounted(() => {
       <DeskPhone v-if="bonus.enabled" />
     </template>
   </Office>
+  </main>
   <!-- Contact/about sections (below the Office carousel, shelf view only). -->
   <div v-if="office.view === 'shelf'" class="home-sections">
     <Cover :bonus-content="bonus.enabled" />

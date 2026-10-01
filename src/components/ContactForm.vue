@@ -99,15 +99,15 @@ function submitContactForm(event: SubmitEvent) {
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
-      <input name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" />
-      <small v-if="discountError" class="discount-error">{{ discountError }}</small>
+      <input name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" />
+      <small v-if="discountError" id="discount-error" class="discount-error" role="alert">{{ discountError }}</small>
       <small v-if="showPuzzleInfo" class="puzzle-info-text">Solve the hidden puzzle on this site for 20% off.</small>
     </label>
     <div class="contact-submit">
       <button class="btn btn-solid" type="submit">
         Send it over <span class="arrow" aria-hidden="true">&rarr;</span>
       </button>
-      <small>{{ formStatus || 'I read every note myself and reply within a couple of days.' }}</small>
+      <small aria-live="polite">{{ formStatus || 'I read every note myself and reply within a couple of days.' }}</small>
     </div>
   </form>
 </template>
