@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
+import Book from './Book.vue';
 
 withDefaults(
   defineProps<{
@@ -42,20 +43,20 @@ const SHELF_BOOKS: ShelfBook[] = [
 const shelfLeft = SHELF_BOOKS.slice(0, 3);
 const shelfRight = SHELF_BOOKS.slice(3);
 
-/** The currently selected (floating) book, by title. Null when none. */
-const selected = ref<string | null>(null);
+/** The currently selected (floating) book. Null when none. */
+const selectedBook = ref<ShelfBook | 'ours' | null>(null);
 
-/** Toggle a book: pull it out (CSS 3D) or slide it back. */
+/** Toggle a book: show its 3D version in an overlay, or dismiss. */
 function toggleBook(book: ShelfBook) {
-  if (selected.value === book.title) selected.value = null;
-  else if (!selected.value) selected.value = book.title;
+  if (selectedBook.value === book) selectedBook.value = null;
+  else selectedBook.value = book;
 }
 
-/** Gray Solutions: tap pulls it out, tap again puts it back.
+/** Gray Solutions: tap shows its 3D version, tap again dismisses.
     The "Open the book" button (not the book itself) opens it. */
 function toggleOurs() {
-  if (selected.value === '__ours') selected.value = null;
-  else if (!selected.value) selected.value = '__ours';
+  if (selectedBook.value === 'ours') selectedBook.value = null;
+  else selectedBook.value = 'ours';
 }
 </script>
 
@@ -79,40 +80,28 @@ function toggleOurs() {
             role="button"
             tabindex="0"
             class="bs-book"
-            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :class="{ 'is-interactive': interactive }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
             :aria-label="b.title"
             @click="interactive && toggleBook(b)"
             @keydown.enter="interactive && toggleBook(b)"
             @keydown.space.prevent="interactive && toggleBook(b)"
           >
             <span class="bs-spine-label">{{ b.title }}</span>
-            <span class="bs-face bs-front" aria-hidden="true">
-              <span class="bs-front-title">{{ b.title }}</span>
-            </span>
-            <span class="bs-face bs-back" aria-hidden="true">
-              <span class="bs-back-text">{{ b.synopsis }}</span>
-            </span>
           </div>
           <template v-if="isBound">
             <div
               role="button"
               tabindex="0"
               class="bs-book bs-ours"
-              :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
-              :style="{ height: '230px', width: '52px', background: '#1a1a1a', '--bw': '52px', '--bc': '#1a1a1a' }"
+              :class="{ 'is-interactive': interactive }"
+              :style="{ height: '230px', width: '52px', background: '#1a1a1a' }"
               aria-label="Gray Solutions — open the book"
               @click="interactive && toggleOurs()"
               @keydown.enter="interactive && toggleOurs()"
               @keydown.space.prevent="interactive && toggleOurs()"
             >
               <span class="bs-spine-label">Gray Solutions</span>
-              <span class="bs-face bs-front" aria-hidden="true">
-                <span class="bs-front-mark">G.</span>
-                <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
-                <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
-                <span class="bs-front-author">Chris Gray</span>
-              </span>
             </div>
           </template>
           <template v-else>
@@ -124,20 +113,14 @@ function toggleOurs() {
             role="button"
             tabindex="0"
             class="bs-book"
-            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
-            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :class="{ 'is-interactive': interactive }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
             :aria-label="b.title"
             @click="interactive && toggleBook(b)"
             @keydown.enter="interactive && toggleBook(b)"
             @keydown.space.prevent="interactive && toggleBook(b)"
           >
             <span class="bs-spine-label">{{ b.title }}</span>
-            <span class="bs-face bs-front" aria-hidden="true">
-              <span class="bs-front-title">{{ b.title }}</span>
-            </span>
-            <span class="bs-face bs-back" aria-hidden="true">
-              <span class="bs-back-text">{{ b.synopsis }}</span>
-            </span>
           </div>
         </div>
         <div class="bs-plank"></div>
@@ -164,7 +147,7 @@ function toggleOurs() {
         >
       </button>
       <button
-        v-else-if="isBound && interactive && selected === '__ours'"
+        v-else-if="isBound && interactive && selectedBook === 'ours'"
         type="button"
         class="bs-reopen"
         @click="emit('open-book')"
@@ -174,6 +157,56 @@ function toggleOurs() {
       <p v-if="showManuscript && !isBound" class="bs-hint">
         Six pages &middot; best read front to back
       </p>
+    </div>
+
+    <!-- 3D book overlay: tap a spine to see its 3D Book.vue version drop in.
+         Uses the same real Book component as the binding cinematic. -->
+    <div
+      v-if="selectedBook"
+      class="bs-book-overlay"
+      @click="selectedBook = null"
+    >
+      <div class="bs-book-drop" @click.stop>
+        <Book
+          v-if="selectedBook === 'ours'"
+          title="Gray Solutions"
+          color="#1a1a1a"
+          :width="200"
+          :height="300"
+          :pulled="true"
+          :interactive="true"
+          mark="G."
+          tagline="Websites that tell stories."
+          author="Chris Gray"
+          :showBonusToggle="true"
+        />
+        <Book
+          v-else
+          :title="selectedBook.title"
+          :color="selectedBook.color"
+          :synopsis="selectedBook.synopsis"
+          :width="160"
+          :height="240"
+          :pulled="true"
+          :interactive="true"
+        />
+        <button
+          v-if="selectedBook === 'ours'"
+          type="button"
+          class="bs-overlay-open"
+          @click="emit('open-book')"
+        >
+          Open the book <span aria-hidden="true">&rarr;</span>
+        </button>
+        <button
+          type="button"
+          class="bs-overlay-close"
+          @click="selectedBook = null"
+          aria-label="Put the book back"
+        >
+          &times;
+        </button>
+      </div>
     </div>
   </section>
 </template>
@@ -275,11 +308,6 @@ function toggleOurs() {
   filter: brightness(1.12);
 }
 /* Pulled out: lift, come forward, turn to show the front cover. */
-.bs-book.is-selected {
-  transform: translateY(-40px) scale(1.15);
-  z-index: 10;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
-}
 .bs-book .bs-spine-label {
   display: flex;
   align-items: center;
@@ -289,69 +317,9 @@ function toggleOurs() {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Book info card: appears above the pulled-out book. Replaces fragile 3D faces. */
-.bs-face {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
-  background: rgba(20, 14, 8, 0.95);
-  border: 1px solid rgba(232, 205, 150, 0.3);
-  border-radius: 8px;
-  padding: 1rem;
-  box-sizing: border-box;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  z-index: 20;
-}
-.bs-book.is-selected .bs-face {
-  opacity: 1;
-  pointer-events: auto;
-}
-.bs-front {
-  background: linear-gradient(145deg, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.45) 100%), var(--bc, #333);
-  border: 1px solid rgba(232, 205, 150, 0.25);
-}
-.bs-front-title {
-  font-family: var(--serif);
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: rgba(232, 205, 150, 0.95);
-  line-height: 1.25;
-  writing-mode: horizontal-tb;
-  white-space: normal;
-}
-.bs-back {
-  display: none;
-}
-.bs-back-text {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 0.95rem;
-  color: rgba(232, 205, 150, 0.85);
-  line-height: 1.5;
-  writing-mode: horizontal-tb;
-  white-space: normal;
-}
-/* The floating book lifts above the shelf. */
-.bs-book.is-floating {
-  z-index: 10;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
-}
-/* Gray Solutions in the slot: clickable when bound + interactive. */
+/* Gray Solutions: clickable when bound + interactive. */
 .bs-ours.is-interactive {
   cursor: pointer;
-  transform-style: preserve-3d;
-  opacity: 1;
-}
-.bs-ours .bs-face {
-  width: 200px;
-  left: 50%;
-  margin-left: -100px;
-}
-.bs-ours.is-selected .bs-face {
   opacity: 1;
 }
 /* Open button appears when Gray Solutions is floating. */
@@ -585,5 +553,55 @@ html[data-theme='dark'] .bookshelf-hero {
   color: rgba(232, 205, 150, 0.95);
   line-height: 1;
   margin-bottom: 0.5rem;
+}
+/* 3D book overlay: dims the shelf, drops the real Book.vue in. */
+.bs-book-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 6, 3, 0.75);
+  backdrop-filter: blur(4px);
+  animation: bs-overlay-in 0.25s ease;
+}
+@keyframes bs-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.bs-book-drop {
+  position: relative;
+  animation: bs-drop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+@keyframes bs-drop-in {
+  from { transform: translateY(-60vh); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.bs-overlay-open {
+  font-family: var(--serif);
+  font-size: 1rem;
+  padding: 0.7rem 1.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 205, 150, 0.4);
+  background: rgba(232, 205, 150, 0.1);
+  color: rgba(232, 205, 150, 0.95);
+  cursor: pointer;
+}
+.bs-overlay-close {
+  position: absolute;
+  top: -2.5rem;
+  right: 0;
+  font-size: 2rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: rgba(232, 205, 150, 0.7);
+  cursor: pointer;
+  padding: 0.5rem;
 }
 </style>
