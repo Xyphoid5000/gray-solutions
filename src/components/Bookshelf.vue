@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Book from './Book.vue';
 import { manuscriptBound } from '../lib/manuscript';
 
 withDefaults(
@@ -52,13 +51,11 @@ function toggleBook(book: ShelfBook) {
   else if (!selected.value) selected.value = book.title;
 }
 
-/** Gray Solutions: first tap pulls it out; tap again (when pulled) opens it. */
+/** Gray Solutions: tap pulls it out, tap again puts it back.
+    The "Open the book" button (not the book itself) opens it. */
 function toggleOurs() {
-  if (selected.value === '__ours') {
-    emit('open-book');
-  } else if (!selected.value) {
-    selected.value = '__ours';
-  }
+  if (selected.value === '__ours') selected.value = null;
+  else if (!selected.value) selected.value = '__ours';
 }
 </script>
 
@@ -76,48 +73,65 @@ function toggleOurs() {
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
         <div class="bs-books">
-          <Book
+          <button
             v-for="b in shelfLeft"
             :key="b.title"
-            :title="b.title"
-            :color="b.color"
-            :synopsis="b.synopsis"
-            :width="b.w"
-            :height="b.h"
-            :interactive="interactive"
-            :pulled="selected === b.title"
-            @toggle="toggleBook(b)"
-          />
+            type="button"
+            class="bs-book"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :aria-label="b.title"
+            @click="interactive && toggleBook(b)"
+          >
+            <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
+          </button>
           <div class="bs-slot" data-bind-slot>
             <template v-if="isBound">
-              <Book
-                title="Gray Solutions"
-                color="#1a1a1a"
-                :width="52"
-                :height="230"
-                :interactive="interactive"
-                :pulled="selected === '__ours'"
-                :show-bonus-toggle="true"
-                mark="G."
-                tagline="Websites that tell stories."
-                author="Chris Gray"
-                @toggle="toggleOurs()"
-              />
+              <button
+                type="button"
+                class="bs-book bs-ours"
+                :class="{ 'is-interactive': interactive, 'is-selected': selected === '__ours' }"
+                :style="{ height: '230px', width: '52px', background: '#1a1a1a', '--bw': '52px', '--bc': '#1a1a1a' }"
+                aria-label="Gray Solutions — open the book"
+                @click="interactive && toggleOurs()"
+              >
+                <span class="bs-spine-label">Gray Solutions</span>
+                <span class="bs-face bs-front" aria-hidden="true">
+                  <span class="bs-front-title">Gray<br />Solutions<em>.</em></span>
+                  <span class="bs-front-tag"><em>Websites that tell stories.</em></span>
+                  <span class="bs-front-author">Chris Gray</span>
+                </span>
+                <span class="bs-face bs-back" aria-hidden="true">
+                  <span class="bs-back-text">Bonus content toggle</span>
+                </span>
+              </button>
             </template>
             <div v-if="!isBound" class="bs-slot-empty" aria-hidden="true"></div>
           </div>
-          <Book
+          <button
             v-for="b in shelfRight"
             :key="b.title"
-            :title="b.title"
-            :color="b.color"
-            :synopsis="b.synopsis"
-            :width="b.w"
-            :height="b.h"
-            :interactive="interactive"
-            :pulled="selected === b.title"
-            @toggle="toggleBook(b)"
-          />
+            type="button"
+            class="bs-book"
+            :class="{ 'is-interactive': interactive, 'is-selected': selected === b.title }"
+            :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color, '--bw': b.w + 'px', '--bc': b.color }"
+            :aria-label="b.title"
+            @click="interactive && toggleBook(b)"
+          >
+            <span class="bs-spine-label">{{ b.title }}</span>
+            <span class="bs-face bs-front" aria-hidden="true">
+              <span class="bs-front-title">{{ b.title }}</span>
+            </span>
+            <span class="bs-face bs-back" aria-hidden="true">
+              <span class="bs-back-text">{{ b.synopsis }}</span>
+            </span>
+          </button>
         </div>
         <div class="bs-plank"></div>
       </div>
@@ -143,7 +157,7 @@ function toggleOurs() {
         >
       </button>
       <button
-        v-else-if="isBound && interactive"
+        v-else-if="isBound && interactive && selected === '__ours'"
         type="button"
         class="bs-reopen"
         @click="emit('open-book')"
@@ -242,14 +256,22 @@ function toggleOurs() {
   min-height: 244px;
   padding: 0 6px;
   position: relative;
+  perspective: 900px;
 }
 /* Interactive books: clickable, 3D. */
 .bs-book.is-interactive {
   cursor: pointer;
   transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .bs-book.is-interactive:hover {
   filter: brightness(1.12);
+}
+/* Pulled out: lift, come forward, turn to show the front cover. */
+.bs-book.is-selected {
+  transform: translateY(-60px) translateZ(100px) rotateY(-68deg) scale(0.9);
+  z-index: 10;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
 }
 .bs-book .bs-spine-label {
   transform: translateZ(100px);
@@ -351,6 +373,7 @@ function toggleOurs() {
   background: rgba(208, 138, 78, 0.28);
 }
 .bs-book {
+  position: relative;
   flex-shrink: 0;
   writing-mode: vertical-rl;
   display: flex;

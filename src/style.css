@@ -977,7 +977,8 @@ a {
 .finale {
   justify-content: flex-start;
   padding-top: 0;
-  min-height: 0;
+  /* Stable height — the page shouldn't grow as the typewriter types. */
+  min-height: 78svh;
 }
 /* One continuous page — tight vertical rhythm. */
 .finale .kicker {
