@@ -318,13 +318,33 @@ async function paginateCurrentChapter() {
       continue;
     }
     // The arc stage is a desktop composition (SVG + act grid + scroll
-    // spine). On mobile the line gets its own page, then each act gets
-    // its own page — the arc is drawn across the pages.
+    // spine). On mobile the line is drawn across the pages: each act
+    // gets its own segment of the arc, so the line continues page to page.
     if (isMobile && child.classList.contains('arc-stage')) {
       const svgWrap = child.querySelector('.arc-svg-wrap');
-      if (svgWrap) blocks.push(svgWrap as HTMLElement);
-      child.querySelectorAll('.arc-act').forEach((act) => {
-        blocks.push(act as HTMLElement);
+      const acts = Array.from(child.querySelectorAll('.arc-act'));
+      // The full arc path, split into per-act segments.
+      const segments = [
+        'M 60 280 C 220 280, 260 250, 360 170',
+        'M 360 170 C 460 90, 540 60, 620 90',
+        'M 620 90 C 700 120, 760 220, 940 250',
+        'M 940 250 L 940 250',
+      ];
+      acts.forEach((act, i) => {
+        const page = document.createElement('div');
+        page.className = 'arc-page';
+        if (svgWrap) {
+          const svgClone = svgWrap.cloneNode(true) as HTMLElement;
+          const path = svgClone.querySelector('#arc-path');
+          if (path && segments[i]) path.setAttribute('d', segments[i]);
+          // Highlight this act's node, dim the others.
+          svgClone.querySelectorAll('.arc-node').forEach((node, j) => {
+            (node as HTMLElement).style.opacity = j === i ? '1' : '0.25';
+          });
+          page.appendChild(svgClone);
+        }
+        page.appendChild(act);
+        blocks.push(page);
       });
       // The spine is a scroll-progress indicator — meaningless in pages.
       child.querySelector('.arc-spine')?.remove();
