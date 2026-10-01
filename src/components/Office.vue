@@ -64,15 +64,15 @@ const trackClass = computed(() => ({
   background: #0d0a06;
 }
 .office-track {
-  height: calc(200svh - var(--nav-h) * 2);
+  height: 200%;
   transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1);
   will-change: transform;
 }
 .office-track.show-desk {
-  transform: translateY(calc(-100svh + var(--nav-h)));
+  transform: translateY(-50%);
 }
 .office-slide {
-  height: calc(100svh - var(--nav-h));
+  height: 50%;
   position: relative;
   overflow: hidden;
   /* The desk's real height — props position themselves against this,
@@ -84,14 +84,7 @@ const trackClass = computed(() => ({
   height: 100svh;
   margin-top: 0;
 }
-.binding-active .office-track {
-  height: 200svh;
-}
-.binding-active .office-track.show-desk {
-  transform: translateY(-100svh);
-}
 .binding-active .office-slide {
-  height: 100svh;
   --desk-h: 100svh;
 }
 .office-desk {

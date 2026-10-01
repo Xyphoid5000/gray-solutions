@@ -2889,6 +2889,7 @@ html[data-theme='dark'] body.has-book .chapter {
 .manuscript-desk {
   position: relative;
   min-height: 100%;
+  display: flow-root; /* contain page margins — stops them collapsing through and shoving the desk down */
   /* Mahogany desk. */
   background-color: #2a140c;
   background-image:
