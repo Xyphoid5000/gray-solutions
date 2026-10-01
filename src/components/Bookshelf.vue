@@ -97,6 +97,7 @@ function toggleOurs() {
               :class="{ 'is-interactive': interactive }"
               :style="{ height: '230px', width: '52px', background: '#1a1a1a' }"
               aria-label="Gray Solutions — open the book"
+              data-bind-slot
               @click="interactive && toggleOurs()"
               @keydown.enter="interactive && toggleOurs()"
               @keydown.space.prevent="interactive && toggleOurs()"
