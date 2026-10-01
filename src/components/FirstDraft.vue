@@ -36,7 +36,7 @@ const PAGES: DraftPage[] = [
       'do not fold, spindle, or interrogate this paragraph,',
     ],
     uvText:
-      'Ah \u2014 you found the secret. I love tucking little extras into corners',
+      'Ah \u2014 you found the secret. I love tucking little extras into corners for people who poke around.',
   },
   {
     num: 2,
@@ -46,7 +46,7 @@ const PAGES: DraftPage[] = [
       'the ink ran out halfway through a very important —',
       'the footnotes filed a complaint with the header and won,',
     ],
-    uvText: 'for people who poke around. I do the same for my clients\u2019 sites, by the way.',
+    uvText: 'I\u2019d love to build a secret into your site too.',
   },
   {
     num: 3,
