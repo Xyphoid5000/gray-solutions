@@ -158,10 +158,14 @@ async function closeBookToSection(section: 'about' | 'contact', after = 100) {
     open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
 const officeRef = ref<InstanceType<typeof Office> | null>(null);
+/** True while the binding cinematic owns the screen — the site nav
+    (and its pull cord) hides so it can't collide with SKIP. */
+const bindingActive = ref(false);
 /** The binding, from any trigger: the open page joins the pile first so
     the final page is really in the list, then the cinematic gathers it. */
 async function runBinding() {
   if (office.manuscriptBound || !bindCinematic.value) return;
+  bindingActive.value = true;
   await officeRef.value?.bookView?.tossCurrentToPile();
   bindCinematic.value.start();
 }
@@ -176,6 +180,7 @@ function onBindDone() {
   // The book is bound — the home page already shows it after the
   // blackout; drop the 3D book in, let it land and breathe, then glide
   // to the contact form.
+  bindingActive.value = false;
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
   closeBookToSection('contact', 2600);
@@ -709,7 +714,7 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn }">
   <div class="grain" aria-hidden="true"></div>
-  <SiteNav :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
+  <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <Office
     ref="officeRef"
     @open-book="openBook"

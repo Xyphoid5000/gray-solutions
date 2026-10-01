@@ -2982,6 +2982,13 @@ html[data-theme='dark'] body.has-book .chapter {
 /* Inside the book, chapters use the full paper — no extra inset. */
 .page-paper .chapter {
   padding: 0;
+  margin: 0;
+}
+/* After pagination, the emptied chapter/wrap must not hold space above
+   the generated pages. */
+.page-paper .chapter:empty,
+.page-paper .wrap:empty {
+  display: none;
 }
 .page-paper .wrap {
   width: 100%;
