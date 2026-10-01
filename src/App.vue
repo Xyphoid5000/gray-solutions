@@ -178,13 +178,16 @@ function onFinaleContact() {
   closeBookToSection('contact');
 }
 function onBindDone() {
-  // The book is bound — the home page already shows it after the
-  // blackout; drop the 3D book in, let it land and breathe, then glide
-  // to the contact form.
+  // The book is bound — skip the trip back to the top entirely and
+  // glide straight to the contact form.
   bindingActive.value = false;
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
-  closeBookToSection('contact', 2600);
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    }, 600);
+  });
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
     the fade back in lands on the home page with the bound book. */
