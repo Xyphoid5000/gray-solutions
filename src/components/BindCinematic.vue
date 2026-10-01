@@ -28,7 +28,6 @@ const room = ref<HTMLElement | null>(null);
 const stack = ref<HTMLElement | null>(null);
 const coverEl = ref<HTMLElement | null>(null);
 const book3d = ref<HTMLElement | null>(null);
-const flatSpine = ref<HTMLElement | null>(null);
 const msCover = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
@@ -54,8 +53,6 @@ function finish() {
     gsap.set(book3d.value, { clearProps: 'all', display: 'none', opacity: 0 });
   if (msCover.value)
     gsap.set(msCover.value, { clearProps: 'all', display: 'none', opacity: 0 });
-  if (flatSpine.value)
-    gsap.set(flatSpine.value, { clearProps: 'all', display: 'none', opacity: 0 });
   playing.value = false;
   tl = null;
   emit('done');
@@ -354,8 +351,9 @@ function start() {
   const b7 = b6 + 2.5;
 
   // Beat 8 — the book files itself into the shelf slot: flies to it,
-  // turns spine-out, and seats as the flat spine. The slot is measured
-  // live from the room's shelf.
+  // turns spine-out, and scales to seat in the gap. The slot is measured
+  // live from the room's shelf. No 2D crossfade — the 3D book stays
+  // until the overlay hands off to the real shelf.
   T.call(
     () => {
       const slot = rm.querySelector('[data-bind-slot]') as HTMLElement | null;
@@ -369,23 +367,9 @@ function start() {
         s = Math.min(0.75, (r.height - 10) / 340);
       }
       const file = gsap.timeline();
-      const spine = flatSpine.value!;
-      gsap.set(spine, {
-        display: 'none',
-        opacity: 0,
-        x: 0,
-        y: 0,
-        xPercent: -50,
-        yPercent: -50,
-        scale: 1,
-      });
       file.to(b3d, { x: dx, y: dy, duration: 1.0, ease: 'power2.inOut' }, 0);
       file.to(b3d, { rotationY: 90, duration: 0.7, ease: 'power2.inOut' }, 0.9);
-      file.to(b3d, { opacity: 0, duration: 0.25, ease: 'power1.in' }, 1.6);
-      file.set(b3d, { display: 'none' }, 1.9);
-      file.set(spine, { display: 'flex', x: dx, y: dy }, 1.6);
-      file.to(spine, { opacity: 1, duration: 0.25, ease: 'power1.out' }, 1.6);
-      file.to(spine, { scale: s, duration: 0.6, ease: 'power2.inOut' }, 1.85);
+      file.to(b3d, { scale: s, duration: 0.6, ease: 'power2.inOut' }, 1.6);
     },
     [],
     b7,
@@ -467,11 +451,6 @@ defineExpose({ start });
         tagline="Websites that tell stories."
         author="Chris Gray"
       />
-    </div>
-
-    <!-- Flat spine: seats into the shelf gap. -->
-    <div ref="flatSpine" class="bind-flat-spine" aria-hidden="true">
-      <span>Gray Solutions</span>
     </div>
 
     <button
@@ -835,28 +814,6 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
     #d3c096 0 2px,
     #a68f63 2px 3px
   );
-}
-.bind-flat-spine {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 44px;
-  height: 340px;
-  display: none;
-  opacity: 0;
-  z-index: 3;
-  background: linear-gradient(145deg, #1a120b 0%, #0f0a06 100%);
-  border: 1px solid rgba(208, 138, 78, 0.35);
-  align-items: center;
-  justify-content: center;
-}
-.bind-flat-spine span {
-  writing-mode: vertical-rl;
-  font-family: var(--serif);
-  color: #d08a4e;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
 }
 .bind-skip {
   z-index: 6;
