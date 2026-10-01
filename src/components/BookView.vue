@@ -357,10 +357,24 @@ async function paginateCurrentChapter() {
 
   // Group blocks into pages: one per page on mobile, several per page
   // on larger screens. No measuring — deterministic by count.
+  // Exception: a chapter heading (.ch-head) never stands alone — it
+  // joins the block that follows so the page isn't mostly empty.
   const perPage = isMobile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
   const pages: HTMLElement[][] = [];
   for (let i = 0; i < blocks.length; i += perPage) {
-    pages.push(blocks.slice(i, i + perPage));
+    const page = blocks.slice(i, i + perPage);
+    // If this page is just a chapter heading and there's a next block,
+    // pull the next block in too.
+    if (
+      isMobile &&
+      page.length === 1 &&
+      page[0].classList.contains('ch-head') &&
+      i + 1 < blocks.length
+    ) {
+      page.push(blocks[i + 1]);
+      i += 1; // Skip the block we just absorbed.
+    }
+    pages.push(page);
   }
 
   pageCount.value = pages.length;
