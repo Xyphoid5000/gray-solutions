@@ -2,6 +2,14 @@
 import { ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
+import DeskClutter from './DeskClutter.vue';
+import DeskPencil from './DeskPencil.vue';
+import DeskCandle from './DeskCandle.vue';
+import DeskPhone from './DeskPhone.vue';
+import FirstDraft from './FirstDraft.vue';
+import RemoteControl from './RemoteControl.vue';
+
+defineProps<{ bonusContent?: boolean }>();
 
 const emit = defineEmits<{
   done: [];
@@ -340,7 +348,7 @@ function start() {
   T.to(b3d, { y: '-=46', duration: 0.5, ease: 'power2.out' }, grabAt + 0.2);
   const b6 = grabAt + 1.3;
 
-  // Beat 6b — the dark backdrop dissolves, revealing the home page's
+  // Beat 6b — the desk fades, revealing the home page's
   // real bookshelf behind the cinematic while the book hovers, waiting.
   // App mounts the home page on the 'shelf' emit.
   const bd = backdrop.value!;
@@ -416,8 +424,15 @@ defineExpose({ start });
     role="dialog"
     aria-label="Binding the manuscript"
   >
-    <!-- The dark cinematic backdrop; dissolves for the shelf beat. -->
-    <div ref="backdrop" class="bind-backdrop" aria-hidden="true"></div>
+    <!-- The desk: binding happens here, same desk all the time. -->
+    <div ref="backdrop" class="bind-desk" aria-hidden="true">
+      <DeskClutter />
+      <DeskPencil />
+      <DeskCandle :lit="true" :smoking="false" />
+      <DeskPhone v-if="bonusContent" />
+      <FirstDraft v-if="bonusContent" />
+      <RemoteControl v-if="bonusContent" :ledOn="false" color="#ff0000" />
+    </div>
 
     <!-- The neat stack forms here. -->
     <div ref="stack" class="bind-stack" aria-hidden="true"></div>
@@ -486,16 +501,17 @@ defineExpose({ start });
   display: none;
   overflow: hidden;
 }
-.bind-backdrop {
+.bind-desk {
   position: absolute;
   inset: 0;
   background:
     radial-gradient(
       120% 90% at 50% 10%,
-      rgba(58, 36, 22, 0.98) 0%,
-      rgba(32, 19, 12, 0.99) 55%,
-      rgba(18, 11, 7, 1) 100%
+      #5a3a24 0%,
+      #3d2617 55%,
+      #241610 100%
     );
+  overflow: hidden;
 }
 .bind-skip {
   position: absolute;
