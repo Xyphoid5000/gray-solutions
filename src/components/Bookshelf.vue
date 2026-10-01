@@ -106,7 +106,7 @@ function toggleOurs() {
             </div>
           </template>
           <template v-else>
-            <div class="bs-slot-empty" aria-hidden="true"></div>
+            <div class="bs-slot-empty" data-bind-slot aria-hidden="true"></div>
           </template>
           <div
             v-for="b in shelfRight"
