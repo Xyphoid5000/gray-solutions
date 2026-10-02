@@ -17,6 +17,8 @@ async function submitContactForm(event: SubmitEvent) {
   const email = String(formData.get('email') ?? '').trim();
   const phone = String(formData.get('phone') ?? '').trim();
   const site = String(formData.get('site-url') ?? '').trim();
+  // Accept what people actually type (www.example.com) and normalize the scheme.
+  const siteUrl = site && !/^[a-z][a-z0-9+.-]*:\/\//i.test(site) ? `https://${site}` : site;
   const comments = String(formData.get('comments') ?? '').trim();
   const discount = String(formData.get('discount-code') ?? '').trim();
   const company = String(formData.get('company') ?? '').trim();
@@ -45,7 +47,7 @@ async function submitContactForm(event: SubmitEvent) {
         email,
         phone,
         hasSite: hasSite.value,
-        siteUrl: site,
+        siteUrl,
         comments,
         discountLine,
         company,
@@ -100,7 +102,7 @@ async function submitContactForm(event: SubmitEvent) {
     <Transition name="fade">
       <label v-if="hasSite === 'yes'" class="field">
         <span>What&rsquo;s the address of your current site?</span>
-        <input name="site-url" type="url" inputmode="url" required placeholder="https://yoursite.com" />
+        <input name="site-url" type="text" inputmode="url" required placeholder="https://yoursite.com" />
       </label>
     </Transition>
     <label class="field">
