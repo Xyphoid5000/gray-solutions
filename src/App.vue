@@ -341,10 +341,10 @@ function breezeRitual() {
 }
 
 /** Tapping the lit candle blows it out. It stays out — only the hand
-    (or the breeze) changes that. Every fourth blowout of the lone
-    candle, the match guy comes out: three complaint cutscenes,
-    angrier each time, then the sixteenth blowout is his last — he
-    quits, taking the candle. */
+    (or the breeze) changes that. Keep blowing out the lone candle and
+    the match guy comes out to complain: three cutscenes, angrier each
+    time — on the 3rd, 6th and 8th blowouts — then the 9th blowout is
+    his last: he quits, taking the candle. */
 function onCandleBlowOut() {
   if (interactions.ritualRunning || interactions.gagRunning || !bonus.candleLit) return;
   // Only counts when the candle was the room's only light.
@@ -352,10 +352,10 @@ function onCandleBlowOut() {
   if (alone && !bonus.candleGone) {
     bonus.blowoutCount += 1;
     const n = bonus.blowoutCount;
-    // The bit happens every 4th blowout: 4, 8, 12 — and 16 is the
-    // resignation. Block the normal relight before the sources update
-    // fans out.
-    if (n % 4 === 0) interactions.gagRunning = true;
+    // The bit: 3 blowouts to trigger the first complaint, 3 more for
+    // the second, 2 for the third, then 1 more and he quits (3/6/8/9).
+    // Block the normal relight before the sources update fans out.
+    if (n === 3 || n === 6 || n === 8 || n >= 9) interactions.gagRunning = true;
   }
   bonus.candleLit = false;
   bonus.candleSmoking = true;
@@ -364,17 +364,17 @@ function onCandleBlowOut() {
     bonus.candleSmoking = false;
   }, 2600);
   const n = bonus.blowoutCount;
-  if (n === 4) matchGuyGag(1);
-  else if (n === 8) matchGuyGag(2);
-  else if (n === 12) matchGuyGag(3);
-  else if (n >= 16 && !bonus.candleGone) matchGuyQuits();
+  if (n === 3) matchGuyGag(1);
+  else if (n === 6) matchGuyGag(2);
+  else if (n === 8) matchGuyGag(3);
+  else if (n >= 9 && !bonus.candleGone) matchGuyQuits();
 }
 
 /** The complaint ladder — wearier every cycle. */
 const GUY_LINES = [
   "I don't know what you thought was gonna happen. I have to get more matches.",
   'Come on, man. Really?!',
-  'Twelve times! TWELVE! Are you doing this on purpose?!',
+  'Eight times! EIGHT! Are you doing this on purpose?!',
 ] as const;
 
 /** The match guy's fuse: consecutive lone-candle blowouts this session. */
@@ -417,7 +417,7 @@ function walkGuyToDoorway(onDone: () => void) {
   walkGuyTo(interactions.guyX + interactions.guyFacing * 150, 110, onDone);
 }
 
-/** Every fourth blowout: the room stays dark, and the match guy
+/** A blowout on the ladder: the room stays dark, and the match guy
     walks across the desk with a flashlight to complain — angrier each
     cycle — then strides back through with a lit match, lighting the
     candle mid-stride without stopping. */
@@ -502,7 +502,7 @@ function lightCandleAfterGag() {
   }, 600);
 }
 
-/** Sixteenth consecutive blowout: he quits. Walks in from the right,
+/** Ninth blowout: he quits. Walks in from the right,
     says the line, takes the candle, and leaves. The room light comes
     back on to reveal a HELP WANTED flyer where the candle was. */
 function matchGuyQuits() {
@@ -840,7 +840,7 @@ onUnmounted(() => {
   </main>
   <!-- Contact/about sections (below the Office carousel, shelf view only). -->
   <div v-if="office.view === 'shelf'" class="home-sections">
-    <Cover :bonus-content="bonus.enabled" />
+    <Cover :is-bound="manuscriptBound" />
   </div>
   <BindCinematic
     ref="bindCinematic"
