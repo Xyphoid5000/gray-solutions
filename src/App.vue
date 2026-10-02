@@ -22,6 +22,7 @@ import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
 import { useInteractionsStore } from './stores/interactions';
+import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
 import { motionReduced } from './utils/a11y';
 
@@ -30,6 +31,10 @@ gsap.registerPlugin(ScrollTrigger);
 const office = useOfficeStore();
 const bonus = useBonusStore();
 const interactions = useInteractionsStore();
+// Device capabilities (touch / screen size). Instantiated here so it's
+// live from startup; components read it when they need touch-vs-desktop
+// behavior. Changes nothing on its own.
+const device = useDeviceStore();
 
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
@@ -401,6 +406,15 @@ function stopGuy() {
   guyTimer = null;
   interactions.guyMounted = false;
   interactions.guyLine = null;
+  interactions.guyFading = false;
+}
+
+/** On larger screens the guy doesn't hike the whole viewport — he
+    exits through an invisible doorway: a short walk in his facing
+    direction while fading out. Small screens keep the full walk. */
+function walkGuyToDoorway(onDone: () => void) {
+  interactions.guyFading = true;
+  walkGuyTo(interactions.guyX + interactions.guyFacing * 150, 110, onDone);
 }
 
 /** Every fourth blowout: the room stays dark, and the match guy
@@ -423,6 +437,9 @@ function matchGuyGag(level: 1 | 2 | 3) {
   }
   interactions.pitchBlack = true;
   updateLights();
+  // On larger screens the full-viewport hike takes forever — he walks
+  // in from the nearest edge and leaves through an invisible doorway.
+  const doorway = device.isSmallScreen === false;
   later(() => {
     // The complaint walk: in from the left, flashlight sweeping.
     interactions.guyMode = 'flashlight';
@@ -430,28 +447,59 @@ function matchGuyGag(level: 1 | 2 | 3) {
     interactions.guyX = -160;
     interactions.guyLine = GUY_LINES[level - 1];
     interactions.guyMounted = true;
-    walkGuyTo(vw + 160, 110, () => {
-      stopGuy();
-      later(() => {
-        // Back with a lit match, from the right this time — and he
-        // doesn't break stride. Past the candle, off the left edge;
-        // the flame catches a beat after he's gone.
+    walkGuyTo(doorway ? 200 : vw + 160, 110, () => {
+      const afterComplaint = () => {
+        // Back with a lit match — and he doesn't break stride. Past
+        // the candle; the flame catches a beat after he's gone.
         interactions.guyMode = 'match';
-        interactions.guyFacing = -1;
-        interactions.guyX = vw + 160;
+        interactions.guyLine = null;
         interactions.guyMounted = true;
-        walkGuyTo(-160, 110, () => {
-          stopGuy();
-          later(() => {
-            bonus.candleLit = true;
-            interactions.pitchBlack = false;
-            interactions.gagRunning = false;
-            updateLights();
-          }, 600);
-        });
-      }, 1200);
+        if (doorway) {
+          // In from the left (nearest the candle), past it, then out
+          // through the doorway.
+          interactions.guyFacing = 1;
+          interactions.guyX = -160;
+          walkGuyTo(240, 110, () => {
+            walkGuyToDoorway(() => {
+              stopGuy();
+              lightCandleAfterGag();
+            });
+          });
+        } else {
+          interactions.guyFacing = -1;
+          interactions.guyX = vw + 160;
+          walkGuyTo(-160, 110, () => {
+            stopGuy();
+            lightCandleAfterGag();
+          });
+        }
+      };
+      if (doorway) {
+        // He stops by the candle, delivers the line, then steps
+        // through the invisible doorway.
+        later(() => {
+          walkGuyToDoorway(() => {
+            stopGuy();
+            later(afterComplaint, 1200);
+          });
+        }, 1400);
+      } else {
+        stopGuy();
+        later(afterComplaint, 1200);
+      }
     });
   }, 900);
+}
+
+/** Shared ending for the gag's match walk: the candle catches after
+    he's gone and the lights come back. */
+function lightCandleAfterGag() {
+  later(() => {
+    bonus.candleLit = true;
+    interactions.pitchBlack = false;
+    interactions.gagRunning = false;
+    updateLights();
+  }, 600);
 }
 
 /** Sixteenth consecutive blowout: he quits. Walks in from the right,
@@ -471,10 +519,13 @@ function matchGuyQuits() {
   }
   interactions.pitchBlack = true;
   updateLights();
+  // On larger screens he walks in from the nearest edge (the candle
+  // lives on the left) and leaves through the invisible doorway.
+  const doorway = device.isSmallScreen === false;
   later(() => {
     interactions.guyMode = 'flashlight';
-    interactions.guyFacing = -1;
-    interactions.guyX = vw + 160;
+    interactions.guyFacing = doorway ? 1 : -1;
+    interactions.guyX = doorway ? -160 : vw + 160;
     interactions.guyLine = "That's it. I QUIT.";
     interactions.guyMounted = true;
     walkGuyTo(wick.x + 34, 110, () => {
@@ -486,7 +537,7 @@ function matchGuyQuits() {
         updateLights();
         later(() => {
           interactions.guyFacing = 1;
-          walkGuyTo(vw + 160, 110, () => {
+          const leave = () => {
             stopGuy();
             later(() => {
               // The lights come back on. Just the flyer now.
@@ -495,7 +546,9 @@ function matchGuyQuits() {
               interactions.gagRunning = false;
               updateLights();
             }, 900);
-          });
+          };
+          if (doorway) walkGuyToDoorway(leave);
+          else walkGuyTo(vw + 160, 110, leave);
         }, 500);
       }, 900);
     });
@@ -520,9 +573,12 @@ function rehireMatchGuy() {
   const spotX = flyer
     ? flyer.getBoundingClientRect().left + flyer.getBoundingClientRect().width / 2
     : measureWickSpot().x;
+  // On larger screens he walks in from the nearest edge and leaves
+  // through the invisible doorway.
+  const doorway = device.isSmallScreen === false;
   interactions.guyMode = 'carry';
-  interactions.guyFacing = -1;
-  interactions.guyX = vw + 160;
+  interactions.guyFacing = doorway ? 1 : -1;
+  interactions.guyX = doorway ? -160 : vw + 160;
   interactions.guyLine = "Fine. I'm back.";
   interactions.guyMounted = true;
   walkGuyTo(spotX + 34, 110, () => {
@@ -534,10 +590,12 @@ function rehireMatchGuy() {
       updateLights();
       later(() => {
         interactions.guyFacing = 1;
-        walkGuyTo(vw + 160, 110, () => {
+        const leave = () => {
           stopGuy();
           interactions.gagRunning = false;
-        });
+        };
+        if (doorway) walkGuyToDoorway(leave);
+        else walkGuyTo(vw + 160, 110, leave);
       }, 500);
     }, 900);
   });
@@ -735,7 +793,6 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn, 'binding-active': bindingActive }">
   <a href="#main-content" class="skip-link">Skip to content</a>
-  <div class="grain" aria-hidden="true"></div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <main id="main-content">
   <h1 class="sr-only">Gray Solutions — websites that tell stories</h1>
@@ -821,6 +878,7 @@ onUnmounted(() => {
     :mode="interactions.guyMode"
     :facing="interactions.guyFacing"
     :line="interactions.guyLine"
+    :fading="interactions.guyFading"
   />
   </div>
 </template>

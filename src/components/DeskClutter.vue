@@ -79,8 +79,8 @@
   width: 110px;
 }
 .clutter-ball2 {
-  left: calc(18px - var(--desk-pl));
-  top: calc(var(--desk-h) * 0.72);
+  left: calc(100px - var(--desk-pl));
+  top: calc(var(--desk-h) * 0.7);
   width: 44px;
   transform: rotate(14deg);
 }

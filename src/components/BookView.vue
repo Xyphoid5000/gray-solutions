@@ -261,10 +261,17 @@ function pileToss(index: number): { rotation: number; x: number; y: number } {
 /** Paginate the current chapter's content into screen-sized pages.
     No height measurements: the .wrap's block children are the chapter's
     block array. Mobile gets one block per page; larger screens group
-    blocks together. Moves the actual elements (no clones) into
-    .paginate-page divs. */
+    blocks together — except chapters 1–4, whose blocks are tall enough
+    to overflow the fixed desk stage when grouped. Those paginate one
+    block per page on desktop too, so no page is ever taller than the
+    stage. Chapter 5 ("The End") is intentionally a single page. Moves
+    the actual elements (no clones) into .paginate-page divs. */
 /** Blocks per page on larger screens — one block per page on mobile. */
 const DESKTOP_BLOCKS_PER_PAGE = 3;
+/** Chapters 1–4 paginate one block per page on desktop: their blocks
+    are stage-sized, and grouping them overflows the fixed desk stage.
+    Chapter 5 ("The End") is intentionally a single page and keeps the
+    grouped layout. (Mobile already paginates one block per page.) */
 async function paginateCurrentChapter() {
   await nextTick();
   const paper = document.querySelector(
@@ -287,9 +294,25 @@ async function paginateCurrentChapter() {
 
   const isMobile = window.innerWidth < 640;
 
+  // Chapters 1–4: one block per page on desktop so every page fits
+  // the fixed desk stage. Chapter 5 keeps the grouped layout.
+  const singleFile = !isMobile && currentIndex.value < 4;
+
   // The chapter array: the wrap's top-level blocks, in order.
   const blocks: HTMLElement[] = [];
   for (const child of Array.from(wrap.children) as HTMLElement[]) {
+    // On desktop chapters 2–4, a card grid is a screenful of cards —
+    // explode it so each card gets its own page. The real card nodes
+    // move (desktop keeps the card styling and buttons); the grid
+    // wrapper is discarded.
+    if (singleFile && child.classList.contains('craft-grid')) {
+      const cards = Array.from(child.querySelectorAll('.craft-card'));
+      if (cards.length > 0) {
+        cards.forEach((c) => blocks.push(c as HTMLElement));
+        child.remove();
+        continue;
+      }
+    }
     // On mobile, card grids don't fit the page format — show each card's
     // content as its own plain text block, not wrapped in a card.
     if (isMobile && child.querySelector('.craft-card, .service-card, .chapter-card, .proof-panel, .premise-point')) {
@@ -360,12 +383,32 @@ async function paginateCurrentChapter() {
   const chapter = wrap.closest('.chapter') as HTMLElement | null;
   if (chapter) chapter.style.display = 'none';
 
-  // Group blocks into pages: one per page on mobile, several per page
-  // on larger screens. No measuring — deterministic by count.
-  const perPage = isMobile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
+  // Group blocks into pages: one per page on mobile and on desktop
+  // chapters 2–4, several per page on other desktop chapters. No
+  // measuring — deterministic by count and class. In single-file mode
+  // the chapter heading shares page 0 with the block after it, and
+  // short blocks (the lede, the swipe hint) join the page before them
+  // instead of standing alone on an empty page.
+  const perPage = isMobile || singleFile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
   const pages: HTMLElement[][] = [];
-  for (let i = 0; i < blocks.length; i += perPage) {
-    pages.push(blocks.slice(i, i + perPage));
+  if (singleFile) {
+    for (let i = 0; i < blocks.length; i++) {
+      const b = blocks[i];
+      const joinsPrev =
+        i > 0 &&
+        (blocks[i - 1].classList.contains('ch-head') ||
+          b.classList.contains('lede') ||
+          b.classList.contains('proof-hint'));
+      if (joinsPrev) {
+        pages[pages.length - 1].push(b);
+      } else {
+        pages.push([b]);
+      }
+    }
+  } else {
+    for (let i = 0; i < blocks.length; i += perPage) {
+      pages.push(blocks.slice(i, i + perPage));
+    }
   }
 
   pageCount.value = pages.length;

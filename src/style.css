@@ -77,9 +77,6 @@
 [data-theme='light'] .site-nav-min {
   background: color-mix(in srgb, var(--bg) 82%, transparent);
 }
-[data-theme='light'] .grain {
-  opacity: 0.035;
-}
 
 *,
 *::before,
@@ -136,26 +133,6 @@ img {
 
 a {
   color: inherit;
-}
-
-/* ---------- film grain ---------- */
-.grain {
-  position: fixed;
-  inset: -50%;
-  width: 200%;
-  height: 200%;
-  pointer-events: none;
-  z-index: 2000;
-  opacity: 0.055;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: grain-shift 0.9s steps(4) infinite;
-}
-@keyframes grain-shift {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-2%, 1%); }
-  50% { transform: translate(1%, -2%); }
-  75% { transform: translate(-1%, 2%); }
-  100% { transform: translate(2%, -1%); }
 }
 
 /* ---------- reveal (pairs with v-reveal directive) ---------- */
@@ -1175,7 +1152,6 @@ a {
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .grain,
   .marquee-track,
   .hero-eyebrow .dot {
     animation: none;
@@ -3169,7 +3145,11 @@ html[data-theme='dark'] .page-paper .proof-panel {
     padding: 1.15rem 1rem;
     font-size: 0.9375rem;
   }
-  /* The finale's header clears the finished-pages pile. */
+  /* A few px of breathing room on every page; the finale keeps its
+     wider pile-clearing margin. */
+  .page-paper .wrap {
+    padding-left: 0.25rem;
+  }
   .page-paper .finale .wrap {
     padding-left: 1.75rem;
   }
@@ -3229,7 +3209,10 @@ html[data-theme='dark'] .page-paper .proof-panel {
   z-index: 20;
   /* Completely off the paper — attached at its right edge. */
   right: -52px;
-  top: calc(100px + var(--tab-row, 0) * 58px);
+  /* The five-tab stack is vertically centered in the visible desk
+     (the desk is 100svh minus the nav). 278px = four 58px strides +
+     the last tab's 46px height. */
+  top: calc((100svh - var(--nav-h) - 278px) / 2 + var(--tab-row, 0) * 58px);
   width: 52px;
   height: 46px;
   display: grid;
@@ -3259,6 +3242,12 @@ html[data-theme='dark'] .page-tab {
 .page-tab.is-piled {
   opacity: 0.6;
 }
+/* The current page's wrap sits 8svh below the desk top — pull its tab
+   back up so every tab shares the desk's coordinate system and the
+   active tab never slides under its neighbor. */
+.page-wrap.is-current .page-tab {
+  top: calc((100svh - var(--nav-h) - 278px) / 2 + var(--tab-row, 0) * 58px - 8svh);
+}
 @media (max-width: 640px) {
   .manuscript-desk {
     --desk-pl: 70px;
@@ -3266,13 +3255,17 @@ html[data-theme='dark'] .page-tab {
   }
   .page-tab {
     right: -40px;
+    top: calc(100px + var(--tab-row, 0) * 58px);
     width: 40px;
     height: 38px;
     font-size: 0.85rem;
   }
+  .page-wrap.is-current .page-tab {
+    top: calc(100px + var(--tab-row, 0) * 58px - 8svh);
+  }
   .read-pile {
     left: 10px;
-    top: 20%;
+    top: 11%;
     width: 84px;
     height: 112px;
   }
