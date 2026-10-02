@@ -5,7 +5,10 @@ import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
 import { motionReduced } from '../utils/a11y';
+import { useSettingsStore } from '../stores/settings';
 import WaxSeal from './WaxSeal.vue';
+
+const settings = useSettingsStore();
 
 const emit = defineEmits(['open-book', 'toggle-bonus']);
 const props = defineProps<{ bookDropKey?: number; bonusContent?: boolean }>();
@@ -568,13 +571,13 @@ onUnmounted(() => {
             </span>
           </button>
         </div>
-        <div class="b-face b-spine"><span>Gray Solutions</span></div>
+        <div class="b-face b-spine"><span>{{ settings.siteName }}</span></div>
         <div class="b-face b-top"></div>
         <div class="b-face b-pages"></div>
         <div class="b-face b-front">
           <div class="b-cover-frame">
-            <span class="b-mark">G.</span>
-            <p class="b-title">Gray<br />Solutions<em>.</em></p>
+            <span class="b-mark">{{ settings.logoMark }}</span>
+            <p class="b-title">{{ settings.siteName }}<em>.</em></p>
             <p class="b-tag"><em>Websites that tell stories.</em></p>
             <p class="b-by">Chris Gray</p>
           </div>

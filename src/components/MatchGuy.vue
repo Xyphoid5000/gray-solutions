@@ -112,6 +112,11 @@ defineProps<{
 .match-guy svg.flip {
   transform: scaleX(-1);
 }
+/* Rim-lit in orange by the blazing doorway as he walks through it. */
+.door-glow svg {
+  filter: drop-shadow(0 0 26px rgba(255, 150, 45, 0.9))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
 /* A faint pool of light around his feet so he reads in the dark. */
 .mg-aura {
   position: absolute;

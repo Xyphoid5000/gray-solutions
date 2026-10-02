@@ -2,10 +2,13 @@
 import { ref, watch } from 'vue';
 import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
 import { useBonusStore } from '../stores/bonus';
+import { useSettingsStore } from '../stores/settings';
+import { storeToRefs } from 'pinia';
 
 defineProps<{ isBound?: boolean }>();
 
 const bonus = useBonusStore();
+const { siteName } = storeToRefs(useSettingsStore());
 const hasSite = ref('');
 const formStatus = ref('');
 const formError = ref(false);
@@ -144,7 +147,7 @@ async function submitContactForm(event: SubmitEvent) {
       <span v-if="showPuzzleInfo" class="puzzle-info-text">
         <small>Somewhere on this site is a one time code for 20% off your website.</small>
         <button v-if="!showHint" type="button" class="hint-btn" @click="revealHint">Show hint</button>
-        <small v-else class="puzzle-hint">{{ hintSeesBonus ? 'review the first draft.' : `Turn the ${isBound ? 'Gray Solutions book' : 'manuscript'} around.` }}</small>
+        <small v-else class="puzzle-hint">{{ hintSeesBonus ? 'review the first draft.' : `Turn the ${isBound ? siteName + ' book' : 'manuscript'} around.` }}</small>
       </span>
     </label>
     <div class="contact-submit">

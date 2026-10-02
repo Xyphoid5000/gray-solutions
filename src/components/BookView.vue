@@ -5,9 +5,18 @@ import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
 import { manuscriptBound } from '../lib/manuscript';
 import ChapterModal from './ChapterModal.vue';
+import SandwichIngredient from './SandwichIngredient.vue';
+import { useSettingsStore } from '../stores/settings';
 import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(Flip);
+
+/** Sandwich mode: the open book keeps its structure — cover, tabs,
+    page turns, pile — but the pages are the sandwich: the cover is
+    the top bun, each chapter page is its topping. */
+const sandwich = computed(() => useSettingsStore().sandwich);
+/** Chapter index → topping, top of the sandwich first. */
+const sandwichKinds = ['pickles', 'tomato', 'lettuce', 'cheese', 'patty'] as const;
 
 const emit = defineEmits<{
   (e: 'back-to-cover'): void;
@@ -452,6 +461,11 @@ function showPage(n: number) {
 }
 
 function next() {
+  // Sandwich mode: each chapter is one topping — hop chapters directly.
+  if (sandwich.value) {
+    goTo(currentIndex.value + 1);
+    return;
+  }
   // If more pages in this chapter, turn the page. Otherwise, next chapter.
   if (currentPage.value < pageCount.value - 1) {
     const nextPage = currentPage.value + 1;
@@ -487,6 +501,11 @@ function next() {
 }
 
 function prev() {
+  // Sandwich mode: each chapter is one topping — hop chapters directly.
+  if (sandwich.value) {
+    goTo(currentIndex.value - 1);
+    return;
+  }
   // If not on first page, go back a page. Otherwise, previous chapter.
   if (currentPage.value > 0) {
     const prevPage = currentPage.value - 1;
@@ -531,6 +550,21 @@ watch(currentIndex, async () => {
   paginateCurrentChapter();
 });
 
+/** Sandwich mode swaps the open pages for the sandwich live. Turning
+    it on orphans the imperatively-built paginate pages (Vue doesn't
+    know about them) — sweep those. When it flips back off, the page
+    DOM is recreated — re-paginate it. */
+watch(sandwich, async (on) => {
+  await nextTick();
+  if (on) {
+    document
+      .querySelectorAll('.manuscript-desk .page-paper .paginate-page')
+      .forEach((p) => p.remove());
+  } else {
+    paginateCurrentChapter();
+  }
+});
+
 onMounted(async () => {
   // Wait for the chapter DOM to settle before measuring.
   await nextTick();
@@ -556,7 +590,11 @@ function goFromModal(i: number) {
 
 function onKey(e: KeyboardEvent) {
   if (overlayOpen()) return;
-  if (e.key === 'ArrowRight') next();
+  if (e.key === 'ArrowRight') {
+    // Last chapter: the right arrow binds the book (mirrors swipe-left).
+    if (currentIndex.value === chapters.length - 1) onChapterContact(currentIndex.value);
+    else next();
+  }
   if (e.key === 'ArrowLeft') prev();
 }
 
@@ -738,8 +776,12 @@ function onTouchEnd(e: TouchEvent) {
         aria-label="Open finished pages"
         :tabindex="pileOpen ? 0 : -1"
       >
-        <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
-        <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+        <!-- Sandwich mode: the manuscript cover is the top bun. -->
+        <SandwichIngredient v-if="sandwich" kind="bun-top" compact />
+        <template v-else>
+          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
+          <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+        </template>
       </button>
       <button
         v-for="i in pile"
@@ -767,8 +809,12 @@ function onTouchEnd(e: TouchEvent) {
           :aria-label="manuscriptBound ? 'Back to the book cover' : 'Back to the manuscript cover'"
           @click="pickCoverFromScatter"
         >
-          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
-          <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+          <!-- Sandwich mode: the manuscript cover is the top bun. -->
+          <SandwichIngredient v-if="sandwich" kind="bun-top" compact />
+          <template v-else>
+            <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
+            <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+          </template>
           <span class="pile-grid-label" aria-hidden="true">{{ manuscriptBound ? 'Book cover' : 'Manuscript cover' }}</span>
         </button>
         <button
@@ -788,7 +834,10 @@ function onTouchEnd(e: TouchEvent) {
     </div>
 
     <!-- The stack: each page is a transparent wrap, paper inside with a
-         right margin, tab attached in that margin. -->
+         right margin, tab attached in that margin.
+         Sandwich mode: the structure stays — cover, tabs, page turns,
+         pile — but the cover is the top bun and each chapter page is
+         its topping. -->
     <div
       v-for="(ch, i) in chapters"
       :key="ch.num"
@@ -801,7 +850,13 @@ function onTouchEnd(e: TouchEvent) {
         }"
       >
         <div class="page-paper" :inert="i !== currentIndex">
+          <SandwichIngredient
+            v-if="sandwich"
+            :kind="sandwichKinds[i]"
+            :chapter="ch.label"
+          />
           <component
+            v-else
             :is="ch.component"
             :active="i === currentIndex"
             @go="goTo"

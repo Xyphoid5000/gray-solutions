@@ -94,6 +94,16 @@ const trackClass = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Flat wall with plants and a window behind the bookcase — dimmed
+     so the shelf pops. */
+  background:
+    linear-gradient(rgba(10, 6, 3, 0.45), rgba(10, 6, 3, 0.45)),
+    url('/office-wall.jpg') center / cover no-repeat,
+    #141009;
+}
+/* Let the library show through around the case. */
+.office-shelf :deep(.bookshelf-hero) {
+  background: transparent;
 }
 .office-cover {
   position: absolute;

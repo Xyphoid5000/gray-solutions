@@ -14,7 +14,7 @@
     <p class="hero-sub">
       I&rsquo;m a senior software engineer who treats every website like a
       story — with a hook, a rising arc, and an ending that asks something
-      of the reader. Gray Solutions is where I do that for other people&rsquo;s
+      of the reader. {{ settings.siteName }} is where I do that for other people&rsquo;s
       businesses.
     </p>
     <p class="about-signoff">
@@ -35,6 +35,9 @@
 
 <script setup lang="ts">
 import { siteConfig } from '../config';
+import { useSettingsStore } from '../stores/settings';
+
+const settings = useSettingsStore();
 
 const LINKS = [
   {

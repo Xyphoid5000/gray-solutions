@@ -8,6 +8,7 @@ import Cover from './components/Cover.vue';
 import CoverHero from './components/CoverHero.vue';
 import Office from './components/Office.vue';
 import BindCinematic from './components/BindCinematic.vue';
+import SandwichBite from './components/SandwichBite.vue';
 import OpenTransition from './components/OpenTransition.vue';
 import BookIntroModal from './components/BookIntroModal.vue';
 import RemoteControl from './components/RemoteControl.vue';
@@ -21,6 +22,7 @@ import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
+import { useSettingsStore } from './stores/settings';
 import { useInteractionsStore } from './stores/interactions';
 import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
@@ -30,6 +32,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const office = useOfficeStore();
 const bonus = useBonusStore();
+const settings = useSettingsStore();
 const interactions = useInteractionsStore();
 // Device capabilities (touch / screen size). Instantiated here so it's
 // live from startup; components read it when they need touch-vs-desktop
@@ -179,16 +182,42 @@ async function closeBookToSection(section: 'about' | 'contact', after = 100) {
     open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
 const officeRef = ref<InstanceType<typeof Office> | null>(null);
+/** Floating settings shortcut: the desk phone stays mounted (its desk
+    slide hides in shelf view, but the picked-up modal teleports to
+    <body>), so this reaches it anywhere on the main screen — it picks
+    the phone up straight into the Settings app. */
+function openPhoneSettings() {
+  window.dispatchEvent(new CustomEvent('gs:open-phone-settings'));
+}
 /** True while the binding cinematic owns the screen — the site nav
     (and its pull cord) hides so it can't collide with SKIP. */
 const bindingActive = ref(false);
+/** Sandwich binding: the bite overlay owns the screen instead of the
+    sewing cinematic. */
+const biteActive = ref(false)
 /** The binding, from any trigger: the open page joins the pile first so
-    the final page is really in the list, then the cinematic gathers it. */
+    the final page is really in the list, then the cinematic gathers it.
+    In sandwich mode we take a bite instead — that's the binding. */
 async function runBinding() {
-  if (office.manuscriptBound || !bindCinematic.value) return;
-  bindingActive.value = true;
+  if (office.manuscriptBound) return;
   await officeRef.value?.bookView?.tossCurrentToPile();
+  if (settings.sandwich) {
+    bindingActive.value = true;
+    biteActive.value = true;
+    return;
+  }
+  if (!bindCinematic.value) return;
+  bindingActive.value = true;
   bindCinematic.value.start();
+}
+/** Sandwich binding: the bite is done — finish like the cinematic,
+    then back to the main page (the bite skips the cinematic's
+    blackout, which is what normally closes the book). */
+function onBiteDone() {
+  biteActive.value = false;
+  onBindDone();
+  officeRef.value?.bookView?.resetBookView();
+  closeBook();
 }
 function onFinaleContact() {
   if (!manuscriptBound.value && bindCinematic.value) {
@@ -268,8 +297,13 @@ function clearRitual() {
 
 /** Where the remote lives on the desk — the hand aims for its center.
     The remote keeps its layout box while parked, so it's measurable. */
-/** Plain theme switch, with the half-second palette crossfade. */
+/** Plain theme switch, with the half-second palette crossfade.
+    A manual Light/Dark pick from the phone's settings is authoritative:
+    the rituals still run, but they can't move the base palette until
+    the visitor goes back to Auto. */
 function setThemePlain(light: boolean) {
+  if (settings.mode === 'light') light = true;
+  else if (settings.mode === 'dark') light = false;
   const root = document.documentElement;
   root.classList.add('theme-fade');
   root.dataset.theme = light ? 'light' : 'dark';
@@ -447,7 +481,8 @@ function matchGuyGag(level: 1 | 2 | 3) {
     interactions.guyX = -160;
     interactions.guyLine = GUY_LINES[level - 1];
     interactions.guyMounted = true;
-    walkGuyTo(doorway ? 200 : vw + 160, 110, () => {
+    // Desktop: he stops at the screen midpoint, where the doorway is.
+    walkGuyTo(doorway ? vw / 2 : vw + 160, 110, () => {
       const afterComplaint = () => {
         // Back with a lit match — and he doesn't break stride. Past
         // the candle; the flame catches a beat after he's gone.
@@ -455,15 +490,22 @@ function matchGuyGag(level: 1 | 2 | 3) {
         interactions.guyLine = null;
         interactions.guyMounted = true;
         if (doorway) {
-          // In from the left (nearest the candle), past it, then out
-          // through the doorway.
-          interactions.guyFacing = 1;
-          interactions.guyX = -160;
-          walkGuyTo(240, 110, () => {
-            walkGuyToDoorway(() => {
-              stopGuy();
-              lightCandleAfterGag();
-            });
+          // Back through the doorway the other way, match in hand:
+          // fade in just right of it, walk left through the lit
+          // doorway, past the candle, off the left edge — then the
+          // door closes behind him.
+          interactions.guyFacing = -1;
+          interactions.guyX = vw / 2 + 80;
+          interactions.guyFading = true;
+          interactions.guyMounted = true;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            interactions.guyFading = false;
+          }));
+          walkGuyTo(-160, 110, () => {
+            // The door closes (hard cut) and the amber glow fades.
+            interactions.doorOpen = false;
+            stopGuy();
+            lightCandleAfterGag();
           });
         } else {
           interactions.guyFacing = -1;
@@ -475,13 +517,25 @@ function matchGuyGag(level: 1 | 2 | 3) {
         }
       };
       if (doorway) {
-        // He stops by the candle, delivers the line, then steps
-        // through the invisible doorway.
+        // He stops at the midpoint, delivers the line, and a plain dark
+        // slab door fades into the black in front of him — then a hard
+        // cut: the doorway is already open, blazing amber over the lit
+        // page beneath. He walks through silhouetted; the door stays
+        // open behind him until he comes back.
         later(() => {
-          walkGuyToDoorway(() => {
-            stopGuy();
-            later(afterComplaint, 1200);
-          });
+          interactions.doorSlab = true;
+          later(() => {
+            interactions.doorSlab = false;
+            interactions.doorOpen = true;
+            later(() => {
+              interactions.guyFading = true;
+              walkGuyTo(vw / 2 + 220, 110, () => {
+                stopGuy();
+                // The open doorway holds a beat, then he's back.
+                later(afterComplaint, 1200);
+              });
+            }, 450);
+          }, 650);
         }, 1400);
       } else {
         stopGuy();
@@ -606,6 +660,11 @@ function rehireMatchGuy() {
 provide('matchGuy', {
   candleGone: toRef(bonus, 'candleGone'),
   rehire: rehireMatchGuy,
+});
+
+/** The phone's settings app drives the desk's LED rig through this. */
+provide('lights', {
+  refresh: updateLights,
 });
 
 /** The cord was yanked — decide what the yank means. */
@@ -740,7 +799,8 @@ onMounted(() => {
   // The page always opens in light mode — the LEDs stay off until the
   // reader pulls the cord. This used to live in PullCord, but the cord
   // only mounts once bonus content is on, so it has to run regardless.
-  document.documentElement.dataset.theme = 'light';
+  // A manual dark pick from the phone's settings wins over the default.
+  document.documentElement.dataset.theme = settings.mode === 'dark' ? 'dark' : 'light';
   try {
     localStorage.removeItem('gs-theme');
   } catch {
@@ -793,9 +853,25 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn, 'binding-active': bindingActive }">
   <a href="#main-content" class="skip-link">Skip to content</a>
+  <!-- No-CSS escape hatch: raw HTML is deliberately disorienting, so the
+       way back is always one tap away. Inline styles survive the
+       stylesheet kill switch. -->
+  <div
+    v-if="settings.noCss"
+    style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#fff;color:#000;padding:10px 14px;font:14px/1.4 sans-serif;border-bottom:2px solid #000;"
+  >
+    <span>You're browsing raw, unstyled HTML. </span>
+    <button
+      type="button"
+      style="font:inherit;padding:6px 12px;cursor:pointer;"
+      @click="settings.toggleNoCss()"
+    >
+      Turn the styles back on
+    </button>
+  </div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <main id="main-content">
-  <h1 class="sr-only">Gray Solutions — websites that tell stories</h1>
+  <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>
   <Office
     ref="officeRef"
     @open-book="openBook"
@@ -834,7 +910,7 @@ onUnmounted(() => {
       <DeskPencil />
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
-      <DeskPhone v-if="bonus.enabled" />
+      <DeskPhone v-if="bonus.enabled" shortcut />
     </template>
   </Office>
   </main>
@@ -849,6 +925,19 @@ onUnmounted(() => {
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
   />
+  <SandwichBite v-if="biteActive" @done="onBiteDone" />
+  <!-- Settings shortcut: appears on the main screen only when the user
+       has changed something, and only while the book is closed. Taps
+       open the desk phone's Settings app. -->
+  <button
+    v-if="settings.isModified && office.view !== 'desk' && !bindingActive"
+    type="button"
+    class="settings-fab"
+    aria-label="Open phone settings"
+    @click="openPhoneSettings"
+  >
+    <span aria-hidden="true">⚙</span>
+  </button>
   <OpenTransition
     v-if="showOpenTransition"
     @done="onOpenTransitionDone"
@@ -858,7 +947,32 @@ onUnmounted(() => {
     @close="showBookIntro = false"
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
-  <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
+  <div class="pitch-black" :class="{ on: interactions.pitchBlack && !interactions.doorOpen }" aria-hidden="true"></div>
+  <!-- The match guy's doorway (desktop gag levels). Closed: a plain
+       flat dark slab faded into the black at the screen midpoint.
+       Open: a hard cut to a doorway blazing amber, revealing the lit
+       page beneath, with light spilling onto the floor. No swing, no
+       fire — the reveal is instant. -->
+  <div class="door-slab" :class="{ on: interactions.doorSlab }" aria-hidden="true"></div>
+  <svg
+    class="pitch-door"
+    :class="{ open: interactions.doorOpen }"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+  >
+    <defs>
+      <mask id="mgDoorMask">
+        <rect x="0" y="0" width="100" height="100" fill="#fff" />
+        <path d="M44 76 V40 H56 V76 Z" fill="#000" />
+      </mask>
+    </defs>
+    <rect x="0" y="0" width="100" height="100" fill="#000" mask="url(#mgDoorMask)" />
+  </svg>
+  <div class="doorway" :class="{ on: interactions.doorOpen }" aria-hidden="true">
+    <div class="doorway-blaze"></div>
+    <div class="doorway-spill"></div>
+  </div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
   <div class="led-wash" :class="{ on: bonus.ledOn, accent: bonus.ledAccent }" aria-hidden="true"></div>
   <!-- Candlelight: warm wash while the candle burns. Desk view only —
@@ -880,6 +994,7 @@ onUnmounted(() => {
     :facing="interactions.guyFacing"
     :line="interactions.guyLine"
     :fading="interactions.guyFading"
+    :class="{ 'door-glow': interactions.doorOpen }"
   />
   </div>
 </template>
@@ -887,6 +1002,30 @@ onUnmounted(() => {
 <style>
 .gs-no-scroll {
   overflow: hidden;
+}
+/* Floating settings shortcut: bottom-right, only when the user has
+   changed a setting and the book is closed. */
+.settings-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 900;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(16, 14, 12, 0.82);
+  color: #f5ead6;
+  font-size: 1.3rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease;
+}
+.settings-fab:hover {
+  transform: scale(1.08);
 }
 /* During the binding's shelf beat the home page sits behind the
    cinematic; hide its manuscript stack so the filing reads clean. */

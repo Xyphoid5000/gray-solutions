@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
 import Book from './Book.vue';
+import BookSandwich from './BookSandwich.vue';
+import { useSettingsStore } from '../stores/settings';
+import { useDeviceStore } from '../stores/device';
+import { useOfficeStore } from '../stores/office';
+import { storeToRefs } from 'pinia';
 
 withDefaults(
   defineProps<{
@@ -22,16 +27,18 @@ const emit = defineEmits(['open-book']);
     Session-scoped — every visit starts with the slot empty. */
 const isBound = manuscriptBound;
 
+const { siteName, logoMark } = storeToRefs(useSettingsStore());
+
 interface ShelfBook {
   title: string;
+  author?: string;
   color: string;
   h: number;
   w: number;
   synopsis: string;
 }
 
-/** The shelf: one set of 5 books, used identically everywhere.
-    (Moby-Dick and The Odyssey were cut — the row only fits five.) */
+/** The shelf: the same set of books, used identically everywhere. */
 const SHELF_BOOKS: ShelfBook[] = [
   { title: 'Pride and Prejudice', color: '#1f3a5a', h: 212, w: 40, synopsis: 'Two people who are perfect for each other spend 400 pages pretending they are not.' },
   { title: 'Frankenstein', color: '#2e4a2e', h: 244, w: 48, synopsis: 'A college dropout builds a man, then complains about it for the rest of his life.' },
@@ -42,6 +49,52 @@ const SHELF_BOOKS: ShelfBook[] = [
 /** Split around the binding slot: 3 left, 2 right. */
 const shelfLeft = SHELF_BOOKS.slice(0, 3);
 const shelfRight = SHELF_BOOKS.slice(3);
+/** Five more classics for larger screens, flanking the row — same
+    books, same behavior, just more shelf to fill on desktop. */
+const NEW_BOOKS: ShelfBook[] = [
+  { title: 'Moby-Dick', author: 'Herman Melville', color: '#26435c', h: 228, w: 30, synopsis: 'A captain\u2019s obsessive hunt for a white whale, padded with 200 pages of whaling facts.' },
+  { title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', color: '#3d2b52', h: 208, w: 30, synopsis: 'A mysterious millionaire throws lavish parties to win back a lost love. The Jazz Age, dissected.' },
+  { title: '1984', author: 'George Orwell', color: '#4a2323', h: 240, w: 32, synopsis: 'A man rewrites history for the Party, then dares to think for himself. Big Brother is watching.' },
+  { title: 'The Picture of Dorian Gray', author: 'Oscar Wilde', color: '#4f3a24', h: 216, w: 32, synopsis: 'A beautiful young man stays young while his portrait does all the aging \u2014 and all the sinning.' },
+  { title: 'Of Mice and Men', author: 'John Steinbeck', color: '#413c28', h: 204, w: 30, synopsis: 'Two drifters chase the American Dream through the Depression. It ends the way Steinbeck ends things.' },
+];
+const newLeft = NEW_BOOKS.slice(0, 3);
+const newRight = NEW_BOOKS.slice(3);
+/** The extra books only exist where there's room — large screens. */
+const showExtraBooks = computed(() => useDeviceStore().isDesktop);
+
+/** Sandwich mode: every book becomes a topping. The Gray Solutions
+    book is the patty — the main event. */
+interface SandwichLayer {
+  book: ShelfBook | 'ours';
+  title: string;
+  topping: string;
+  color: string;
+}
+const TOPPINGS: Record<string, { topping: string; color: string }> = {
+  'Pride and Prejudice': { topping: 'Lettuce', color: '#6fa85c' },
+  'Frankenstein': { topping: 'Swiss cheese', color: '#e8c96a' },
+  'Jane Eyre': { topping: 'Tomato', color: '#d9534f' },
+  'Dracula': { topping: 'Pickled beet', color: '#8e244d' },
+  'Wuthering Heights': { topping: 'Bacon', color: '#a85b3f' },
+};
+const sandwichLayers = computed<SandwichLayer[]>(() => {
+  const layers = SHELF_BOOKS.map((b) => ({
+    book: b as ShelfBook | 'ours',
+    title: b.title,
+    topping: TOPPINGS[b.title].topping,
+    color: TOPPINGS[b.title].color,
+  }));
+  if (isBound.value) {
+    layers.push({ book: 'ours', title: siteName.value, topping: 'The patty', color: '#6b4226' });
+  }
+  return layers;
+});
+const sandwich = computed(() => useSettingsStore().sandwich);
+function toggleLayer(layer: SandwichLayer) {
+  if (layer.book === 'ours') toggleOurs();
+  else toggleBook(layer.book);
+}
 
 /** The currently selected (floating) book. Null when none. */
 const selectedBook = ref<ShelfBook | 'ours' | null>(null);
@@ -58,6 +111,27 @@ function toggleOurs() {
   if (selectedBook.value === 'ours') selectedBook.value = null;
   else selectedBook.value = 'ours';
 }
+
+/** Desktop spin: dragging a book with a mouse is fiddly, so the
+    selected book also rotates with the arrow keys — the same Y axis
+    the drag spins (Book.rotateBy). The sandwich has no Book to spin,
+    so only real books get the helper. */
+const bookRef = ref<InstanceType<typeof Book> | null>(null);
+const showRotateHint = ref(false);
+watch(selectedBook, (b) => {
+  showRotateHint.value = !!b && !(b === 'ours' && sandwich.value);
+});
+function onShelfKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  // The open book owns the arrow keys — page turns, not shelf spins.
+  if (useOfficeStore().view === 'desk') return;
+  if (!selectedBook.value || !bookRef.value) return;
+  e.preventDefault();
+  bookRef.value.rotateBy(e.key === 'ArrowLeft' ? -15 : 15);
+  showRotateHint.value = false;
+}
+onMounted(() => window.addEventListener('keydown', onShelfKey));
+onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
 </script>
 
 <template>
@@ -73,7 +147,25 @@ function toggleOurs() {
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
-        <div class="bs-books">
+        <div v-if="!sandwich" class="bs-books">
+          <!-- Extra classics on larger screens: same books, same behavior. -->
+          <template v-if="showExtraBooks">
+            <div
+              v-for="b in newLeft"
+              :key="b.title"
+              role="button"
+              tabindex="0"
+              class="bs-book"
+              :class="{ 'is-interactive': interactive }"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+              :aria-label="b.title"
+              @click="interactive && toggleBook(b)"
+              @keydown.enter="interactive && toggleBook(b)"
+              @keydown.space.prevent="interactive && toggleBook(b)"
+            >
+              <span class="bs-spine-label">{{ b.title }}</span>
+            </div>
+          </template>
           <div
             v-for="b in shelfLeft"
             :key="b.title"
@@ -96,13 +188,13 @@ function toggleOurs() {
               class="bs-book bs-ours"
               :class="{ 'is-interactive': interactive }"
               :style="{ height: '230px', width: '52px', background: '#1a1a1a' }"
-              aria-label="Gray Solutions — open the book"
+              :aria-label="`${siteName} — open the book`"
               data-bind-slot
               @click="interactive && toggleOurs()"
               @keydown.enter="interactive && toggleOurs()"
               @keydown.space.prevent="interactive && toggleOurs()"
             >
-              <span class="bs-spine-label">Gray Solutions</span>
+              <span class="bs-spine-label">{{ siteName }}</span>
             </div>
           </template>
           <template v-else>
@@ -123,6 +215,40 @@ function toggleOurs() {
           >
             <span class="bs-spine-label">{{ b.title }}</span>
           </div>
+          <template v-if="showExtraBooks">
+            <div
+              v-for="b in newRight"
+              :key="b.title"
+              role="button"
+              tabindex="0"
+              class="bs-book"
+              :class="{ 'is-interactive': interactive }"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+              :aria-label="b.title"
+              @click="interactive && toggleBook(b)"
+              @keydown.enter="interactive && toggleBook(b)"
+              @keydown.space.prevent="interactive && toggleBook(b)"
+            >
+              <span class="bs-spine-label">{{ b.title }}</span>
+            </div>
+          </template>
+        </div>
+        <div v-else class="bs-sandwich" aria-label="Sandwich mode: every book is a topping">
+          <div class="sw-bun sw-bun-top" aria-hidden="true"></div>
+          <button
+            v-for="layer in [...sandwichLayers].reverse()"
+            :key="layer.title"
+            type="button"
+            class="sw-layer"
+            :class="{ 'is-interactive': interactive }"
+            :style="{ background: layer.color }"
+            :aria-label="`${layer.title} — ${layer.topping}`"
+            @click="interactive && toggleLayer(layer)"
+          >
+            <span class="sw-topping">{{ layer.topping }}</span>
+            <span class="sw-title">{{ layer.title }}</span>
+          </button>
+          <div class="sw-bun sw-bun-bottom" aria-hidden="true"></div>
         </div>
         <div class="bs-plank"></div>
       </div>
@@ -169,23 +295,31 @@ function toggleOurs() {
     >
       <div class="bs-book-drop" @click.stop>
         <Book
-          v-if="selectedBook === 'ours'"
-          title="Gray Solutions"
+          v-if="selectedBook === 'ours' && !sandwich"
+          ref="bookRef"
+          :title="siteName"
           color="#1a1a1a"
           :width="36"
           :height="220"
           :pulled="true"
           :interactive="true"
-          mark="G."
+          :mark="logoMark"
           tagline="Websites that tell stories."
           author="Chris Gray"
           :showBonusToggle="true"
         />
+        <!-- Sandwich mode: the book is a sandwich — buns, chapter
+             toppings, no pages. -->
+        <div v-else-if="selectedBook === 'ours'" class="bs-sw-wrap">
+          <BookSandwich />
+        </div>
         <Book
           v-else
+          ref="bookRef"
           :title="selectedBook.title"
           :color="selectedBook.color"
           :synopsis="selectedBook.synopsis"
+          :author="selectedBook.author"
           :width="32"
           :height="200"
           :pulled="true"
@@ -205,6 +339,22 @@ function toggleOurs() {
             class="bs-overlay-close"
             @click="selectedBook = null"
             aria-label="Put the book back"
+          >
+            &times;
+          </button>
+        </div>
+        <!-- Desktop spin helper: dragging with a mouse is fiddly. -->
+        <div
+          v-if="showRotateHint"
+          class="bs-rotate-hint"
+          role="status"
+        >
+          <span>Use your arrow keys to rotate</span>
+          <button
+            type="button"
+            class="bs-rotate-hint-close"
+            @click="showRotateHint = false"
+            aria-label="Dismiss"
           >
             &times;
           </button>
@@ -281,6 +431,16 @@ function toggleOurs() {
   border-image: linear-gradient(to bottom, #4a2e18, #2b1a0e) 1;
   padding: 0 10px;
 }
+/* Desktop: a few more books join the row — snugger padding so the
+   original case still fits them all. */
+@media (min-width: 641px) {
+  .bs-case {
+    padding: 0 6px;
+  }
+  .bs-books {
+    padding: 0 4px;
+  }
+}
 .bs-cornice {
   height: 18px;
   margin: 0 -24px;
@@ -309,6 +469,69 @@ function toggleOurs() {
 }
 .bs-book.is-interactive:hover {
   filter: brightness(1.12);
+}
+/* Sandwich mode: the shelf becomes a sandwich, every book a topping. */
+.bs-sandwich {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 3px;
+  width: min(320px, 80vw);
+  margin: 0 auto;
+  min-height: 244px;
+  padding: 0 6px;
+}
+.sw-bun {
+  height: 34px;
+  background: linear-gradient(180deg, #e0aa5e 0%, #c98f45 60%, #a87434 100%);
+}
+.sw-bun-top {
+  border-radius: 120px 120px 14px 14px;
+  position: relative;
+}
+.sw-bun-top::after {
+  content: '';
+  position: absolute;
+  inset: 6px 18px;
+  background-image: radial-gradient(ellipse 5px 3px at 50% 50%, #f7e3b8 60%, transparent 61%);
+  background-size: 26px 12px;
+  opacity: 0.8;
+}
+.sw-bun-bottom {
+  border-radius: 10px 10px 26px 26px;
+  height: 26px;
+}
+.sw-layer {
+  border: 0;
+  border-radius: 16px;
+  min-height: 34px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(20, 12, 6, 0.92);
+  font-size: 0.72rem;
+  cursor: default;
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25), inset 0 2px 3px rgba(255, 255, 255, 0.25);
+}
+.sw-layer.is-interactive {
+  cursor: pointer;
+}
+.sw-layer:active {
+  filter: brightness(1.1);
+}
+.sw-topping {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+}
+.sw-title {
+  font-style: italic;
+  opacity: 0.85;
+  text-align: right;
 }
 /* Pulled out: lift, come forward, turn to show the front cover. */
 .bs-book .bs-spine-label {
@@ -600,6 +823,11 @@ html[data-theme='dark'] .bookshelf-hero {
   transform: none;
   margin: 0; /* shelf-row spacing must not throw off the centering */
 }
+/* Sandwich mode: the book-sandwich takes the pulled book's middle row. */
+.bs-book-drop .bs-sw-wrap {
+  grid-row: 2;
+  align-self: center;
+}
 /* Buttons ride the bottom row, just under the book. The margin clears the
    3D book's visual overhang below its box, then leaves breathing room. */
 .bs-book-buttons {
@@ -610,6 +838,42 @@ html[data-theme='dark'] .bookshelf-hero {
   align-items: center;
   gap: 2.5rem;
   margin-top: 5rem;
+}
+/* Desktop spin helper: translucent pill — dragging with a mouse is
+   fiddly, so the arrow keys rotate the selected book instead. */
+.bs-rotate-hint {
+  position: absolute;
+  /* Halfway between the header and the pulled book. */
+  top: 16%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(12, 8, 5, 0.72);
+  border: 1px solid rgba(232, 205, 150, 0.35);
+  color: rgba(232, 205, 150, 0.95);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: bs-overlay-in 0.3s ease;
+}
+.bs-rotate-hint-close {
+  background: none;
+  border: none;
+  color: rgba(232, 205, 150, 0.7);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.bs-rotate-hint-close:hover {
+  color: rgba(232, 205, 150, 1);
 }
 @keyframes bs-drop-in {
   from { transform: translateY(-60vh); opacity: 0; }

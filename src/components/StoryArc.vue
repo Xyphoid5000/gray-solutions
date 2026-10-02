@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ChapterHeading from './ChapterHeading.vue';
 import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const props = defineProps<{ active?: boolean }>();
+
+const isDesktop = window.matchMedia('(min-width: 641px)').matches;
+const reduced = motionReduced();
 
 const acts = [
   {
@@ -36,17 +41,31 @@ const acts = [
 
 const litCount = ref(0);
 const spineProgress = ref(0);
-let st: ScrollTrigger | undefined;
 let spineTriggers: ScrollTrigger[] = [];
 
+/** Desktop auto-draw: the pen-drawn curve advances on a timer. */
+let arcTl: gsap.core.Timeline | null = null;
+let arcPlayed = false;
+/** Start the auto-draw the first time the chapter becomes current. */
+function maybePlayArc() {
+  if (!props.active || arcPlayed || !arcTl || reduced) return;
+  arcPlayed = true;
+  arcTl.play();
+}
+/** Simple replay affordance for the finished curve. */
+function replayArc() {
+  if (!arcTl || reduced) return;
+  arcPlayed = true;
+  arcTl.restart();
+}
+watch(() => props.active, maybePlayArc);
+
 onMounted(() => {
-  if (motionReduced()) {
+  if (reduced) {
     litCount.value = acts.length;
     spineProgress.value = 1;
     return;
   }
-
-  const isDesktop = window.matchMedia('(min-width: 641px)').matches;
 
   if (!isDesktop) {
     // Mobile: each stop lights as it scrolls into view, and the glowing
@@ -92,8 +111,10 @@ onMounted(() => {
     return;
   }
 
-  // Desktop: the pen-drawn curve. A glowing pen tip travels the path as
-  // it draws, and each act node pulses as the pen reaches it.
+  // Desktop: the pen-drawn curve. Page scroll is locked on desktop, so a
+  // timer drives the drawing instead of a scroll scrub: the pen steps
+  // through the acts with a readable pause at each beat, eases between
+  // them, then holds on the finished curve (no loop).
   const svg = document.querySelector<SVGSVGElement>('.arc-svg');
   const path = svg?.querySelector<SVGPathElement>('#arc-path');
   const pen = svg?.querySelector<SVGGElement>('.arc-pen');
@@ -110,47 +131,50 @@ onMounted(() => {
   };
   placePen(0);
 
-  const draw = gsap.to(path, {
-    strokeDashoffset: 0,
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '.arc-stage',
-      start: 'top 72%',
-      end: 'bottom 62%',
-      scrub: 0.6,
-      onUpdate: (self) => {
-        const drawn = self.progress * len;
-        placePen(drawn);
-        // Light each act as the pen reaches its node.
-        const lit = Math.min(
-          acts.length,
-          Math.floor(self.progress * acts.length + 0.15),
+  /** Apply a draw progress of 0..1: curve, pen, and lit acts. */
+  const setProgress = (p: number) => {
+    const drawn = p * len;
+    gsap.set(path, { strokeDashoffset: len - drawn });
+    placePen(drawn);
+    // Light each act as the pen reaches its node.
+    const lit = Math.min(acts.length, Math.floor(p * acts.length + 0.15));
+    if (lit !== litCount.value) {
+      litCount.value = lit;
+      gsap.set('.arc-node', {
+        opacity: (i: number) => (i < lit ? 1 : 0.15),
+      });
+      // Pulse the newly lit node.
+      const nodes = document.querySelectorAll('.arc-node');
+      const node = nodes[lit - 1] as SVGCircleElement | undefined;
+      if (node) {
+        gsap.fromTo(
+          node,
+          { scale: 1.8, transformOrigin: 'center' },
+          { scale: 1, duration: 0.6, ease: 'back.out(2)' },
         );
-        if (lit !== litCount.value) {
-          litCount.value = lit;
-          gsap.set('.arc-node', {
-            opacity: (i: number) => (i < lit ? 1 : 0.15),
-          });
-          // Pulse the newly lit node.
-          const nodes = document.querySelectorAll('.arc-node');
-          const node = nodes[lit - 1] as SVGCircleElement | undefined;
-          if (node) {
-            gsap.fromTo(
-              node,
-              { scale: 1.8, transformOrigin: 'center' },
-              { scale: 1, duration: 0.6, ease: 'back.out(2)' },
-            );
-          }
-        }
-      },
-    },
-  });
-  st = draw.scrollTrigger ?? undefined;
+      }
+    }
+  };
+
+  const progress = { v: 0 };
+  arcTl = gsap.timeline({ paused: true });
+  // Checkpoints chosen so each one lights the next act.
+  for (const cp of [0.25, 0.5, 0.75, 1]) {
+    arcTl.to(progress, {
+      v: cp,
+      duration: 1.2,
+      ease: 'power2.inOut',
+      onUpdate: () => setProgress(progress.v),
+    });
+    // Readable pause at each beat; the last one holds the finished curve.
+    arcTl.to({}, { duration: 2 });
+  }
+  maybePlayArc();
 });
 
 onUnmounted(() => {
-  st?.kill();
-  st = undefined;
+  arcTl?.kill();
+  arcTl = null;
   spineTriggers.forEach((t) => t.kill());
   spineTriggers = [];
 });
@@ -236,6 +260,14 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+        <button
+          v-if="isDesktop && !reduced"
+          type="button"
+          class="arc-replay"
+          @click="replayArc"
+        >
+          Replay the arc
+        </button>
       </div>
     </div>
   </section>
