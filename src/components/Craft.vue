@@ -6,25 +6,25 @@ const services = [
   {
     num: 'i.',
     title: 'Story-first design',
-    copy: 'Narrative structure before pixels. We find the story your business is already telling &mdash; then design the site around it, so every section earns the next scroll.',
+    copy: 'Narrative structure before pixels. We find the story your business is already telling &mdash; then design the site around it, so every section <em>earns the next scroll</em>.',
     tags: ['Art direction', 'Copy structure', 'UX'],
   },
   {
     num: 'ii.',
     title: 'Custom development',
-    copy: 'Hand-built with Vue 3 and TypeScript. Fast, accessible, and easy to grow &mdash; no bloated themes, no page-builder cruft, no plugins fighting each other at 2am.',
+    copy: 'Hand-built with Vue 3 and TypeScript. Fast, accessible, and easy to grow &mdash; no bloated themes, <em>no page-builder cruft</em>, no plugins fighting each other at 2am.',
     tags: ['Vue 3', 'TypeScript', 'GSAP'],
   },
   {
     num: 'iii.',
     title: 'Backends & APIs',
-    copy: 'The machinery behind the story: C# / .NET services, databases, and integrations that keep everything running quietly while the front page takes the bow.',
+    copy: 'The machinery behind the story: C# / .NET services, databases, and integrations that keep everything running quietly while the front page <em>takes the bow</em>.',
     tags: ['C# / .NET', 'SQL', 'Integrations'],
   },
   {
     num: 'iv.',
     title: 'Rebuilds & rescues',
-    copy: 'Stuck with a template that never fit? I rebuild tired sites into something with a pulse &mdash; same business, an entirely different first impression.',
+    copy: 'Stuck with a template that never fit? I rebuild tired sites into <em>something with a pulse</em> &mdash; same business, an entirely different first impression.',
     tags: ['Redesign', 'Migration', 'Performance'],
   },
 ];
@@ -50,8 +50,8 @@ onMounted(() => {
         title="What I <em>actually do.</em>"
       />
       <p v-reveal class="lede" style="margin-bottom: 3rem">
-        Four disciplines, one obsession: a website that reads like it was
-        written, not assembled.
+        Four disciplines, one obsession: a website that
+        <em>reads like it was written</em>, not assembled.
       </p>
       <div class="craft-grid">
         <article
