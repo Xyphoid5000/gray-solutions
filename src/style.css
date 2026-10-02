@@ -1096,10 +1096,92 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   text-transform: uppercase;
   margin-top: 0.6rem;
 }
+/* Desktop exhibit pagination: one project per view with prev/next.
+   (Mobile keeps the swipe strip; its panels paginate as plain blocks.) */
+.proof-pager {
+  display: none;
+}
+@media (min-width: 641px) {
+  .proof-strip {
+    display: block;
+    overflow: visible;
+    scroll-snap-type: none;
+    padding-bottom: 0.4rem;
+  }
+  .proof-strip .proof-panel {
+    display: none;
+    width: min(100%, 640px);
+    margin: 0 auto;
+  }
+  .proof-strip .proof-panel.is-current {
+    display: block;
+    animation: proof-panel-in 0.4s var(--ease-out);
+  }
+  .proof-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    margin-top: 1.4rem;
+  }
+  /* The swipe hint is meaningless once exhibits paginate. */
+  .proof-hint {
+    display: none;
+  }
+}
+.proof-page-btn {
+  background: rgba(208, 138, 78, 0.12);
+  border: 1px solid rgba(208, 138, 78, 0.45);
+  border-radius: 999px;
+  color: #e8cd96;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.55em 1.2em;
+  cursor: pointer;
+  transition: background 0.25s ease, opacity 0.25s ease;
+}
+.proof-page-btn:hover:not(:disabled) {
+  background: rgba(208, 138, 78, 0.24);
+}
+.proof-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.proof-page-count {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  min-width: 11em;
+  text-align: center;
+}
+@keyframes proof-panel-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* ---------- arc: mobile spine ---------- */
 .arc-spine {
   display: none;
+}
+/* Desktop auto-draw replay. */
+.arc-replay {
+  display: block;
+  margin: 1.5rem auto 0;
+  background: none;
+  border: 1px solid rgba(208, 138, 78, 0.45);
+  border-radius: 999px;
+  color: #e8cd96;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 0.55em 1.3em;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+.arc-replay:hover {
+  background: rgba(208, 138, 78, 0.16);
 }
 
 /* ---------- cover: the falling book ---------- */
@@ -1475,10 +1557,9 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   transform-origin: top center;
   pointer-events: none;
   /* The G emblem is the cord's housing: the top edge sits exactly at the
-     G's bottom, and everything above it is clipped — the base, string and
-     ball emerge from and return into the G, never fading through it.
+     G's bottom, and everything above it emerges from behind the G —
+     no clipping, so glows and shadows render round, never boxy.
      Height clears the full drop plus a max pull. */
-  overflow: hidden;
   height: 300px;
 }
 .cord-mount {
@@ -1520,10 +1601,12 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   padding: 0;
   /* Parked up inside the G until the entrance (see .cord-mount). */
   transform: translateY(-200px);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.45),
-    0 0 12px rgba(208, 138, 78, 0.5);
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+  /* Drop-shadow instead of box-shadow: follows the round bulb instead of
+     the box, so the glow never looks clipped or square. */
+  filter:
+    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 12px rgba(208, 138, 78, 0.5));
+  transition: transform 0.2s var(--ease-out), filter 0.2s;
 }
 .cord-knob:hover {
   transform: scale(1.08);
@@ -2213,8 +2296,7 @@ html[data-theme='dark'] .ms-back {
 .manuscript-desk {
   position: relative;
   min-height: 100%;
-  display: flow-root; /* contain page margins — stops them collapsing through and shoving the desk down */
-  /* Mahogany desk. */
+  display: flow-root; /* contain page margins — stops them collapsing through and shoving the desk down */  /* Mahogany desk. */
   background-color: #2a140c;
   background-image:
     repeating-linear-gradient(
@@ -2231,6 +2313,18 @@ html[data-theme='dark'] .ms-back {
   --desk-pr: 60px;
   padding-left: var(--desk-pl);
   padding-right: var(--desk-pr);
+}
+/* Sandwich mode: the open manuscript becomes the sandwich — chapters as
+   toppings, no pages. Centered on the desk where the open book sat. */
+.manuscript-sandwich {
+  margin: 10vh auto;
+  position: relative;
+  z-index: 1;
+  animation: manuscript-sandwich-in 0.4s var(--ease-out);
+}
+@keyframes manuscript-sandwich-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 /* The desk stage: a zero-height sticky layer pinned to the top of the
    viewport while the desk is on screen. The candle and pencil live on

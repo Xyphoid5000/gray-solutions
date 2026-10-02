@@ -1,9 +1,22 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import ChapterHeading from './ChapterHeading.vue';
 
 const emit = defineEmits<{
   (e: 'go', index: number): void;
 }>();
+
+/** Desktop pagination: one exhibit per view with prev/next stepping.
+    Mobile keeps the swipe strip (its panels paginate as plain blocks). */
+const panelIndex = ref(0);
+const PANEL_COUNT = 3;
+const PANEL_LETTERS = ['A', 'B', 'C'];
+function prevPanel() {
+  panelIndex.value = Math.max(0, panelIndex.value - 1);
+}
+function nextPanel() {
+  panelIndex.value = Math.min(PANEL_COUNT - 1, panelIndex.value + 1);
+}
 </script>
 
 <template>
@@ -19,7 +32,7 @@ const emit = defineEmits<{
         happens when a business gets <em>a website with a plot.</em>
       </p>
       <div v-reveal class="proof-strip">
-        <article class="proof-panel">
+        <article class="proof-panel" :class="{ 'is-current': panelIndex === 0 }">
           <div>
             <span class="proof-index">Exhibit A</span>
             <h3>Burning River Auto Glass</h3>
@@ -37,7 +50,7 @@ const emit = defineEmits<{
             </ul>
           </div>
         </article>
-        <article class="proof-panel">
+        <article class="proof-panel" :class="{ 'is-current': panelIndex === 1 }">
           <div>
             <span class="proof-index">Exhibit B</span>
             <h3>This very website</h3>
@@ -54,7 +67,7 @@ const emit = defineEmits<{
             </ul>
           </div>
         </article>
-        <article class="proof-panel cta-panel">
+        <article class="proof-panel cta-panel" :class="{ 'is-current': panelIndex === 2 }">
           <div>
             <span class="proof-index">Exhibit C</span>
             <h3>Your business here.</h3>
@@ -68,6 +81,29 @@ const emit = defineEmits<{
             Claim the page <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
         </article>
+        <nav class="proof-pager" aria-label="Project exhibits">
+          <button
+            type="button"
+            class="proof-page-btn"
+            :disabled="panelIndex === 0"
+            @click="prevPanel"
+            aria-label="Previous project"
+          >
+            &larr; Prev
+          </button>
+          <span class="proof-page-count" aria-live="polite">
+            Exhibit {{ PANEL_LETTERS[panelIndex] }} &middot; {{ panelIndex + 1 }} of {{ PANEL_COUNT }}
+          </span>
+          <button
+            type="button"
+            class="proof-page-btn"
+            :disabled="panelIndex === PANEL_COUNT - 1"
+            @click="nextPanel"
+            aria-label="Next project"
+          >
+            Next &rarr;
+          </button>
+        </nav>
       </div>
       <p class="proof-hint" aria-hidden="true">
         <span>Swipe</span><span>&rarr;</span>

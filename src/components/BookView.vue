@@ -5,9 +5,15 @@ import { Flip } from 'gsap/Flip';
 import { chapters } from '../lib/chapters';
 import { manuscriptBound } from '../lib/manuscript';
 import ChapterModal from './ChapterModal.vue';
+import BookSandwich from './BookSandwich.vue';
+import { useSettingsStore } from '../stores/settings';
 import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(Flip);
+
+/** Sandwich mode: the open book renders as the sandwich — chapters as
+    toppings, no pages — live, the moment the toggle flips. */
+const sandwich = computed(() => useSettingsStore().sandwich);
 
 const emit = defineEmits<{
   (e: 'back-to-cover'): void;
@@ -531,6 +537,15 @@ watch(currentIndex, async () => {
   paginateCurrentChapter();
 });
 
+/** Sandwich mode swaps the open pages for the sandwich live. When it
+    flips back off, the page DOM is recreated — re-paginate it. */
+watch(sandwich, async (on) => {
+  if (!on) {
+    await nextTick();
+    paginateCurrentChapter();
+  }
+});
+
 onMounted(async () => {
   // Wait for the chapter DOM to settle before measuring.
   await nextTick();
@@ -788,7 +803,10 @@ function onTouchEnd(e: TouchEvent) {
     </div>
 
     <!-- The stack: each page is a transparent wrap, paper inside with a
-         right margin, tab attached in that margin. -->
+         right margin, tab attached in that margin.
+         Sandwich mode: the open book is the sandwich instead — chapters
+         as toppings, no pages — the moment the toggle flips. -->
+    <template v-if="!sandwich">
     <div
       v-for="(ch, i) in chapters"
       :key="ch.num"
@@ -836,6 +854,8 @@ function onTouchEnd(e: TouchEvent) {
           />
         </template>
       </div>
+    </template>
+    <BookSandwich v-else class="manuscript-sandwich" />
 
     <!-- Chapter card: tabs to unread chapters preview here first. -->
     <ChapterModal

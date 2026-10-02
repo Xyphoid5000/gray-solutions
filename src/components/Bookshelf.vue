@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
 import Book from './Book.vue';
 import BookSandwich from './BookSandwich.vue';
@@ -96,6 +96,90 @@ function toggleOurs() {
   if (selectedBook.value === 'ours') selectedBook.value = null;
   else selectedBook.value = 'ours';
 }
+
+/** Desktop spin: dragging a book with a mouse is fiddly, so the
+    selected book also rotates with the arrow keys — the same Y axis
+    the drag spins (Book.rotateBy). The sandwich has no Book to spin,
+    so only real books get the helper. */
+const bookRef = ref<InstanceType<typeof Book> | null>(null);
+const showRotateHint = ref(false);
+watch(selectedBook, (b) => {
+  showRotateHint.value = !!b && !(b === 'ours' && sandwich.value);
+});
+function onShelfKey(e: KeyboardEvent) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (!selectedBook.value || !bookRef.value) return;
+  e.preventDefault();
+  bookRef.value.rotateBy(e.key === 'ArrowLeft' ? -15 : 15);
+  showRotateHint.value = false;
+}
+onMounted(() => window.addEventListener('keydown', onShelfKey));
+onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
+
+/** Fill the shelf edge to edge: the narrowest standard book is 38px,
+    so floor(innerWidth / (38 + gap)) slots fit. The 5 classics + the
+    binding slot stay the real interactive books; the rest are
+    spine-only decorative filler, split around the real books so they
+    stay centered. */
+const BOOK_MIN_WIDTH = 38;
+const BOOK_GAP = 7;
+const REAL_SLOTS = SHELF_BOOKS.length + 1; // 5 classics + the binding slot
+const booksEl = ref<HTMLElement | null>(null);
+const shelfInnerWidth = ref(0);
+let shelfRO: ResizeObserver | null = null;
+function measureShelf() {
+  const el = booksEl.value;
+  if (!el) return;
+  // Mobile zooms the case — measure in un-zoomed px so the slot math
+  // uses the same units as the book widths.
+  const zoom = parseFloat(getComputedStyle(el).zoom || '1') || 1;
+  shelfInnerWidth.value = el.getBoundingClientRect().width / zoom;
+}
+function bindShelfMeasure() {
+  shelfRO?.disconnect();
+  shelfRO = null;
+  if (!booksEl.value) return;
+  measureShelf();
+  shelfRO = new ResizeObserver(measureShelf);
+  shelfRO.observe(booksEl.value);
+}
+onMounted(bindShelfMeasure);
+onUnmounted(() => shelfRO?.disconnect());
+// The books row unmounts in sandwich mode — rebind when it returns.
+watch(sandwich, async () => {
+  await nextTick();
+  bindShelfMeasure();
+});
+const fillerCount = computed(() => {
+  if (shelfInnerWidth.value <= 0) return 0;
+  const slots = Math.floor(shelfInnerWidth.value / (BOOK_MIN_WIDTH + BOOK_GAP));
+  return Math.max(0, slots - REAL_SLOTS);
+});
+interface FillerBook {
+  h: number;
+  w: number;
+  color: string;
+}
+/** Deterministic filler spines — muted cloth tones, varied heights. */
+function fillerAt(i: number): FillerBook {
+  const r = (seed: number) => ((i * seed + 12345) % 233280) / 233280;
+  const palette = ['#26343f', '#3a2f22', '#2e2a26', '#402020', '#22332a', '#33272e', '#2a2f3a'];
+  return {
+    h: 200 + Math.round(r(9301) * 48),
+    w: 34 + Math.round(r(49297) * 14),
+    color: palette[Math.floor(r(7919) * palette.length) % palette.length],
+  };
+}
+const leftFillers = computed<FillerBook[]>(() => {
+  const n = fillerCount.value;
+  const left = Math.ceil(n / 2);
+  return Array.from({ length: left }, (_, i) => fillerAt(i));
+});
+const rightFillers = computed<FillerBook[]>(() => {
+  const n = fillerCount.value;
+  const left = Math.ceil(n / 2);
+  return Array.from({ length: n - left }, (_, i) => fillerAt(left + i));
+});
 </script>
 
 <template>
@@ -111,7 +195,15 @@ function toggleOurs() {
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
-        <div v-if="!sandwich" class="bs-books">
+        <div v-if="!sandwich" ref="booksEl" class="bs-books">
+          <!-- Decorative filler: spine-only, non-interactive. -->
+          <div
+            v-for="(f, i) in leftFillers"
+            :key="'fl-' + i"
+            class="bs-book bs-filler"
+            aria-hidden="true"
+            :style="{ height: f.h + 'px', width: f.w + 'px', background: f.color }"
+          ></div>
           <div
             v-for="b in shelfLeft"
             :key="b.title"
@@ -161,6 +253,13 @@ function toggleOurs() {
           >
             <span class="bs-spine-label">{{ b.title }}</span>
           </div>
+          <div
+            v-for="(f, i) in rightFillers"
+            :key="'fr-' + i"
+            class="bs-book bs-filler"
+            aria-hidden="true"
+            :style="{ height: f.h + 'px', width: f.w + 'px', background: f.color }"
+          ></div>
         </div>
         <div v-else class="bs-sandwich" aria-label="Sandwich mode: every book is a topping">
           <div class="sw-bun sw-bun-top" aria-hidden="true"></div>
@@ -225,6 +324,7 @@ function toggleOurs() {
       <div class="bs-book-drop" @click.stop>
         <Book
           v-if="selectedBook === 'ours' && !sandwich"
+          ref="bookRef"
           :title="siteName"
           color="#1a1a1a"
           :width="36"
@@ -243,6 +343,7 @@ function toggleOurs() {
         </div>
         <Book
           v-else
+          ref="bookRef"
           :title="selectedBook.title"
           :color="selectedBook.color"
           :synopsis="selectedBook.synopsis"
@@ -265,6 +366,22 @@ function toggleOurs() {
             class="bs-overlay-close"
             @click="selectedBook = null"
             aria-label="Put the book back"
+          >
+            &times;
+          </button>
+        </div>
+        <!-- Desktop spin helper: dragging with a mouse is fiddly. -->
+        <div
+          v-if="showRotateHint"
+          class="bs-rotate-hint"
+          role="status"
+        >
+          <span>Use your arrow keys to rotate</span>
+          <button
+            type="button"
+            class="bs-rotate-hint-close"
+            @click="showRotateHint = false"
+            aria-label="Dismiss"
           >
             &times;
           </button>
@@ -340,6 +457,16 @@ function toggleOurs() {
   border-right: 14px solid transparent;
   border-image: linear-gradient(to bottom, #4a2e18, #2b1a0e) 1;
   padding: 0 10px;
+}
+/* Desktop: a wider case, filled edge to edge with books. */
+@media (min-width: 641px) {
+  .bs-case {
+    width: min(1100px, 96vw);
+  }
+}
+/* Decorative filler spines: same shelf language, no interaction. */
+.bs-book.bs-filler {
+  filter: brightness(0.92);
 }
 .bs-cornice {
   height: 18px;
@@ -738,6 +865,41 @@ html[data-theme='dark'] .bookshelf-hero {
   align-items: center;
   gap: 2.5rem;
   margin-top: 5rem;
+}
+/* Desktop spin helper: translucent pill — dragging with a mouse is
+   fiddly, so the arrow keys rotate the selected book instead. */
+.bs-rotate-hint {
+  position: absolute;
+  top: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem 0.55rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(12, 8, 5, 0.72);
+  border: 1px solid rgba(232, 205, 150, 0.35);
+  color: rgba(232, 205, 150, 0.95);
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: bs-overlay-in 0.3s ease;
+}
+.bs-rotate-hint-close {
+  background: none;
+  border: none;
+  color: rgba(232, 205, 150, 0.7);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+}
+.bs-rotate-hint-close:hover {
+  color: rgba(232, 205, 150, 1);
 }
 @keyframes bs-drop-in {
   from { transform: translateY(-60vh); opacity: 0; }

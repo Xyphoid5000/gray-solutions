@@ -101,8 +101,21 @@ export const useSettingsStore = defineStore('settings', () => {
     document.documentElement.dataset.invert = v ? 'on' : 'off';
   }, { immediate: true });
   watch(accent, (c) => {
-    if (c) document.documentElement.style.setProperty('--ember', c);
-    else document.documentElement.style.removeProperty('--ember');
+    const root = document.documentElement;
+    if (c) {
+      root.style.setProperty('--ember', c);
+      // Derive the deep/bright siblings from the new accent so every
+      // ember-tinted surface tracks the picker. Percentages chosen so the
+      // default accents reproduce the theme's hardcoded pairs approximately
+      // (dark #d08a4e -> deep ~#9a663a / bright ~#d79c69;
+      //  light #b06a2a -> deep ~#824e1f / bright ~#bc804a).
+      root.style.setProperty('--ember-deep', `color-mix(in srgb, ${c} 74%, black)`);
+      root.style.setProperty('--ember-bright', `color-mix(in srgb, ${c} 85%, white)`);
+    } else {
+      root.style.removeProperty('--ember');
+      root.style.removeProperty('--ember-deep');
+      root.style.removeProperty('--ember-bright');
+    }
   }, { immediate: true });
   watch(siteName, (n) => {
     document.title = `${n} — Websites That Tell Stories`;
