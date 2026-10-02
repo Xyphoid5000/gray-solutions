@@ -861,8 +861,9 @@ onUnmounted(() => {
   <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
   <div class="led-wash" :class="{ on: bonus.ledOn, accent: bonus.ledAccent }" aria-hidden="true"></div>
-  <!-- Candlelight: warm wash while the candle burns. -->
-  <div class="candle-wash" :class="{ on: bonus.candleLit }" aria-hidden="true"></div>
+  <!-- Candlelight: warm wash while the candle burns. Desk view only —
+       never on the main page. -->
+  <div class="candle-wash" :class="{ on: bonus.candleLit && office.view === 'desk' }" aria-hidden="true"></div>
   <!-- Breeze gust sweeping the desk, left to right. -->
   <div class="breeze" :class="{ on: bonus.breezeOn }" aria-hidden="true"></div>
   <MatchHand

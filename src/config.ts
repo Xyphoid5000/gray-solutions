@@ -5,8 +5,7 @@
 export const siteConfig = {
   name: 'Gray Solutions',
   tagline: 'Every good story needs great structure.',
-  // TEMPORARY: Chris is creating a dedicated business address; use it here when ready.
-  email: 'c90gray@gmail.com',
+  email: 'chris@graywebsolutions.com',
   linkedIn: 'https://www.linkedin.com/in/c90gray',
   github: 'https://github.com/Xyphoid5000',
   // TODO (Chris): confirm location — best guess from context.
