@@ -12,25 +12,25 @@ const acts = [
     num: 'Act I',
     title: 'Exposition',
     sub: 'Discovery',
-    copy: 'We talk. I learn what you do, who it\u2019s for, and the story you\u2019re already telling \u2014 whether you know it yet or not.',
+    copy: 'We talk. I learn what you do, who it\u2019s for, and <em>the story you\u2019re already telling</em> \u2014 whether you know it yet or not.',
   },
   {
     num: 'Act II',
     title: 'Rising action',
     sub: 'Design',
-    copy: 'Narrative becomes structure: sitemap as plot outline, visual design as voice. Tension builds on purpose.',
+    copy: 'Narrative becomes structure: sitemap as plot outline, visual design as voice. <em>Tension builds on purpose.</em>',
   },
   {
     num: 'Act III',
     title: 'Climax',
     sub: 'Build',
-    copy: 'The site comes alive \u2014 motion, content, and code, built by hand. This is the part visitors feel in their chest.',
+    copy: 'The site comes alive \u2014 motion, content, and code, built by hand. This is the part visitors <em>feel in their chest</em>.',
   },
   {
     num: 'Act IV',
     title: 'Resolution',
     sub: 'Launch',
-    copy: 'We ship, measure, and keep the story sharp long after opening night. Endings should land; then they should last.',
+    copy: 'We ship, measure, and keep the story sharp long after opening night. <em>Endings should land;</em> then they should last.',
   },
 ];
 
@@ -165,8 +165,8 @@ onUnmounted(() => {
         title="Every project follows <em>the arc.</em>"
       />
       <p v-reveal class="lede" style="margin-bottom: 3rem">
-        Stories have run on the same shape for three thousand years &mdash;
-        so does my process.
+        Stories have run on the same shape for
+        <em>three thousand years</em> &mdash; so does my process.
       </p>
       <div v-reveal class="arc-stage">
         <div class="arc-svg-wrap">
@@ -213,7 +213,7 @@ onUnmounted(() => {
           >
             <span class="act-num">{{ act.num }} &mdash; {{ act.sub }}</span>
             <h3>{{ act.title }}</h3>
-            <p>{{ act.copy }}</p>
+            <p v-html="act.copy"></p>
           </article>
         </div>
         <div class="arc-spine">
@@ -232,7 +232,7 @@ onUnmounted(() => {
             <div class="arc-stop-body">
               <span class="act-num">{{ act.num }} &mdash; {{ act.sub }}</span>
               <h3>{{ act.title }}</h3>
-              <p>{{ act.copy }}</p>
+              <p v-html="act.copy"></p>
             </div>
           </div>
         </div>
