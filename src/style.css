@@ -3145,8 +3145,8 @@ html[data-theme='dark'] .page-paper .proof-panel {
     padding: 1.15rem 1rem;
     font-size: 0.9375rem;
   }
-  /* The finale's header clears the finished-pages pile. */
-  .page-paper .finale .wrap {
+  /* Every page's header clears the finished-pages pile on mobile. */
+  .page-paper .wrap {
     padding-left: 1.75rem;
   }
   .page-paper .ch-title {
@@ -3261,7 +3261,7 @@ html[data-theme='dark'] .page-tab {
   }
   .read-pile {
     left: 10px;
-    top: 20%;
+    top: 11%;
     width: 84px;
     height: 112px;
   }
