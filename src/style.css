@@ -567,6 +567,11 @@ a {
   color: var(--ember);
   font-style: italic;
 }
+/* Amber italic accents in chapter body copy — the chapter-1 treatment, everywhere. */
+.chapter em {
+  color: var(--ember);
+  font-style: italic;
+}
 .premise-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1504,7 +1509,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 @media (max-width: 640px) {
   .read-pile {
     left: 6px;
-    top: 14%;
+    top: 11%;
     width: 72px;
     height: 100px;
   }
@@ -2323,6 +2328,88 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   transition: border-color 0.3s, color 0.3s, transform 0.3s var(--ease-out);
 }
 .chapter-modal-close:hover {
+  border-color: var(--ember);
+  color: var(--ember);
+  transform: rotate(90deg);
+}
+/* First-open book intro: same paper-card language as the chapter modal.
+   Fixed so it sits over the whole viewport; dismissable ONLY via X/OK. */
+.book-intro-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  background: rgba(9, 7, 4, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+.book-intro {
+  position: relative;
+  width: min(430px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 2.2rem 2rem 2rem;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+.book-intro-kicker {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--ember);
+  margin: 0 0 0.9rem;
+}
+.book-intro-title {
+  font-family: var(--serif);
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 1rem;
+  text-wrap: balance;
+}
+.book-intro-list {
+  list-style: none;
+  margin: 0 0 1.8rem;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+  color: var(--muted);
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+.book-intro-list li {
+  padding-left: 1.4rem;
+  position: relative;
+}
+.book-intro-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--ember);
+}
+.book-intro-ok {
+  width: 100%;
+  justify-content: center;
+}
+.book-intro-close {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.9rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.3s, color 0.3s, transform 0.3s var(--ease-out);
+}
+.book-intro-close:hover {
   border-color: var(--ember);
   color: var(--ember);
   transform: rotate(90deg);

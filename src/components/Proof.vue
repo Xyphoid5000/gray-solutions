@@ -16,7 +16,7 @@ const emit = defineEmits<{
       />
       <p v-reveal class="lede" style="margin-bottom: 2.6rem">
         A portfolio is a story&rsquo;s evidence locker. Here&rsquo;s what
-        happens when a business gets a website with a plot.
+        happens when a business gets <em>a website with a plot.</em>
       </p>
       <div v-reveal class="proof-strip">
         <article class="proof-panel">
@@ -26,9 +26,9 @@ const emit = defineEmits<{
             <p>
               A local auto glass company on a generic Squarespace template.
               I rebuilt it as a cinematic custom site &mdash; the same
-              business, an entirely different first impression. Scroll-driven
-              storytelling, built to make a cracked windshield feel like the
-              start of an adventure.
+              business, <em>an entirely different first impression.</em>
+              Scroll-driven storytelling, built to make a cracked windshield
+              feel like the start of an adventure.
             </p>
             <ul class="proof-tags">
               <li>Design</li>
@@ -44,7 +44,7 @@ const emit = defineEmits<{
             <p>
               You&rsquo;re turning the pages of the portfolio itself &mdash;
               cover, chapters, page turns and all. No templates, no themes:
-              the medium is the pitch.
+              <em>the medium is the pitch.</em>
             </p>
             <ul class="proof-tags">
               <li>Concept</li>
@@ -59,9 +59,9 @@ const emit = defineEmits<{
             <span class="proof-index">Exhibit C</span>
             <h3>Your business here.</h3>
             <p>
-              Every portfolio needs a blank page. This one&rsquo;s yours
-              &mdash; the before-and-after your competitors will wish
-              they&rsquo;d done first.
+              Every portfolio needs a blank page. <em>This one&rsquo;s
+              yours</em> &mdash; the before-and-after your competitors will
+              wish they&rsquo;d done first.
             </p>
           </div>
           <button class="btn btn-solid" @click="emit('go', 4)">

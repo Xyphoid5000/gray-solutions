@@ -9,6 +9,7 @@ import CoverHero from './components/CoverHero.vue';
 import Office from './components/Office.vue';
 import BindCinematic from './components/BindCinematic.vue';
 import OpenTransition from './components/OpenTransition.vue';
+import BookIntroModal from './components/BookIntroModal.vue';
 import RemoteControl from './components/RemoteControl.vue';
 import DeskClutter from './components/DeskClutter.vue';
 import FirstDraft from './components/FirstDraft.vue';
@@ -21,7 +22,7 @@ import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
 import { useInteractionsStore } from './stores/interactions';
-import { manuscriptBound, markManuscriptBound } from './lib/manuscript';
+import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
 import { motionReduced } from './utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -33,6 +34,16 @@ const interactions = useInteractionsStore();
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
 const showOpenTransition = ref(false);
+/** How-to-read modal, shown once per session on first book open. */
+const showBookIntro = ref(false);
+
+/** First book-open each session gets the how-to-read modal. */
+function maybeShowBookIntro() {
+  if (!bookIntroSeen.value) {
+    markBookIntroSeen();
+    showBookIntro.value = true;
+  }
+}
 /** Bonus content (candle, LEDs, first draft, UV light, phone, discount
     code) lives behind a toggle on the back of the cover. Off by
     default; session-scoped, like the bound state. */
@@ -55,6 +66,8 @@ function noScroll(on: boolean) {
 /** Tilt down: pages fall first, then the office carousel slides shelf→desk. */
 async function openBook() {
   if ((office.view === 'desk') || office.transitioning) return;
+  // Re-entering always starts at chapter 1 with an empty pile.
+  officeRef.value?.bookView?.resetBookView();
   // Entering the book in the dark: the candle is already lit — no
   // pitch-black beat, no lighting ceremony.
   if (isDark() && bonus.enabled && !bonus.candleGone) {
@@ -64,6 +77,7 @@ async function openBook() {
     office.showDesk();
     window.scrollTo(0, 0);
     updateLights();
+    maybeShowBookIntro();
     return;
   }
   office.setTransitioning(true);
@@ -107,6 +121,7 @@ async function openBook() {
   office.setTransitioning(false);
   noScroll(false);
   updateLights();
+  maybeShowBookIntro();
 }
 
 function onOpenTransitionDone() {
@@ -780,6 +795,10 @@ onUnmounted(() => {
   <OpenTransition
     v-if="showOpenTransition"
     @done="onOpenTransitionDone"
+  />
+  <BookIntroModal
+    v-if="showBookIntro"
+    @close="showBookIntro = false"
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
