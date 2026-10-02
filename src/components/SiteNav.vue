@@ -7,7 +7,7 @@ import { useSettingsStore } from '../stores/settings';
 import { storeToRefs } from 'pinia';
 
 const props = defineProps<{ bonusContent?: boolean }>();
-const { siteName } = storeToRefs(useSettingsStore());
+const { siteName, logoMark } = storeToRefs(useSettingsStore());
 
 const emit = defineEmits<{
   contact: [];
@@ -153,7 +153,7 @@ function retractCord(done: () => void) {
         @click.prevent="emit('home')"
         :aria-label="`${siteName} — back to the cover`"
       >
-        <span class="brand-mark" aria-hidden="true">G.</span>
+        <span class="brand-mark" aria-hidden="true">{{ logoMark }}</span>
         <span>{{ siteName }}<em>.</em></span>
       </a>
       <button class="nav-contact" @click="emit('contact')">

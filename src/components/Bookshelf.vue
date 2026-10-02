@@ -24,7 +24,7 @@ const emit = defineEmits(['open-book']);
     Session-scoped — every visit starts with the slot empty. */
 const isBound = manuscriptBound;
 
-const { siteName } = storeToRefs(useSettingsStore());
+const { siteName, logoMark } = storeToRefs(useSettingsStore());
 
 interface ShelfBook {
   title: string;
@@ -230,7 +230,7 @@ function toggleOurs() {
           :height="220"
           :pulled="true"
           :interactive="true"
-          mark="G."
+          :mark="logoMark"
           tagline="Websites that tell stories."
           author="Chris Gray"
           :showBonusToggle="true"

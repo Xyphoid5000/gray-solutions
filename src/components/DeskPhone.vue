@@ -493,12 +493,15 @@ onUnmounted(() => {
               />
             </label>
             <div class="set-group">
-              <span class="set-name">Theme</span>
-              <div class="set-btns">
-                <button type="button" :class="{ on: settings.theme === 'storybook' }" @click="settings.setTheme('storybook')">Storybook</button>
-                <button type="button" :class="{ on: settings.theme === 'midnight' }" @click="settings.setTheme('midnight')">Midnight</button>
-                <button type="button" :class="{ on: settings.theme === 'terminal' }" @click="settings.setTheme('terminal')">Terminal</button>
-              </div>
+              <span class="set-name">Colors</span>
+              <label class="set-row">
+                <span class="set-name">Background</span>
+                <input type="color" class="set-color" :value="settings.bgColor" @input="settings.setBgColor(($event.target as HTMLInputElement).value)" aria-label="Background color" />
+              </label>
+              <label class="set-row">
+                <span class="set-name">Text</span>
+                <input type="color" class="set-color" :value="settings.textColor" @input="settings.setTextColor(($event.target as HTMLInputElement).value)" aria-label="Text color" />
+              </label>
             </div>
             <div class="set-group">
               <span class="set-name">Light / dark</span>
@@ -532,7 +535,7 @@ onUnmounted(() => {
               <span class="set-switch" :class="{ on: settings.noCss }"><span class="set-knob"></span></span>
             </button>
             <button type="button" class="set-reset" @click="settings.resetAll(); siteNameDraft = settings.siteName">Reset everything</button>
-            <p class="set-note">All toys, no consequences. A refresh restores the storybook.</p>
+            <p class="set-note">All toys, no consequences. A refresh restores the defaults.</p>
           </div>
           <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
         </div>

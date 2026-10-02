@@ -465,7 +465,7 @@ defineExpose({ start });
     <!-- The bound book cover. -->
     <div ref="coverEl" class="bind-cover" :class="{ titled }" aria-hidden="true">
       <div class="bind-cover-frame">
-        <span class="bind-mark">G.</span>
+        <span class="bind-mark">{{ settings.logoMark }}</span>
         <p v-if="!titled" class="bind-title bind-title-typing">
           {{ titleTyped }}<span class="type-cursor"></span>
         </p>
@@ -479,7 +479,7 @@ defineExpose({ start });
     <div ref="book3d" class="bind-book3d" aria-hidden="true">
       <div class="b3d-face b3d-front">
         <div class="b3d-frame">
-          <span class="b3d-mark">G.</span>
+          <span class="b3d-mark">{{ settings.logoMark }}</span>
           <p class="b3d-title">{{ settings.siteName }}<em>.</em></p>
           <p class="b3d-tag"><em>Websites that tell stories.</em></p>
           <p class="b3d-by">Chris Gray</p>

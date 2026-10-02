@@ -806,6 +806,22 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn, 'binding-active': bindingActive }">
   <a href="#main-content" class="skip-link">Skip to content</a>
+  <!-- No-CSS escape hatch: raw HTML is deliberately disorienting, so the
+       way back is always one tap away. Inline styles survive the
+       stylesheet kill switch. -->
+  <div
+    v-if="settings.noCss"
+    style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#fff;color:#000;padding:10px 14px;font:14px/1.4 sans-serif;border-bottom:2px solid #000;"
+  >
+    <span>You're browsing raw, unstyled HTML. </span>
+    <button
+      type="button"
+      style="font:inherit;padding:6px 12px;cursor:pointer;"
+      @click="settings.toggleNoCss()"
+    >
+      Turn the styles back on
+    </button>
+  </div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <main id="main-content">
   <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>
