@@ -182,6 +182,13 @@ async function closeBookToSection(section: 'about' | 'contact', after = 100) {
     open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
 const officeRef = ref<InstanceType<typeof Office> | null>(null);
+/** Floating settings shortcut: the desk phone stays mounted (its desk
+    slide hides in shelf view, but the picked-up modal teleports to
+    <body>), so this reaches it anywhere on the main screen — it picks
+    the phone up straight into the Settings app. */
+function openPhoneSettings() {
+  window.dispatchEvent(new CustomEvent('gs:open-phone-settings'));
+}
 /** True while the binding cinematic owns the screen — the site nav
     (and its pull cord) hides so it can't collide with SKIP. */
 const bindingActive = ref(false);
@@ -470,7 +477,8 @@ function matchGuyGag(level: 1 | 2 | 3) {
     interactions.guyX = -160;
     interactions.guyLine = GUY_LINES[level - 1];
     interactions.guyMounted = true;
-    walkGuyTo(doorway ? 200 : vw + 160, 110, () => {
+    // Desktop: he stops at the screen midpoint, where the doorway is.
+    walkGuyTo(doorway ? vw / 2 : vw + 160, 110, () => {
       const afterComplaint = () => {
         // Back with a lit match — and he doesn't break stride. Past
         // the candle; the flame catches a beat after he's gone.
@@ -478,15 +486,21 @@ function matchGuyGag(level: 1 | 2 | 3) {
         interactions.guyLine = null;
         interactions.guyMounted = true;
         if (doorway) {
-          // In from the left (nearest the candle), past it, then out
-          // through the doorway.
-          interactions.guyFacing = 1;
-          interactions.guyX = -160;
-          walkGuyTo(240, 110, () => {
-            walkGuyToDoorway(() => {
-              stopGuy();
-              lightCandleAfterGag();
-            });
+          // Back through the doorway the other way, match in hand:
+          // fade in just right of it, walk left through the lit
+          // doorway, past the candle, off the left edge — then the
+          // door closes behind him.
+          interactions.guyFacing = -1;
+          interactions.guyX = vw / 2 + 80;
+          interactions.guyFading = true;
+          interactions.guyMounted = true;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            interactions.guyFading = false;
+          }));
+          walkGuyTo(-160, 110, () => {
+            interactions.doorOpen = false;
+            stopGuy();
+            lightCandleAfterGag();
           });
         } else {
           interactions.guyFacing = -1;
@@ -498,13 +512,20 @@ function matchGuyGag(level: 1 | 2 | 3) {
         }
       };
       if (doorway) {
-        // He stops by the candle, delivers the line, then steps
-        // through the invisible doorway.
+        // He stops at the midpoint, delivers the line, opens a
+        // door-shaped doorway through the dark — the lit page beneath
+        // shows through — and walks through it. The door stays open
+        // behind him until he comes back.
         later(() => {
-          walkGuyToDoorway(() => {
-            stopGuy();
-            later(afterComplaint, 1200);
-          });
+          interactions.doorOpen = true;
+          later(() => {
+            interactions.guyFading = true;
+            walkGuyTo(vw / 2 + 220, 110, () => {
+              stopGuy();
+              // The open doorway holds a beat, then he's back.
+              later(afterComplaint, 1200);
+            });
+          }, 700);
         }, 1400);
       } else {
         stopGuy();
@@ -879,7 +900,7 @@ onUnmounted(() => {
       <DeskPencil />
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
-      <DeskPhone v-if="bonus.enabled" />
+      <DeskPhone v-if="bonus.enabled" shortcut />
     </template>
   </Office>
   </main>
@@ -895,6 +916,18 @@ onUnmounted(() => {
     @shelf="onBindShelf"
   />
   <SandwichBite v-if="biteActive" @done="onBiteDone" />
+  <!-- Settings shortcut: appears on the main screen only when the user
+       has changed something, and only while the book is closed. Taps
+       open the desk phone's Settings app. -->
+  <button
+    v-if="settings.isModified && office.view !== 'desk' && !bindingActive"
+    type="button"
+    class="settings-fab"
+    aria-label="Open phone settings"
+    @click="openPhoneSettings"
+  >
+    <span aria-hidden="true">⚙</span>
+  </button>
   <OpenTransition
     v-if="showOpenTransition"
     @done="onOpenTransitionDone"
@@ -904,7 +937,24 @@ onUnmounted(() => {
     @close="showBookIntro = false"
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
-  <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
+  <div class="pitch-black" :class="{ on: interactions.pitchBlack && !interactions.doorOpen }" aria-hidden="true"></div>
+  <!-- The match guy's doorway (desktop gag levels): a door-shaped hole
+       through the dark, revealing the lit page beneath. -->
+  <svg
+    class="pitch-door"
+    :class="{ open: interactions.doorOpen }"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+  >
+    <defs>
+      <mask id="mgDoorMask">
+        <rect x="0" y="0" width="100" height="100" fill="#fff" />
+        <path class="door-hole" d="M46 82 V60 A4 4.5 0 0 1 54 60 V82 Z" fill="#000" />
+      </mask>
+    </defs>
+    <rect x="0" y="0" width="100" height="100" fill="#000" mask="url(#mgDoorMask)" />
+  </svg>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
   <div class="led-wash" :class="{ on: bonus.ledOn, accent: bonus.ledAccent }" aria-hidden="true"></div>
   <!-- Candlelight: warm wash while the candle burns. Desk view only —
@@ -933,6 +983,30 @@ onUnmounted(() => {
 <style>
 .gs-no-scroll {
   overflow: hidden;
+}
+/* Floating settings shortcut: bottom-right, only when the user has
+   changed a setting and the book is closed. */
+.settings-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 900;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(16, 14, 12, 0.82);
+  color: #f5ead6;
+  font-size: 1.3rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease;
+}
+.settings-fab:hover {
+  transform: scale(1.08);
 }
 /* During the binding's shelf beat the home page sits behind the
    cinematic; hide its manuscript stack so the filing reads clean. */

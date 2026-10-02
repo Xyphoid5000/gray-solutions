@@ -94,6 +94,15 @@ const trackClass = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Warm dark library behind the bookcase — dimmed so the shelf pops. */
+  background:
+    linear-gradient(rgba(10, 6, 3, 0.62), rgba(10, 6, 3, 0.62)),
+    url('/library-bg.jpg') center 30% / cover no-repeat,
+    #0d0a06;
+}
+/* Let the library show through around the case. */
+.office-shelf :deep(.bookshelf-hero) {
+  background: transparent;
 }
 .office-cover {
   position: absolute;

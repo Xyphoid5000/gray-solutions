@@ -6,12 +6,23 @@
  * calling Gray Solutions reveals the 20%-off code, and if the match
  * guy has quit, his contact appears so you can hire him back.
  */
-import { computed, inject, ref, onUnmounted, nextTick, type Ref } from 'vue';
+import { computed, inject, ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue';
 import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
 import { useModalA11y } from '../composables/useModalA11y';
 import { scrollToElement } from '../lib/scroll';
 import { useSettingsStore } from '../stores/settings';
 import { useBonusStore } from '../stores/bonus';
+import { useDeviceStore } from '../stores/device';
+
+/** `shortcut`: this is the desk phone — it answers the floating
+    settings shortcut. Other instances (e.g. the binding cinematic's)
+    ignore it. */
+const props = defineProps<{ shortcut?: boolean }>();
+
+const device = useDeviceStore();
+/** Desktop (fine pointer / wide viewport): snake starts with the space
+    bar and steers with the arrow keys. Mobile keeps tap + swipe. */
+const isDesktop = computed(() => device.isDesktop);
 
 const PIN = '4132';
 const MAX_ATTEMPTS = 3;
@@ -212,7 +223,11 @@ function drawSnake() {
     ctx.fillStyle = '#d9f2dd';
     ctx.font = '600 17px Inter, system-ui, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Tap to play', (SNAKE_COLS * CELL) / 2, (SNAKE_ROWS * CELL) / 2);
+    ctx.fillText(
+      isDesktop.value ? 'Press space to play' : 'Tap to play',
+      (SNAKE_COLS * CELL) / 2,
+      (SNAKE_ROWS * CELL) / 2,
+    );
   } else if (snakeState.value === 'over') {
     ctx.fillStyle = 'rgba(13,20,16,0.72)';
     ctx.fillRect(0, 0, SNAKE_COLS * CELL, SNAKE_ROWS * CELL);
@@ -225,7 +240,11 @@ function drawSnake() {
       (SNAKE_ROWS * CELL) / 2 - 12,
     );
     ctx.font = '500 13px Inter, system-ui, sans-serif';
-    ctx.fillText('Tap to retry', (SNAKE_COLS * CELL) / 2, (SNAKE_ROWS * CELL) / 2 + 16);
+    ctx.fillText(
+      isDesktop.value ? 'Press space to retry' : 'Tap to retry',
+      (SNAKE_COLS * CELL) / 2,
+      (SNAKE_ROWS * CELL) / 2 + 16,
+    );
   }
 }
 function onSnakeTap() {
@@ -260,6 +279,13 @@ function onKey(e: KeyboardEvent) {
   else if (e.key === 'ArrowDown') steer(0, 1);
   else if (e.key === 'ArrowLeft') steer(-1, 0);
   else if (e.key === 'ArrowRight') steer(1, 0);
+  else if (e.key === ' ') {
+    // Desktop: space starts (or restarts) the game.
+    if (snakeState.value !== 'playing') {
+      e.preventDefault();
+      startSnake();
+    }
+  }
 }
 
 /* ---------------- Contacts ---------------- */
@@ -348,6 +374,21 @@ function makeCode(): string {
   return `CURIOUS-${s}`;
 }
 
+function openSettingsDirect() {
+  // From the floating settings shortcut on the main screen: skip the
+  // PIN and land straight in the Settings app. Safe because the
+  // shortcut only appears after the user already changed settings.
+  pinEntry.value = '';
+  pinError.value = false;
+  held.value = true;
+  screen.value = 'settings';
+  siteNameDraft.value = settings.siteName;
+}
+onMounted(() => {
+  if (props.shortcut) window.addEventListener('gs:open-phone-settings', openSettingsDirect);
+});
+onUnmounted(() => window.removeEventListener('gs:open-phone-settings', openSettingsDirect));
+
 onUnmounted(() => {
   stopSnake();
   if (callTimer !== null) clearTimeout(callTimer);
@@ -373,7 +414,10 @@ onUnmounted(() => {
     </svg>
   </button>
 
-  <!-- Picked up: the phone in hand. -->
+  <!-- Picked up: the phone in hand. Teleported to <body> so it can
+       open from the main screen too — there the desk slide (and this
+       component's on-desk button) is display:none. -->
+  <Teleport to="body">
   <div
     v-if="held"
     ref="phoneDialogEl"
@@ -463,7 +507,7 @@ onUnmounted(() => {
               :height="SNAKE_ROWS * CELL"
             ></canvas>
           </div>
-          <p class="snake-hint">Swipe to steer</p>
+          <p class="snake-hint">{{ isDesktop ? 'Arrow keys to steer' : 'Swipe to steer' }}</p>
         </div>
 
         <!-- Contacts -->
@@ -583,6 +627,7 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -652,7 +697,10 @@ html[data-blacklight='on'] .desk-phone-btn {
 
 /* ---- picked-up modal ---- */
 .phone-modal {
-  position: absolute;
+  /* Fixed, not absolute: the phone can be picked up from the main
+     screen too (via the settings shortcut), where its desk slide is
+     display:none. */
+  position: fixed;
   inset: 0;
   z-index: 1600;
   display: grid;

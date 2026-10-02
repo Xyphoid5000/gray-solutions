@@ -72,6 +72,20 @@ export const useSettingsStore = defineStore('settings', () => {
     sandwich.value = false;
   }
 
+  /** True when any setting differs from its default — drives the
+      floating settings shortcut on the main screen. */
+  const isModified = computed(() =>
+    siteName.value !== 'Gray Solutions' ||
+    bgColor.value !== null ||
+    textColor.value !== null ||
+    mode.value !== 'auto' ||
+    accent.value !== null ||
+    mirror.value ||
+    invert.value ||
+    noCss.value ||
+    sandwich.value,
+  );
+
   /** Disabling stylesheets directly — the toggle needs the real DOM. */
   function setNoCss(v: boolean) {
     noCss.value = v;
@@ -135,6 +149,6 @@ export const useSettingsStore = defineStore('settings', () => {
   return {
     siteName, logoMark, bgColor, textColor, mode, accent, mirror, invert, noCss, sandwich,
     setSiteName, setBgColor, setTextColor, setMode, setAccent,
-    toggleMirror, toggleInvert, toggleNoCss, toggleSandwich, resetAll,
+    toggleMirror, toggleInvert, toggleNoCss, toggleSandwich, resetAll, isModified,
   };
 });

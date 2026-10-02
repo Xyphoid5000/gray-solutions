@@ -9,6 +9,9 @@ import { ref } from 'vue';
 export const useInteractionsStore = defineStore('interactions', () => {
   /** Light rituals: pitch-black beat, match hand, breeze. */
   const pitchBlack = ref(false);
+  /** The match guy's doorway: a door-shaped hole through the
+      pitch-black overlay, revealing the lit page beneath. */
+  const doorOpen = ref(false);
   const matchMounted = ref(false);
   const matchAtWick = ref(false);
   const matchXY = ref({ x: 60, y: 400 });
@@ -40,6 +43,7 @@ export const useInteractionsStore = defineStore('interactions', () => {
 
   return {
     pitchBlack,
+    doorOpen,
     matchMounted,
     matchAtWick,
     matchXY,

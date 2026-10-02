@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
 import Book from './Book.vue';
 import BookSandwich from './BookSandwich.vue';
 import { useSettingsStore } from '../stores/settings';
+import { useDeviceStore } from '../stores/device';
 import { storeToRefs } from 'pinia';
 
 withDefaults(
@@ -29,14 +30,14 @@ const { siteName, logoMark } = storeToRefs(useSettingsStore());
 
 interface ShelfBook {
   title: string;
+  author?: string;
   color: string;
   h: number;
   w: number;
   synopsis: string;
 }
 
-/** The shelf: one set of 5 books, used identically everywhere.
-    (Moby-Dick and The Odyssey were cut — the row only fits five.) */
+/** The shelf: the same set of books, used identically everywhere. */
 const SHELF_BOOKS: ShelfBook[] = [
   { title: 'Pride and Prejudice', color: '#1f3a5a', h: 212, w: 40, synopsis: 'Two people who are perfect for each other spend 400 pages pretending they are not.' },
   { title: 'Frankenstein', color: '#2e4a2e', h: 244, w: 48, synopsis: 'A college dropout builds a man, then complains about it for the rest of his life.' },
@@ -47,6 +48,19 @@ const SHELF_BOOKS: ShelfBook[] = [
 /** Split around the binding slot: 3 left, 2 right. */
 const shelfLeft = SHELF_BOOKS.slice(0, 3);
 const shelfRight = SHELF_BOOKS.slice(3);
+/** Five more classics for larger screens, flanking the row — same
+    books, same behavior, just more shelf to fill on desktop. */
+const NEW_BOOKS: ShelfBook[] = [
+  { title: 'Moby-Dick', author: 'Herman Melville', color: '#26435c', h: 228, w: 30, synopsis: 'A captain\u2019s obsessive hunt for a white whale, padded with 200 pages of whaling facts.' },
+  { title: 'The Great Gatsby', author: 'F. Scott Fitzgerald', color: '#3d2b52', h: 208, w: 30, synopsis: 'A mysterious millionaire throws lavish parties to win back a lost love. The Jazz Age, dissected.' },
+  { title: '1984', author: 'George Orwell', color: '#4a2323', h: 240, w: 32, synopsis: 'A man rewrites history for the Party, then dares to think for himself. Big Brother is watching.' },
+  { title: 'The Picture of Dorian Gray', author: 'Oscar Wilde', color: '#4f3a24', h: 216, w: 32, synopsis: 'A beautiful young man stays young while his portrait does all the aging \u2014 and all the sinning.' },
+  { title: 'Of Mice and Men', author: 'John Steinbeck', color: '#413c28', h: 204, w: 30, synopsis: 'Two drifters chase the American Dream through the Depression. It ends the way Steinbeck ends things.' },
+];
+const newLeft = NEW_BOOKS.slice(0, 3);
+const newRight = NEW_BOOKS.slice(3);
+/** The extra books only exist where there's room — large screens. */
+const showExtraBooks = computed(() => useDeviceStore().isDesktop);
 
 /** Sandwich mode: every book becomes a topping. The Gray Solutions
     book is the patty — the main event. */
@@ -115,71 +129,6 @@ function onShelfKey(e: KeyboardEvent) {
 }
 onMounted(() => window.addEventListener('keydown', onShelfKey));
 onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
-
-/** Fill the shelf edge to edge: the narrowest standard book is 38px,
-    so floor(innerWidth / (38 + gap)) slots fit. The 5 classics + the
-    binding slot stay the real interactive books; the rest are
-    spine-only decorative filler, split around the real books so they
-    stay centered. */
-const BOOK_MIN_WIDTH = 38;
-const BOOK_GAP = 7;
-const REAL_SLOTS = SHELF_BOOKS.length + 1; // 5 classics + the binding slot
-const booksEl = ref<HTMLElement | null>(null);
-const shelfInnerWidth = ref(0);
-let shelfRO: ResizeObserver | null = null;
-function measureShelf() {
-  const el = booksEl.value;
-  if (!el) return;
-  // Mobile zooms the case — measure in un-zoomed px so the slot math
-  // uses the same units as the book widths.
-  const zoom = parseFloat(getComputedStyle(el).zoom || '1') || 1;
-  shelfInnerWidth.value = el.getBoundingClientRect().width / zoom;
-}
-function bindShelfMeasure() {
-  shelfRO?.disconnect();
-  shelfRO = null;
-  if (!booksEl.value) return;
-  measureShelf();
-  shelfRO = new ResizeObserver(measureShelf);
-  shelfRO.observe(booksEl.value);
-}
-onMounted(bindShelfMeasure);
-onUnmounted(() => shelfRO?.disconnect());
-// The books row unmounts in sandwich mode — rebind when it returns.
-watch(sandwich, async () => {
-  await nextTick();
-  bindShelfMeasure();
-});
-const fillerCount = computed(() => {
-  if (shelfInnerWidth.value <= 0) return 0;
-  const slots = Math.floor(shelfInnerWidth.value / (BOOK_MIN_WIDTH + BOOK_GAP));
-  return Math.max(0, slots - REAL_SLOTS);
-});
-interface FillerBook {
-  h: number;
-  w: number;
-  color: string;
-}
-/** Deterministic filler spines — muted cloth tones, varied heights. */
-function fillerAt(i: number): FillerBook {
-  const r = (seed: number) => ((i * seed + 12345) % 233280) / 233280;
-  const palette = ['#26343f', '#3a2f22', '#2e2a26', '#402020', '#22332a', '#33272e', '#2a2f3a'];
-  return {
-    h: 200 + Math.round(r(9301) * 48),
-    w: 34 + Math.round(r(49297) * 14),
-    color: palette[Math.floor(r(7919) * palette.length) % palette.length],
-  };
-}
-const leftFillers = computed<FillerBook[]>(() => {
-  const n = fillerCount.value;
-  const left = Math.ceil(n / 2);
-  return Array.from({ length: left }, (_, i) => fillerAt(i));
-});
-const rightFillers = computed<FillerBook[]>(() => {
-  const n = fillerCount.value;
-  const left = Math.ceil(n / 2);
-  return Array.from({ length: n - left }, (_, i) => fillerAt(left + i));
-});
 </script>
 
 <template>
@@ -195,15 +144,25 @@ const rightFillers = computed<FillerBook[]>(() => {
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
-        <div v-if="!sandwich" ref="booksEl" class="bs-books">
-          <!-- Decorative filler: spine-only, non-interactive. -->
-          <div
-            v-for="(f, i) in leftFillers"
-            :key="'fl-' + i"
-            class="bs-book bs-filler"
-            aria-hidden="true"
-            :style="{ height: f.h + 'px', width: f.w + 'px', background: f.color }"
-          ></div>
+        <div v-if="!sandwich" class="bs-books">
+          <!-- Extra classics on larger screens: same books, same behavior. -->
+          <template v-if="showExtraBooks">
+            <div
+              v-for="b in newLeft"
+              :key="b.title"
+              role="button"
+              tabindex="0"
+              class="bs-book"
+              :class="{ 'is-interactive': interactive }"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+              :aria-label="b.title"
+              @click="interactive && toggleBook(b)"
+              @keydown.enter="interactive && toggleBook(b)"
+              @keydown.space.prevent="interactive && toggleBook(b)"
+            >
+              <span class="bs-spine-label">{{ b.title }}</span>
+            </div>
+          </template>
           <div
             v-for="b in shelfLeft"
             :key="b.title"
@@ -253,13 +212,23 @@ const rightFillers = computed<FillerBook[]>(() => {
           >
             <span class="bs-spine-label">{{ b.title }}</span>
           </div>
-          <div
-            v-for="(f, i) in rightFillers"
-            :key="'fr-' + i"
-            class="bs-book bs-filler"
-            aria-hidden="true"
-            :style="{ height: f.h + 'px', width: f.w + 'px', background: f.color }"
-          ></div>
+          <template v-if="showExtraBooks">
+            <div
+              v-for="b in newRight"
+              :key="b.title"
+              role="button"
+              tabindex="0"
+              class="bs-book"
+              :class="{ 'is-interactive': interactive }"
+              :style="{ height: b.h + 'px', width: b.w + 'px', background: b.color }"
+              :aria-label="b.title"
+              @click="interactive && toggleBook(b)"
+              @keydown.enter="interactive && toggleBook(b)"
+              @keydown.space.prevent="interactive && toggleBook(b)"
+            >
+              <span class="bs-spine-label">{{ b.title }}</span>
+            </div>
+          </template>
         </div>
         <div v-else class="bs-sandwich" aria-label="Sandwich mode: every book is a topping">
           <div class="sw-bun sw-bun-top" aria-hidden="true"></div>
@@ -347,6 +316,7 @@ const rightFillers = computed<FillerBook[]>(() => {
           :title="selectedBook.title"
           :color="selectedBook.color"
           :synopsis="selectedBook.synopsis"
+          :author="selectedBook.author"
           :width="32"
           :height="200"
           :pulled="true"
@@ -458,15 +428,15 @@ const rightFillers = computed<FillerBook[]>(() => {
   border-image: linear-gradient(to bottom, #4a2e18, #2b1a0e) 1;
   padding: 0 10px;
 }
-/* Desktop: a wider case, filled edge to edge with books. */
+/* Desktop: a few more books join the row — snugger padding so the
+   original case still fits them all. */
 @media (min-width: 641px) {
   .bs-case {
-    width: min(1100px, 96vw);
+    padding: 0 6px;
   }
-}
-/* Decorative filler spines: same shelf language, no interaction. */
-.bs-book.bs-filler {
-  filter: brightness(0.92);
+  .bs-books {
+    padding: 0 4px;
+  }
 }
 .bs-cornice {
   height: 18px;
@@ -870,7 +840,8 @@ html[data-theme='dark'] .bookshelf-hero {
    fiddly, so the arrow keys rotate the selected book instead. */
 .bs-rotate-hint {
   position: absolute;
-  top: 1.2rem;
+  /* Clear of the site header — rides just above the pulled book. */
+  top: 30%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
