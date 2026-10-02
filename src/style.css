@@ -2034,9 +2034,9 @@ html[data-blacklight='on'] body::after {  content: '';
   opacity: 0.97;
   pointer-events: auto;
 }
-/* The match guy's doorway: a black overlay with a door-shaped hole
-   masked through it, revealing the lit page beneath. The hole scales
-   open from the floor. */
+/* The match guy's doorway: a black overlay with a plain rectangular
+   door hole masked through it, revealing the lit page beneath.
+   The reveal is a hard cut — no swing, no fade. */
 .pitch-door {
   position: fixed;
   inset: 0;
@@ -2045,19 +2045,76 @@ html[data-blacklight='on'] body::after {  content: '';
   height: 100%;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.45s ease;
 }
 .pitch-door.open {
   opacity: 1;
 }
-.pitch-door .door-hole {
-  transform: scaleY(0);
-  transform-box: view-box;
-  transform-origin: 50px 82px;
-  transition: transform 0.6s ease;
+/* The closed door: a plain flat dark slab in a simple dark frame,
+   standing at the screen midpoint. Fades into the dark just before
+   the reveal. */
+.door-slab {
+  position: fixed;
+  left: 44%;
+  top: 40%;
+  width: 12%;
+  height: 36%;
+  z-index: 2000;
+  pointer-events: none;
+  background: #0b0b0d;
+  box-shadow: 0 0 0 4px #17171b, 0 0 60px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
-.pitch-door.open .door-hole {
-  transform: scaleY(1);
+.door-slab.on {
+  opacity: 1;
+}
+/* The open doorway blazes amber: white-hot core over the lit page,
+   soft falloff at the edges, and light spilling onto the floor in
+   front of it. Hard cut on open; the glow fades on close. */
+.doorway {
+  position: fixed;
+  inset: 0;
+  z-index: 2001;
+  pointer-events: none;
+}
+.doorway-blaze {
+  position: absolute;
+  left: 44%;
+  top: 40%;
+  width: 12%;
+  height: 36%;
+  background: radial-gradient(
+    ellipse at 50% 55%,
+    #fff8e6 0%,
+    #ffd27a 20%,
+    #ff9d2e 45%,
+    rgba(224, 106, 18, 0.55) 70%,
+    rgba(224, 106, 18, 0) 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.doorway-spill {
+  position: absolute;
+  left: 50%;
+  top: 74%;
+  width: 36%;
+  height: 18%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(255, 157, 46, 0.5) 0%,
+    rgba(255, 157, 46, 0) 70%
+  );
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.doorway.on .doorway-blaze,
+.doorway.on .doorway-spill {
+  opacity: 1;
+  transition: none;
 }
 /* Candlelight vignette: when the candle is lit, the desk and the page
    nearest the flame sit in a warm pool that falls off with distance —

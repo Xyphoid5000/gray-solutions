@@ -210,10 +210,14 @@ async function runBinding() {
   bindingActive.value = true;
   bindCinematic.value.start();
 }
-/** Sandwich binding: the bite is done — finish like the cinematic. */
+/** Sandwich binding: the bite is done — finish like the cinematic,
+    then back to the main page (the bite skips the cinematic's
+    blackout, which is what normally closes the book). */
 function onBiteDone() {
   biteActive.value = false;
   onBindDone();
+  officeRef.value?.bookView?.resetBookView();
+  closeBook();
 }
 function onFinaleContact() {
   if (!manuscriptBound.value && bindCinematic.value) {
@@ -498,6 +502,7 @@ function matchGuyGag(level: 1 | 2 | 3) {
             interactions.guyFading = false;
           }));
           walkGuyTo(-160, 110, () => {
+            // The door closes (hard cut) and the amber glow fades.
             interactions.doorOpen = false;
             stopGuy();
             lightCandleAfterGag();
@@ -512,20 +517,25 @@ function matchGuyGag(level: 1 | 2 | 3) {
         }
       };
       if (doorway) {
-        // He stops at the midpoint, delivers the line, opens a
-        // door-shaped doorway through the dark — the lit page beneath
-        // shows through — and walks through it. The door stays open
-        // behind him until he comes back.
+        // He stops at the midpoint, delivers the line, and a plain dark
+        // slab door fades into the black in front of him — then a hard
+        // cut: the doorway is already open, blazing amber over the lit
+        // page beneath. He walks through silhouetted; the door stays
+        // open behind him until he comes back.
         later(() => {
-          interactions.doorOpen = true;
+          interactions.doorSlab = true;
           later(() => {
-            interactions.guyFading = true;
-            walkGuyTo(vw / 2 + 220, 110, () => {
-              stopGuy();
-              // The open doorway holds a beat, then he's back.
-              later(afterComplaint, 1200);
-            });
-          }, 700);
+            interactions.doorSlab = false;
+            interactions.doorOpen = true;
+            later(() => {
+              interactions.guyFading = true;
+              walkGuyTo(vw / 2 + 220, 110, () => {
+                stopGuy();
+                // The open doorway holds a beat, then he's back.
+                later(afterComplaint, 1200);
+              });
+            }, 450);
+          }, 650);
         }, 1400);
       } else {
         stopGuy();
@@ -938,8 +948,12 @@ onUnmounted(() => {
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: interactions.pitchBlack && !interactions.doorOpen }" aria-hidden="true"></div>
-  <!-- The match guy's doorway (desktop gag levels): a door-shaped hole
-       through the dark, revealing the lit page beneath. -->
+  <!-- The match guy's doorway (desktop gag levels). Closed: a plain
+       flat dark slab faded into the black at the screen midpoint.
+       Open: a hard cut to a doorway blazing amber, revealing the lit
+       page beneath, with light spilling onto the floor. No swing, no
+       fire — the reveal is instant. -->
+  <div class="door-slab" :class="{ on: interactions.doorSlab }" aria-hidden="true"></div>
   <svg
     class="pitch-door"
     :class="{ open: interactions.doorOpen }"
@@ -950,11 +964,15 @@ onUnmounted(() => {
     <defs>
       <mask id="mgDoorMask">
         <rect x="0" y="0" width="100" height="100" fill="#fff" />
-        <path class="door-hole" d="M46 82 V60 A4 4.5 0 0 1 54 60 V82 Z" fill="#000" />
+        <path d="M44 76 V40 H56 V76 Z" fill="#000" />
       </mask>
     </defs>
     <rect x="0" y="0" width="100" height="100" fill="#000" mask="url(#mgDoorMask)" />
   </svg>
+  <div class="doorway" :class="{ on: interactions.doorOpen }" aria-hidden="true">
+    <div class="doorway-blaze"></div>
+    <div class="doorway-spill"></div>
+  </div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
   <div class="led-wash" :class="{ on: bonus.ledOn, accent: bonus.ledAccent }" aria-hidden="true"></div>
   <!-- Candlelight: warm wash while the candle burns. Desk view only —
@@ -976,6 +994,7 @@ onUnmounted(() => {
     :facing="interactions.guyFacing"
     :line="interactions.guyLine"
     :fading="interactions.guyFading"
+    :class="{ 'door-glow': interactions.doorOpen }"
   />
   </div>
 </template>

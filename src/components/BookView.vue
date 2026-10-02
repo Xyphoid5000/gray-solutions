@@ -590,7 +590,11 @@ function goFromModal(i: number) {
 
 function onKey(e: KeyboardEvent) {
   if (overlayOpen()) return;
-  if (e.key === 'ArrowRight') next();
+  if (e.key === 'ArrowRight') {
+    // Last chapter: the right arrow binds the book (mirrors swipe-left).
+    if (currentIndex.value === chapters.length - 1) onChapterContact(currentIndex.value);
+    else next();
+  }
   if (e.key === 'ArrowLeft') prev();
 }
 

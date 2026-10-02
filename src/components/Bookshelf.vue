@@ -5,6 +5,7 @@ import Book from './Book.vue';
 import BookSandwich from './BookSandwich.vue';
 import { useSettingsStore } from '../stores/settings';
 import { useDeviceStore } from '../stores/device';
+import { useOfficeStore } from '../stores/office';
 import { storeToRefs } from 'pinia';
 
 withDefaults(
@@ -122,6 +123,8 @@ watch(selectedBook, (b) => {
 });
 function onShelfKey(e: KeyboardEvent) {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  // The open book owns the arrow keys — page turns, not shelf spins.
+  if (useOfficeStore().view === 'desk') return;
   if (!selectedBook.value || !bookRef.value) return;
   e.preventDefault();
   bookRef.value.rotateBy(e.key === 'ArrowLeft' ? -15 : 15);
@@ -840,8 +843,8 @@ html[data-theme='dark'] .bookshelf-hero {
    fiddly, so the arrow keys rotate the selected book instead. */
 .bs-rotate-hint {
   position: absolute;
-  /* Clear of the site header — rides just above the pulled book. */
-  top: 30%;
+  /* Halfway between the header and the pulled book. */
+  top: 16%;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
