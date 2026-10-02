@@ -66,7 +66,6 @@ export const useSettingsStore = defineStore('settings', () => {
     textColor.value = null;
     accent.value = null;
     mode.value = 'auto';
-    accent.value = '#d08a4e';
     mirror.value = false;
     invert.value = false;
     setNoCss(false);
