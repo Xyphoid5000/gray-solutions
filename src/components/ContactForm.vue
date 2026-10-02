@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { siteConfig } from '../config';
 import { activeDiscountCode } from '../lib/discount';
 
 defineProps<{ bonusContent?: boolean }>();
 
 const hasSite = ref('');
 const formStatus = ref('');
+const formError = ref(false);
 const showPuzzleInfo = ref(false);
 const discountError = ref('');
 
-function submitContactForm(event: SubmitEvent) {
+async function submitContactForm(event: SubmitEvent) {
   const form = event.currentTarget as HTMLFormElement;
   const formData = new FormData(form);
   const name = String(formData.get('name') ?? '').trim();
@@ -19,6 +19,7 @@ function submitContactForm(event: SubmitEvent) {
   const site = String(formData.get('site-url') ?? '').trim();
   const comments = String(formData.get('comments') ?? '').trim();
   const discount = String(formData.get('discount-code') ?? '').trim();
+  const company = String(formData.get('company') ?? '').trim();
 
   // A code only counts if it matches the one currently on the phone.
   discountError.value = '';
@@ -33,24 +34,40 @@ function submitContactForm(event: SubmitEvent) {
     }
   }
 
-  const subject = `Website inquiry from ${name}`;
-  const body = [
-    `Name: ${name}`,
-    `Email: ${email}`,
-    `Phone: ${phone || '—'}`,
-    `Existing site: ${hasSite.value === 'yes' ? `Yes — ${site}` : 'No'}`,
-    discountLine,
-    '',
-    comments,
-  ].join('\n');
-
-  formStatus.value = 'Opening your email client…';
-  window.location.href = `mailto:${siteConfig.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  formError.value = false;
+  formStatus.value = 'Sending…';
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        email,
+        phone,
+        hasSite: hasSite.value,
+        siteUrl: site,
+        comments,
+        discountLine,
+        company,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || 'Something went wrong sending your message.');
+    }
+    formStatus.value = 'Got it — I read every note myself and reply within a couple of days.';
+    form.reset();
+    hasSite.value = '';
+  } catch (err) {
+    formError.value = true;
+    formStatus.value = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+  }
 }
 </script>
 
 <template>
   <form class="contact-form" @submit.prevent="submitContactForm">
+    <input name="company" type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
     <div class="contact-row">
       <label class="field">
         <span>Name</span>
@@ -107,7 +124,7 @@ function submitContactForm(event: SubmitEvent) {
       <button class="btn btn-solid" type="submit">
         Send it over <span class="arrow" aria-hidden="true">&rarr;</span>
       </button>
-      <small aria-live="polite">{{ formStatus || 'I read every note myself and reply within a couple of days.' }}</small>
+      <small aria-live="polite" :class="{ 'form-error': formError }">{{ formStatus || 'I read every note myself and reply within a couple of days.' }}</small>
     </div>
   </form>
 </template>

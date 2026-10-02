@@ -2406,6 +2406,18 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   gap: 1.35rem;
   max-width: 620px;
 }
+/* Honeypot anti-spam field — never visible to humans. */
+.contact-form .hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.contact-form .form-error {
+  color: #b3261e;
+}
 .contact-row-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
