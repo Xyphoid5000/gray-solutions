@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { activeDiscountCode } from '../lib/discount';
+import { ref, watch } from 'vue';
+import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
 
-defineProps<{ bonusContent?: boolean }>();
+defineProps<{ isBound?: boolean }>();
 
 const hasSite = ref('');
 const formStatus = ref('');
 const formError = ref(false);
 const showPuzzleInfo = ref(false);
+const showHint = ref(false);
 const discountError = ref('');
+const discountInput = ref<HTMLInputElement | null>(null);
+
+/** The desk phone can drop this visit's code straight into the field. */
+watch(autoFillDiscountCode, (code) => {
+  if (!code) return;
+  if (discountInput.value) discountInput.value.value = code;
+  autoFillDiscountCode.value = '';
+});
 
 async function submitContactForm(event: SubmitEvent) {
   const form = event.currentTarget as HTMLFormElement;
@@ -114,13 +123,17 @@ async function submitContactForm(event: SubmitEvent) {
         placeholder="What does your business do, who is it for, and what should your website accomplish?"
       ></textarea>
     </label>
-    <label class="field" v-if="bonusContent">
+    <label class="field">
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
-      <input name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" />
+      <input ref="discountInput" name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" />
       <small v-if="discountError" id="discount-error" class="discount-error" role="alert">{{ discountError }}</small>
-      <small v-if="showPuzzleInfo" class="puzzle-info-text">Solve the hidden puzzle on this site for 20% off.</small>
+      <span v-if="showPuzzleInfo" class="puzzle-info-text">
+        <small>Somewhere on this site is a one time code for 20% off your website.</small>
+        <button v-if="!showHint" type="button" class="hint-btn" @click="showHint = true">Show hint</button>
+        <small v-else class="puzzle-hint">Turn the {{ isBound ? 'Gray Solutions book' : 'manuscript' }} around.</small>
+      </span>
     </label>
     <div class="contact-submit">
       <button class="btn btn-solid" type="submit">

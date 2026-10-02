@@ -840,7 +840,7 @@ onUnmounted(() => {
   </main>
   <!-- Contact/about sections (below the Office carousel, shelf view only). -->
   <div v-if="office.view === 'shelf'" class="home-sections">
-    <Cover :bonus-content="bonus.enabled" />
+    <Cover :bonus-content="bonus.enabled" :is-bound="manuscriptBound" />
   </div>
   <BindCinematic
     ref="bindCinematic"

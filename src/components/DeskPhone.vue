@@ -7,8 +7,9 @@
  * guy has quit, his contact appears so you can hire him back.
  */
 import { computed, inject, ref, onUnmounted, nextTick, type Ref } from 'vue';
-import { activeDiscountCode } from '../lib/discount';
+import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
 import { useModalA11y } from '../composables/useModalA11y';
+import { scrollToElement } from '../lib/scroll';
 
 const PIN = '4132';
 const MAX_ATTEMPTS = 3;
@@ -303,6 +304,13 @@ function endCall() {
   screen.value = 'contacts';
 }
 
+/** Copy this visit's code into the contact form and scroll to it. */
+function fillForm() {
+  autoFillDiscountCode.value = activeDiscountCode.value;
+  const el = document.getElementById('contact');
+  if (el) scrollToElement(el);
+}
+
 /* ---------------- Bonus code ---------------- */
 function makeCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -453,6 +461,7 @@ onUnmounted(() => {
             <p class="call-thanks">Thanks for calling Gray Solutions!</p>
             <p class="call-code-value">{{ activeDiscountCode }}</p>
             <p class="call-code-note">Mention it in the contact form for <strong>20% off</strong> your new website.</p>
+            <button type="button" class="call-code-fill" @click="fillForm">Fill it in for me</button>
           </div>
           <p v-else-if="callStatus === 'connected'" class="call-status">
             {{
@@ -911,6 +920,19 @@ html[data-blacklight='on'] .desk-phone-btn {
   margin: 0;
   max-width: 26ch;
   line-height: 1.5;
+}
+.call-code-fill {
+  border: 1px solid #2f6b3a;
+  background: #0d1410;
+  color: #7ee787;
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.call-code-fill:hover {
+  background: #14231a;
 }
 .call-end {
   margin-top: 1.2rem;
