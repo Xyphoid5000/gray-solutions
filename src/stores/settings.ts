@@ -10,14 +10,14 @@ import { computed, ref, watch } from 'vue';
 export const useSettingsStore = defineStore('settings', () => {
   /** Site name — prominent brand spots read this instead of the literal. */
   const siteName = ref('Gray Solutions');
-  /** Page background color override — drives --bg. */
-  const bgColor = ref('#0a0d16');
-  /** Main text color override — drives --ink. */
-  const textColor = ref('#f2ecdf');
+  /** Page background color override — null means the theme decides. */
+  const bgColor = ref<string | null>(null);
+  /** Main text color override — null means the theme decides. */
+  const textColor = ref<string | null>(null);
   /** Light/dark override. Auto leaves the room lighting in charge. */
   const mode = ref<'auto' | 'light' | 'dark'>('auto');
-  /** Accent color — drives --ember across the site. */
-  const accent = ref('#d08a4e');
+  /** Accent color override — null means the theme decides. */
+  const accent = ref<string | null>(null);
   /** Mirror the whole site horizontally. Beautifully unreadable. */
   const mirror = ref(false);
   /** Invert every color on the site. */
@@ -62,8 +62,9 @@ export const useSettingsStore = defineStore('settings', () => {
   }
   function resetAll() {
     siteName.value = 'Gray Solutions';
-    bgColor.value = '#0a0d16';
-    textColor.value = '#f2ecdf';
+    bgColor.value = null;
+    textColor.value = null;
+    accent.value = null;
     mode.value = 'auto';
     accent.value = '#d08a4e';
     mirror.value = false;
@@ -87,10 +88,12 @@ export const useSettingsStore = defineStore('settings', () => {
   // Root-level effects. Mirror rides as an attribute so plain CSS can
   // do the work; colors are variable swaps.
   watch(bgColor, (c) => {
-    document.documentElement.style.setProperty('--bg', c);
+    if (c) document.documentElement.style.setProperty('--bg', c);
+    else document.documentElement.style.removeProperty('--bg');
   }, { immediate: true });
   watch(textColor, (c) => {
-    document.documentElement.style.setProperty('--ink', c);
+    if (c) document.documentElement.style.setProperty('--ink', c);
+    else document.documentElement.style.removeProperty('--ink');
   }, { immediate: true });
   watch(mirror, (m) => {
     document.documentElement.dataset.mirror = m ? 'on' : 'off';
@@ -99,7 +102,8 @@ export const useSettingsStore = defineStore('settings', () => {
     document.documentElement.dataset.invert = v ? 'on' : 'off';
   }, { immediate: true });
   watch(accent, (c) => {
-    document.documentElement.style.setProperty('--ember', c);
+    if (c) document.documentElement.style.setProperty('--ember', c);
+    else document.documentElement.style.removeProperty('--ember');
   }, { immediate: true });
   watch(siteName, (n) => {
     document.title = `${n} — Websites That Tell Stories`;

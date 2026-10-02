@@ -41,6 +41,16 @@ const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | '
 const settings = useSettingsStore();
 const bonus = useBonusStore();
 const siteNameDraft = ref(settings.siteName);
+
+/** What the theme is actually showing for a variable right now — the
+    color pickers default to this until the visitor overrides it. */
+function themeColor(name: string, fallback: string): string {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return /^#[0-9a-f]{6}$/i.test(v) ? v : fallback;
+}
+const effBg = computed(() => settings.bgColor ?? themeColor('--bg', '#0a0d16'));
+const effText = computed(() => settings.textColor ?? themeColor('--ink', '#f2ecdf'));
+const effAccent = computed(() => settings.accent ?? themeColor('--ember', '#d08a4e'));
 const pinEntry = ref('');
 const pinAttempts = ref(0);
 const pinError = ref(false);
@@ -496,11 +506,11 @@ onUnmounted(() => {
               <span class="set-name">Colors</span>
               <label class="set-row">
                 <span class="set-name">Background</span>
-                <input type="color" class="set-color" :value="settings.bgColor" @input="settings.setBgColor(($event.target as HTMLInputElement).value)" aria-label="Background color" />
+                <input type="color" class="set-color" :value="effBg" @input="settings.setBgColor(($event.target as HTMLInputElement).value)" aria-label="Background color" />
               </label>
               <label class="set-row">
                 <span class="set-name">Text</span>
-                <input type="color" class="set-color" :value="settings.textColor" @input="settings.setTextColor(($event.target as HTMLInputElement).value)" aria-label="Text color" />
+                <input type="color" class="set-color" :value="effText" @input="settings.setTextColor(($event.target as HTMLInputElement).value)" aria-label="Text color" />
               </label>
             </div>
             <div class="set-group">
@@ -513,7 +523,7 @@ onUnmounted(() => {
             </div>
             <label class="set-row">
               <span class="set-name">Accent color</span>
-              <input type="color" class="set-color" :value="settings.accent" @input="settings.setAccent(($event.target as HTMLInputElement).value)" />
+              <input type="color" class="set-color" :value="effAccent" @input="settings.setAccent(($event.target as HTMLInputElement).value)" />
             </label>
             <div class="set-group">
               <span class="set-name">LED strip</span>
