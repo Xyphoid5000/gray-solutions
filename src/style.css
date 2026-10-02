@@ -11,6 +11,7 @@
   --panel: #111829;
   --desk: #04060b;
   --page: #10141f;
+  --paper: #d9cbb0; /* candlelit paper: dark-mode manuscript surfaces */
   --ink: #f2ecdf;
   --muted: #a7a192;
   --faint: #8a857a;
@@ -222,15 +223,6 @@ a {
   color: var(--ink);
   max-width: 34ch;
 }
-.body-copy {
-  color: var(--muted);
-  max-width: 62ch;
-}
-.body-copy strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-
 /* ---------- buttons ---------- */
 .btn {
   display: inline-flex;
@@ -257,16 +249,6 @@ a {
   transform: translateY(-2px);
   box-shadow: 0 12px 40px rgba(208, 138, 78, 0.35);
   background: var(--ember-bright);
-}
-.btn-ghost {
-  border-color: var(--line);
-  color: var(--ink);
-  background: transparent;
-}
-.btn-ghost:hover {
-  transform: translateY(-2px);
-  border-color: var(--ember);
-  color: var(--ember);
 }
 .btn .arrow {
   transition: transform 0.35s var(--ease-out);
@@ -346,7 +328,7 @@ a {
   color: #14100a;
 }
 
-/* ---------- hero / prologue ---------- */
+/* ---------- prologue / hero-sub / link-more ---------- */
 .prologue {
   min-height: 100svh;
   display: flex;
@@ -356,10 +338,7 @@ a {
   position: relative;
   overflow: clip;
 }
-/* Typewriter: the manuscript being finished live. */
-.typewriter .typed-text {
-  white-space: pre-wrap;
-}
+/* Typewriter cursor (Finale, BindCinematic). */
 .type-cursor {
   display: inline-block;
   width: 0.09em;
@@ -383,68 +362,6 @@ a {
   100% {
     opacity: 0;
   }
-}
-.prologue-glow {
-  position: absolute;
-  top: -20%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(1100px, 120vw);
-  height: min(1100px, 120vw);
-  background: radial-gradient(
-    closest-side,
-    rgba(208, 138, 78, 0.13),
-    rgba(180, 95, 34, 0.05),
-    transparent 70%
-  );
-  pointer-events: none;
-}
-.hero-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 1.6rem;
-}
-.hero-eyebrow .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ember);
-  box-shadow: 0 0 18px rgba(208, 138, 78, 0.9);
-  animation: pulse 2.4s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.72); opacity: 0.6; }
-}
-.hero-title {
-  font-family: var(--serif);
-  font-weight: 500;
-  font-size: clamp(3rem, 9.5vw, 7.6rem);
-  line-height: 1.02;
-  letter-spacing: -0.015em;
-  margin: 0 0 1.8rem;
-  text-wrap: balance;
-}
-.hero-title em {
-  font-style: italic;
-  font-weight: 400;
-  color: var(--ember);
-}
-.h-line {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.08em;
-  margin-bottom: -0.08em;
-}
-.h-line-inner {
-  display: block;
-  transform: translateY(115%);
 }
 .hero-sub {
   max-width: 60ch;
@@ -478,24 +395,6 @@ a {
 .link-more:hover .arrow {
   transform: translateX(4px);
 }
-.hero-ctas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 3.2rem;
-}
-.hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem 2.4rem;
-  padding: 1.4rem 0;
-  border-top: 1px solid var(--line-soft);
-  font-size: 0.8rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
-
 /* ---------- marquee divider ---------- */
 .marquee {
   overflow: hidden;
@@ -721,33 +620,6 @@ a {
   border-radius: 999px;
   padding: 0.35rem 0.9rem;
 }
-.proof-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-top: 1.8rem;
-  color: var(--ember);
-  font-weight: 600;
-  font-size: 0.92rem;
-  text-decoration: none;
-}
-.proof-link .arrow {
-  transition: transform 0.3s var(--ease-out);
-}
-.proof-link:hover .arrow {
-  transform: translateX(5px);
-}
-.proof-hint {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-top: 2rem;
-  color: var(--faint);
-  font-size: 0.75rem;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-}
-
 /* ---------- story arc / process ---------- */
 .arc-stage {
   position: relative;
@@ -803,109 +675,7 @@ a {
   margin: 0;
 }
 
-/* ---------- author ---------- */
-.author-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 3rem 5rem;
-  align-items: start;
-}
-.author-name {
-  font-family: var(--serif);
-  font-size: clamp(2.4rem, 5vw, 4rem);
-  font-weight: 500;
-  margin: 0 0 1.6rem;
-  line-height: 1.05;
-}
-.author-name em {
-  font-style: italic;
-  color: var(--ember);
-}
-.author-facts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border-top: 1px solid var(--line);
-}
-.author-facts li {
-  display: grid;
-  grid-template-columns: 130px 1fr;
-  gap: 1rem;
-  padding: 1.1rem 0;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 0.95rem;
-}
-.author-facts .fact-k {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--faint);
-  padding-top: 0.2rem;
-}
-.author-facts .fact-v {
-  color: var(--muted);
-}
-.author-facts .fact-v strong {
-  color: var(--ink);
-  font-weight: 600;
-}
-
 /* ---------- epilogue / contact ---------- */
-.epilogue {
-  text-align: center;
-  padding-bottom: clamp(6rem, 10vw, 9rem);
-}
-.epilogue .ch-kicker {
-  justify-content: center;
-}
-.epilogue .ch-kicker::before {
-  display: none;
-}
-.epilogue-title {
-  font-family: var(--serif);
-  font-weight: 500;
-  font-size: clamp(2.6rem, 7vw, 5.5rem);
-  line-height: 1.05;
-  margin: 0 auto 1.6rem;
-  max-width: 18ch;
-  text-wrap: balance;
-}
-.epilogue-title em {
-  font-style: italic;
-  color: var(--ember);
-}
-.epilogue-sub {
-  color: var(--muted);
-  max-width: 52ch;
-  margin: 0 auto 2.8rem;
-  font-size: 1.08rem;
-}
-.epilogue-ctas {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 3rem;
-}
-.epilogue-links {
-  display: flex;
-  justify-content: center;
-  gap: 2.2rem;
-  flex-wrap: wrap;
-}
-.epilogue-links a {
-  color: var(--faint);
-  text-decoration: none;
-  font-size: 0.85rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 500;
-  transition: color 0.25s;
-}
-.epilogue-links a:hover {
-  color: var(--ember);
-}
 /* The book's closing beat, folded into the About page. */
 .fin {
   margin-top: 2.2rem;
@@ -932,13 +702,11 @@ a {
   align-items: center;
   gap: 1.4rem 2.4rem;
 }
-.fin-links,
 .about-links {
   display: flex;
   gap: 1.8rem;
   flex-wrap: wrap;
 }
-.fin-links a,
 .about-links a {
   color: var(--faint);
   text-decoration: none;
@@ -948,7 +716,6 @@ a {
   font-weight: 500;
   transition: color 0.25s;
 }
-.fin-links a:hover,
 .about-links a:hover {
   color: var(--ember);
 }
@@ -1048,42 +815,11 @@ a {
 .about-me .h-display {
   margin-bottom: 1.6rem;
 }
-.about-facts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.8rem 3rem;
-  margin: 3rem 0 0;
-  padding: 0;
-}
-.about-facts > div {
-  border-top: 1px solid var(--line-soft);
-  padding-top: 1.1rem;
-}
-.about-facts dt {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--ember);
-  margin-bottom: 0.55rem;
-}
-.about-facts dd {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.6;
-  font-size: 0.98rem;
-}
 .about-signoff {
   margin: 3rem 0 0;
   font-size: 1.15rem;
   color: var(--ink);
 }
-@media (max-width: 640px) {
-  .about-facts {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* ---------- footer ---------- */
 .site-footer {
   border-top: 1px solid var(--line-soft);
@@ -1129,9 +865,6 @@ a {
   .arc-grid {
     grid-template-columns: 1fr 1fr;
   }
-  .author-grid {
-    grid-template-columns: 1fr;
-  }
   .ch-num {
     top: -0.7em;
   }
@@ -1139,131 +872,6 @@ a {
 @media (max-width: 560px) {
   .arc-grid {
     grid-template-columns: 1fr;
-  }
-  .author-facts li {
-    grid-template-columns: 1fr;
-    gap: 0.3rem;
-  }
-  .hero-ctas .btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* ---------- reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track,
-  .hero-eyebrow .dot {
-    animation: none;
-  }
-  .h-line-inner {
-    transform: none;
-  }
-  .reveal {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ---------- reduced motion ---------- */
-/* ---------- the book ---------- */
-.book-viewport {
-  position: relative;
-  perspective: 1800px;
-  overflow: clip;
-}
-/* Reserve the read pile's lane on the left so the open page never
-   slides under it. The pile is fixed; this padding keeps the chapter
-   in its own lane. */
-body.has-book .book-viewport {
-  padding-left: 170px;
-}
-@media (max-width: 640px) {
-  body.has-book .book-viewport {
-    padding-left: 84px;
-  }
-}
-.book-page {
-  position: relative;
-  background: var(--bg);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  padding-bottom: clamp(7rem, 16vh, 10rem); /* air above the page-turner */
-}
-/* Dark mode: the book pages are warm candlelit paper, not black —
-   so the ink stays dark and readable. */
-html[data-theme='dark'] .book-page {
-  --ink: #1c1712;
-  --muted: #57503f;
-  --faint: #6b655a;
-  background: #d9cbb0;
-  color: #1c1712;
-}
-.chapter.book-page {
-  padding-top: clamp(6rem, 12vw, 10rem);
-}
-/* The book: chapter pages are paper slabs on a dark mahogany desk, with
-   the edges aligned to the tabs' inner sides. */
-body.has-book {
-  background-color: #2a140c;
-  background-image:
-    /* fine grain */
-    repeating-linear-gradient(
-      94deg,
-      rgba(10, 4, 2, 0.18) 0px,
-      rgba(10, 4, 2, 0.18) 1px,
-      transparent 1px,
-      transparent 6px
-    ),
-    /* soft wide streaks */
-    repeating-linear-gradient(
-      91deg,
-      rgba(0, 0, 0, 0.12) 0px,
-      rgba(0, 0, 0, 0.12) 3px,
-      transparent 3px,
-      transparent 23px
-    ),
-    /* warm highlights */
-    repeating-linear-gradient(
-      88deg,
-      rgba(255, 175, 115, 0.05) 0px,
-      rgba(255, 175, 115, 0.05) 2px,
-      transparent 2px,
-      transparent 17px
-    ),
-    /* broad mahogany tonal sweep */
-    linear-gradient(
-      103deg,
-      #3e2113 0%,
-      #2f170d 28%,
-      #251009 52%,
-      #341f0f 76%,
-      #27120a 100%
-    );
-}
-body.has-book .chapter.book-page {
-  background: var(--page);
-  /* The manuscript is a paper slab on the desk — narrower than the
-     viewport so the mahogany shows on both sides. Width is relative
-     to the viewport minus the pile's reserved lane. */
-  width: min(620px, 100% - 40px);
-  margin-inline: auto;
-  border-left: 1px solid var(--line-soft);
-  border-right: 1px solid var(--line-soft);
-  box-shadow:
-    0 18px 50px rgba(0, 0, 0, 0.22),
-    0 4px 14px rgba(0, 0, 0, 0.14);
-  position: relative;
-}
-@media (max-width: 640px) {
-  /* Mobile: the paper fills its lane (viewport minus the pile).
-     Tabs float over the right desk margin. */
-  body.has-book .chapter.book-page {
-    width: calc(100% - 16px);
-    margin-inline: auto;
-  }
-  .tab-rail-right .tab {
-    border-radius: 0 8px 8px 0;
   }
 }
 
@@ -1370,17 +978,9 @@ body.has-book .chapter.book-page {
   font-size: 1.6rem;
 }
 html[data-theme='dark'] .pile-scatter-card {
-  background: #d9cbb0;
+  background: var(--paper);
 }
-@media (prefers-reduced-motion: reduce) {
-  .pile-scatter-card { animation: none; }
-}
-@media (max-width: 640px) {
-  .pile-scatter-card {
-    width: 84px;
-    height: 116px;
-  }
-}
+
 .pile-grid-label {
   font-size: 0.62rem;
   line-height: 1.3;
@@ -1395,7 +995,7 @@ html[data-theme='dark'] .pile-scatter-card {
   user-select: none;
 }
 html[data-theme='dark'] .read-pile .pile-page {
-  background: #d9cbb0;
+  background: var(--paper);
   border-color: rgba(60, 45, 30, 0.5);
 }
 html[data-theme='dark'] .pile-num {
@@ -1441,10 +1041,6 @@ html[data-theme='dark'] .pile-scatter-card.is-bound {
 .pile-scatter-card.is-bound .pile-grid-label {
   color: rgba(242, 236, 223, 0.65);
 }
-/* The tab sticks to its page in the pile. */
-.read-pile .pile-page {
-  overflow: visible;
-}
 .read-pile .pile-page .pile-tab-mark {
   position: absolute;
   right: -14px;
@@ -1464,88 +1060,9 @@ html[data-theme='dark'] .pile-scatter-card.is-bound {
   box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
 }
 html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
-  background: #d9cbb0;
+  background: var(--paper);
   border-color: rgba(60, 45, 30, 0.5);
   color: rgba(60, 45, 30, 0.7);
-}
-/* A tab whose chapter is in the pile: still clickable, just marked. */
-.tab-rail .tab.is-piled {
-  opacity: 0.55;
-}
-.tab-rail .tab.is-piled::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 6px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--ember);
-}
-@media (max-width: 640px) {
-  .read-pile {
-    left: 6px;
-    top: 11%;
-    width: 72px;
-    height: 100px;
-  }
-  .read-pile .pile-page .pile-tab-mark {
-    right: -10px;
-    top: 8px;
-    width: 20px;
-    height: 30px;
-    font-size: 0.7rem;
-  }
-}
-
-/* ---------- page turner (persistent chrome) ---------- */
-.page-turner {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 900;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.65rem max(1.25rem, calc((100vw - var(--wrap)) / 2));
-  background: rgba(11, 9, 6, 0.8);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--line-soft);
-}
-.page-turner button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  padding: 0.55rem 0.2rem;
-  transition: color 0.25s, opacity 0.25s;
-}
-.page-turner button:hover:not(:disabled) {
-  color: var(--ember);
-}
-.page-turner button:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-.turner-label {
-  font-family: var(--serif);
-  font-style: italic;
-  color: var(--faint);
-  font-size: 0.98rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ---------- proof: swipeable strip ---------- */
@@ -1583,112 +1100,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 /* ---------- arc: mobile spine ---------- */
 .arc-spine {
   display: none;
-}
-@media (max-width: 640px) {
-  .arc-svg-wrap,
-  .arc-grid {
-    display: none;
-  }
-  .arc-spine {
-    display: block;
-    position: relative;
-    padding-left: 2rem;
-    margin-top: 1rem;
-  }
-  .arc-spine::before {
-    content: '';
-    position: absolute;
-    left: 7px;
-    top: 10px;
-    bottom: 10px;
-    width: 2px;
-    border-radius: 2px;
-    background: rgba(208, 138, 78, 0.15);
-  }
-  .arc-spine-progress {
-    position: absolute;
-    left: 7px;
-    top: 10px;
-    bottom: 10px;
-    width: 2px;
-    border-radius: 2px;
-    background: linear-gradient(var(--ember), rgba(208, 138, 78, 0.4));
-    box-shadow: 0 0 12px rgba(208, 138, 78, 0.6);
-    transform-origin: top center;
-    transform: scaleY(0);
-    transition: transform 0.45s ease;
-  }
-  .arc-stop {
-    position: relative;
-    padding-bottom: 2.2rem;
-  }
-  .arc-stop:last-child {
-    padding-bottom: 0;
-  }
-  .arc-dot {
-    position: absolute;
-    left: -2rem;
-    top: 6px;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--bg);
-    border: 2px solid rgba(208, 138, 78, 0.3);
-    transition: border-color 0.4s, box-shadow 0.4s, background 0.4s;
-  }
-  .arc-stop.lit .arc-dot {
-    border-color: var(--ember);
-    background: var(--ember);
-    box-shadow: 0 0 14px rgba(208, 138, 78, 0.8);
-  }
-  .arc-stop .act-num {
-    font-size: 0.72rem;
-  }
-  .arc-stop h3 {
-    font-size: 1.35rem;
-    margin: 0.3rem 0 0.5rem;
-  }
-  .arc-stop p {
-    font-size: 0.98rem;
-  }
-}
-
-/* ---------- mobile comfort ---------- */
-@media (max-width: 640px) {
-  .wrap {
-    width: min(var(--wrap), 100% - 4.5rem);
-  }
-  .chapter.book-page {
-    padding-top: 5rem;
-  }
-  .ch-num {
-    font-size: clamp(3.4rem, 19vw, 4.6rem);
-    top: -0.5em;
-    right: 0.1em;
-  }
-  .ch-title {
-    font-size: clamp(2.1rem, 9vw, 3rem);
-  }
-  .hero-title {
-    font-size: clamp(2.7rem, 12.5vw, 3.6rem);
-  }
-  .hero-kicker {
-    font-size: 0.72rem;
-    letter-spacing: 0.26em;
-  }
-  .premise-statement {
-    font-size: clamp(1.5rem, 6.4vw, 2rem);
-  }
-  .proof-hint {
-    letter-spacing: 0.22em;
-  }
-  .turner-label {
-    font-size: 0.88rem;
-  }
-  .page-turner {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
 }
 
 /* ---------- cover: the falling book ---------- */
@@ -1887,15 +1298,11 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
     opacity: 1;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .wax-seal {
-    animation: none;
-  }
-}
+
 .b-mark {
   font-family: var(--serif);
   font-style: italic;
-  color: #d08a4e;
+  color: var(--ember);
   font-size: 1.5rem;
 }
 .b-title {
@@ -1909,7 +1316,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 }
 .b-title em {
   font-style: italic;
-  color: #d08a4e;
+  color: var(--ember);
   font-weight: 400;
 }
 .b-tag {
@@ -1952,7 +1359,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   font-weight: 600;
   letter-spacing: 0.34em;
   text-transform: uppercase;
-  color: #d08a4e;
+  color: var(--ember);
   white-space: nowrap;
 }
 .b-pages {
@@ -2012,12 +1419,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   text-transform: uppercase;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .cover-cta .btn {
-    animation: none;
-  }
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;
@@ -2027,7 +1428,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   opacity: 0;
 }
 
-/* ---------- minimal header (brand only — nav lives in the tabs) ---------- */
 /* ---------- light/dark pull cord ---------- */
 /* The pull cord only exists while bonus content is on. This wrapper is
    the header-sized stage it swings from: the cord mounts folded up to
@@ -2130,11 +1530,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 :root[data-theme='light'] .cord-icon.icon-moon {
   display: block;
 }
-@media (max-width: 640px) {
-  .cord-line {
-    height: 88px;
-  }
-}
+
 .site-nav-min {
   background: color-mix(in srgb, var(--bg) 78%, transparent);
   backdrop-filter: blur(14px);
@@ -2142,106 +1538,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   border-bottom: 1px solid var(--line-soft);
 }
 
-/* ---------- planner tab rail ---------- */
-/* Both rails share one vertical rhythm: every page owns a fixed grid
-   row on either rail. Tabs hang from the top like a real planner —
-   turning a page moves a tab left or right, never up or down. */
-.tab-rails {
-  --tab-row: 55px; /* tab height + gap */
-  position: fixed;
-  inset: 0;
-  z-index: 900;
-  display: flex;
-  justify-content: flex-end;
-  align-items: flex-start;
-  padding-top: calc(var(--nav-h) + 1.25rem);
-  pointer-events: none;
-}
-.tab-rails .tab-rail {
-  position: static;
-  top: auto;
-  right: auto;
-  left: auto;
-  transform: none;
-  display: grid;
-  grid-auto-rows: var(--tab-row);
-  pointer-events: auto;
-}
-@media (max-width: 640px) {
-  .tab-rails {
-    --tab-row: 50px;
-  }
-}
-.tab {
-  width: 34px;
-  height: 48px;
-  border-radius: 10px 0 0 10px;
-  border: 1px solid var(--line);
-  border-right: none;
-  background: var(--page);
-  color: var(--muted);
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 0.95rem;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  transition:
-    width 0.3s var(--ease-out),
-    background 0.3s,
-    border-color 0.3s,
-    color 0.3s,
-    transform 0.3s var(--ease-out);
-}
-.tab:hover {
-  color: var(--ink);
-  border-color: var(--ember);
-  transform: translateX(-4px);
-}
-/* Left rail: the back of the right tabs — the page flipped over. Outer
-/* Right-rail tabs: the page-facing (left) side is square
-   and borderless, the outer (right) side carries the radius and border.
-   The current page's tab has no left border — it sits flush to the page. */
-.tab-rail-right .tab {
-  border-radius: 0 10px 10px 0;
-  border-left: none;
-  border-right: 1px solid var(--line);
-  box-shadow:
-    calc(var(--depth, 0) * 4px) 4px calc(var(--depth, 0) * 8px + 6px)
-    rgba(0, 0, 0, 0.35);
-}
-.tab-rail-right .tab:hover {
-  transform: translateX(4px);
-}
-.tab-rail-right .tab.active {
-  border-left: none;
-}
-.tab.active {
-  width: 44px;
-  background: var(--ember);
-  border-color: var(--ember);
-  color: #14100a;
-  font-style: normal;
-  font-weight: 600;
-}
-@media (max-width: 640px) {
-  .tab {
-    width: 26px;
-    height: 44px;
-    font-size: 0.8rem;
-    border-radius: 8px 0 0 8px;
-  }
-  .tab.active {
-    width: 33px;
-  }
-  /* Keep body copy clear of the rails on narrow screens. */
-  .wrap {
-    width: min(var(--wrap), 100% - 4.25rem);
-  }
-}
-
 /* ---------- chapter modal ---------- */
+
 .chapter-modal-backdrop {
   position: absolute;
   inset: 0;
@@ -2389,29 +1687,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   border-color: var(--ember);
   color: var(--ember);
   transform: rotate(90deg);
-}
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.32s ease;
-}
-.modal-enter-active .chapter-modal,
-.modal-leave-active .chapter-modal {
-  transition: transform 0.38s var(--ease-out), opacity 0.32s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-from .chapter-modal,
-.modal-leave-to .chapter-modal {
-  transform: translateY(16px) scale(0.97);
-  opacity: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  .tab,
-  .chapter-modal-close {
-    transition: none;
-  }
 }
 
 /* ---------- contact: lives under the book, on the cover ---------- */
@@ -2626,27 +1901,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   font-size: 0.85rem;
 }
 
-/* ---------- the envelope tab ---------- */
-.tab-contact {
-  color: var(--ember);
-  border-color: rgba(208, 138, 78, 0.5);
-}
-.tab-contact:hover {
-  background: var(--ember);
-  border-color: var(--ember);
-  color: #14100a;
-  transform: translateX(-4px);
-}
-
-@media (max-width: 640px) {
-  .contact-row-2 {
-    grid-template-columns: 1fr;
-  }
-  .cover-contact {
-    padding: 4rem 0 6rem;
-  }
-}
-
 /* Blacklight: UV tint over everything. */
 html[data-blacklight='on'] body::after {  content: '';
   position: fixed;
@@ -2712,10 +1966,6 @@ html[data-blacklight='on'] body::after {  content: '';
 /* LED mode readability: the wash tints everything, so push the
    manuscript ink to full black and give the header CTA a dark pill
    it can sit on. */
-html[data-led='on'] body.has-book .chapter {
-  --ink: #000000;
-  --muted: #241f16;
-}
 html[data-led='on'] .nav-contact {
   background: rgba(8, 8, 12, 0.72);
   color: #ffffff;
@@ -2744,11 +1994,7 @@ html[data-led='on'] .nav-contact {
     opacity: 1;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .led-wash.on {
-    animation: none;
-  }
-}
+
 /* Blacklight entrance: the page shivers before the UV washes in. */
 @keyframes desk-shake {
   0%,
@@ -2781,6 +2027,8 @@ html.page-shake .manuscript-desk {
   width: min(64vw, 290px);
   aspect-ratio: 5 / 7;
   margin-bottom: 12px;
+  /* Real 3D context so the pages' backs hide when spun. */
+  transform-style: preserve-3d;
 }
 .ms-page {
   position: absolute;
@@ -2788,6 +2036,8 @@ html.page-shake .manuscript-desk {
   background: var(--page);
   border: 1px solid var(--line);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 .ms-p3 {
   transform: rotate(3deg) translate(8px, 6px);
@@ -2814,7 +2064,7 @@ html.page-shake .manuscript-desk {
 
 /* Manuscript in dark mode: candlelit paper, not black. */
 html[data-theme='dark'] .ms-page {
-  background: #d9cbb0;
+  background: var(--paper);
   border-color: rgba(60, 45, 30, 0.55);
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.5),
@@ -2834,14 +2084,6 @@ html[data-theme='dark'] .b-msub {
 /* ---------- bonus content toggle: the back of the cover ---------- */
 /* The manuscript's pages hide their backs so the stack has a real
    reverse side to spin around to. */
-.ms-page {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-/* The stack needs a real 3D context so the pages' backs hide when spun. */
-.manuscript-stack {
-  transform-style: preserve-3d;
-}
 /* The back of the manuscript stack — spin it around to find the switch. */
 .ms-back {
   position: absolute;
@@ -2857,7 +2099,7 @@ html[data-theme='dark'] .b-msub {
   justify-content: center;
 }
 html[data-theme='dark'] .ms-back {
-  background: #d9cbb0;
+  background: var(--paper);
   border-color: rgba(60, 45, 30, 0.55);
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.5),
@@ -2941,22 +2183,6 @@ html[data-theme='dark'] .ms-back {
 }
 .ms-back .bonus-switch.on .bs-state {
   color: #9a6526;
-}
-
-/* Dark mode: an open manuscript chapter is candlelit paper, not black.
-   Scope-override the ink variables so text flips to dark-on-paper. */
-html[data-theme='dark'] body.has-book .chapter {
-  --page: #d9cbb0;
-  --ink: #1c1712;
-  --muted: #57503f;
-  --faint: #5f584c;
-  --line: rgba(28, 23, 18, 0.16);
-  --line-soft: rgba(28, 23, 18, 0.09);
-  background: var(--page);
-  border-radius: 3px;
-  box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.55),
-    0 0 60px rgba(255, 170, 80, 0.06);
 }
 
 /* ============================================================
@@ -3057,6 +2283,9 @@ html[data-theme='dark'] body.has-book .chapter {
   box-shadow:
     0 24px 70px rgba(0, 0, 0, 0.55),
     0 0 60px rgba(255, 170, 80, 0.06);
+  /* Keep content inside the paper on narrow screens. */
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 /* Inside the book, chapters use the full paper — no extra inset. */
 .page-paper .chapter {
@@ -3072,19 +2301,6 @@ html[data-theme='dark'] body.has-book .chapter {
 .page-paper .wrap {
   width: 100%;
   margin: 0;
-}
-/* Paginated book pages: each fills the paper, no scrolling. */
-.book-page {
-  width: 100%;
-  min-height: 62svh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 2.5rem 2rem;
-}
-.book-page > * {
-  break-inside: avoid;
-  flex-shrink: 0;
 }
 /* Page turn tap zones: narrow strips on the paper edges. */
 .page-tap {
@@ -3110,7 +2326,7 @@ html[data-theme='dark'] .page-paper {
   --ink: #1c1712;
   --muted: #6d6455;
   --faint: #a39c8a;
-  background: #d9cbb0;
+  background: var(--paper);
   color: #1c1712;
 }
 /* Dark cards sitting on the paper keep their light ink. */
@@ -3118,11 +2334,6 @@ html[data-theme='dark'] .page-paper .proof-panel {
   --ink: #f2ecdf;
   --muted: #a7a192;
   --faint: #6f6a5e;
-}
-/* Keep content inside the paper on narrow screens. */
-.page-paper {
-  overflow-wrap: break-word;
-  word-break: break-word;
 }
 .page-paper img,
 .page-paper video,
@@ -3140,64 +2351,7 @@ html[data-theme='dark'] .page-paper .proof-panel {
 }
 /* Mobile readability pass: smaller display type, calmer body copy,
    tighter rhythm — pages get shorter and nothing pushes past the paper. */
-@media (max-width: 640px) {
-  .page-paper {
-    padding: 1.15rem 1rem;
-    font-size: 0.9375rem;
-  }
-  /* A few px of breathing room on every page; the finale keeps its
-     wider pile-clearing margin. */
-  .page-paper .wrap {
-    padding-left: 0.25rem;
-  }
-  .page-paper .finale .wrap {
-    padding-left: 1.75rem;
-  }
-  .page-paper .ch-title {
-    font-size: clamp(1.6rem, 7.4vw, 2rem);
-  }
-  .page-paper .ch-num {
-    font-size: clamp(3.2rem, 17vw, 4.5rem);
-  }
-  .page-paper .ch-head {
-    margin-bottom: 2rem;
-  }
-  .page-paper .premise-statement {
-    font-size: 1.32rem;
-    line-height: 1.35;
-    margin-bottom: 1.6rem;
-  }
-  .page-paper .lede {
-    font-size: 1.06rem;
-    line-height: 1.55;
-  }
-  .page-paper .proof-panel h3 {
-    font-size: 1.42rem;
-  }
-  .page-paper .premise-point h3,
-  .page-paper .craft-card h3,
-  .page-paper .arc-act h3 {
-    font-size: 1.12rem;
-  }
-  .page-paper .proof-strip .proof-panel {
-    width: 100%;
-  }
-  .page-paper .arc-svg-wrap {
-    margin-bottom: 2rem;
-  }
-  .page-paper .marquee {
-    padding: 0.9rem 0;
-  }
-  /* Mobile arc pages: the line segment sits above its act. */
-  .page-paper .arc-page {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-  .page-paper .arc-page .arc-svg-wrap {
-    margin-bottom: 0;
-  }
-}
+
 /* Buried pages: paper hidden, but the tab still shows. */
 .page-wrap.is-buried .page-paper {
   visibility: hidden;
@@ -3230,7 +2384,7 @@ html[data-theme='dark'] .page-paper .proof-panel {
   appearance: none;
 }
 html[data-theme='dark'] .page-tab {
-  background: #d9cbb0;
+  background: var(--paper);
   color: #1c1712;
   border-color: rgba(60, 45, 30, 0.4);
 }
@@ -3247,28 +2401,6 @@ html[data-theme='dark'] .page-tab {
    active tab never slides under its neighbor. */
 .page-wrap.is-current .page-tab {
   top: calc((100svh - var(--nav-h) - 278px) / 2 + var(--tab-row, 0) * 58px - 8svh);
-}
-@media (max-width: 640px) {
-  .manuscript-desk {
-    --desk-pl: 70px;
-    --desk-pr: 44px;
-  }
-  .page-tab {
-    right: -40px;
-    top: calc(100px + var(--tab-row, 0) * 58px);
-    width: 40px;
-    height: 38px;
-    font-size: 0.85rem;
-  }
-  .page-wrap.is-current .page-tab {
-    top: calc(100px + var(--tab-row, 0) * 58px - 8svh);
-  }
-  .read-pile {
-    left: 10px;
-    top: 11%;
-    width: 84px;
-    height: 112px;
-  }
 }
 
 /* Candlelight wash: while the candle burns, a warm pool of light sits
@@ -3351,15 +2483,12 @@ html[data-theme='dark'] .page-tab {
     transparent
   );
   transform: skewX(-10deg) translateX(-30vw);
-  animation: gust-sweep 1.15s 0.12s ease-in-out forwards;
+  animation: gust-sweep-2 1.15s 0.12s ease-in-out forwards;
 }
 @keyframes gust-sweep {
   to {
     transform: skewX(-14deg) translateX(130vw);
   }
-}
-.breeze.on::after {
-  animation-name: gust-sweep-2;
 }
 @keyframes gust-sweep-2 {
   to {
@@ -3396,14 +2525,7 @@ html[data-theme='dark'] .page-tab {
     rotate: 0.3deg;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .app-root.breezing .page-paper,
-  .app-root.breezing .pile-page,
-  .breeze.on::before,
-  .breeze.on::after {
-    animation: none;
-  }
-}
+
 /* After the match guy quits, this flyer is all that's left where the
    candle was — a little paper slip taped to the desk. */
 .help-wanted-flyer {
@@ -3420,13 +2542,7 @@ html[data-theme='dark'] .page-tab {
   text-align: center;
   pointer-events: none;
 }
-@media (max-width: 640px) {
-  .help-wanted-flyer {
-    left: calc(24px - var(--desk-pl));
-    top: 62svh;
-    width: 64px;
-  }
-}
+
 .hw-tape {
   position: absolute;
   top: -7px;
@@ -3544,7 +2660,6 @@ html[data-theme='dark'] .page-tab {
   white-space: nowrap;
 }
 
-/* Paginated manuscript pages: plain wrapper, no bound-book chrome. */
 /* Paginated manuscript pages: plain wrapper, consistent height like real paper.
    Content is vertically centered in the page. */
 .paginate-page {
@@ -3559,4 +2674,242 @@ html[data-theme='dark'] .page-tab {
    the sticky stage was leaking its glow onto the shelf view. */
 .office-track:not(.show-desk) .desk-stage {
   display: none;
+}
+
+/* ============================================================
+   Responsive: all mobile overrides in one place (was: 10 blocks).
+   ============================================================ */
+@media (max-width: 640px) {
+  .pile-scatter-card {
+    width: 84px;
+    height: 116px;
+  }
+
+  .read-pile .pile-page .pile-tab-mark {
+    right: -10px;
+    top: 8px;
+    width: 20px;
+    height: 30px;
+    font-size: 0.7rem;
+  }
+
+  .arc-svg-wrap,
+  .arc-grid {
+    display: none;
+  }
+  .arc-spine {
+    display: block;
+    position: relative;
+    padding-left: 2rem;
+    margin-top: 1rem;
+  }
+  .arc-spine::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 2px;
+    background: rgba(208, 138, 78, 0.15);
+  }
+  .arc-spine-progress {
+    position: absolute;
+    left: 7px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    border-radius: 2px;
+    background: linear-gradient(var(--ember), rgba(208, 138, 78, 0.4));
+    box-shadow: 0 0 12px rgba(208, 138, 78, 0.6);
+    transform-origin: top center;
+    transform: scaleY(0);
+    transition: transform 0.45s ease;
+  }
+  .arc-stop {
+    position: relative;
+    padding-bottom: 2.2rem;
+  }
+  .arc-stop:last-child {
+    padding-bottom: 0;
+  }
+  .arc-dot {
+    position: absolute;
+    left: -2rem;
+    top: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid rgba(208, 138, 78, 0.3);
+    transition: border-color 0.4s, box-shadow 0.4s, background 0.4s;
+  }
+  .arc-stop.lit .arc-dot {
+    border-color: var(--ember);
+    background: var(--ember);
+    box-shadow: 0 0 14px rgba(208, 138, 78, 0.8);
+  }
+  .arc-stop .act-num {
+    font-size: 0.72rem;
+  }
+  .arc-stop h3 {
+    font-size: 1.35rem;
+    margin: 0.3rem 0 0.5rem;
+  }
+  .arc-stop p {
+    font-size: 0.98rem;
+  }
+
+  .ch-num {
+    font-size: clamp(3.4rem, 19vw, 4.6rem);
+    top: -0.5em;
+    right: 0.1em;
+  }
+  .ch-title {
+    font-size: clamp(2.1rem, 9vw, 3rem);
+  }
+  .premise-statement {
+    font-size: clamp(1.5rem, 6.4vw, 2rem);
+  }
+  .proof-hint {
+    letter-spacing: 0.22em;
+  }
+
+  .cord-line {
+    height: 88px;
+  }
+
+  /* Keep body copy clear of the page tabs on narrow screens. */
+  .wrap {
+    width: min(var(--wrap), 100% - 4.25rem);
+  }
+
+  .contact-row-2 {
+    grid-template-columns: 1fr;
+  }
+  .cover-contact {
+    padding: 4rem 0 6rem;
+  }
+
+  .page-paper {
+    padding: 1.15rem 1rem;
+    font-size: 0.9375rem;
+  }
+  /* A few px of breathing room on every page; the finale keeps its
+     wider pile-clearing margin. */
+  .page-paper .wrap {
+    padding-left: 0.25rem;
+  }
+  .page-paper .finale .wrap {
+    padding-left: 1.75rem;
+  }
+  .page-paper .ch-title {
+    font-size: clamp(1.6rem, 7.4vw, 2rem);
+  }
+  .page-paper .ch-num {
+    font-size: clamp(3.2rem, 17vw, 4.5rem);
+  }
+  .page-paper .ch-head {
+    margin-bottom: 2rem;
+  }
+  .page-paper .premise-statement {
+    font-size: 1.32rem;
+    line-height: 1.35;
+    margin-bottom: 1.6rem;
+  }
+  .page-paper .lede {
+    font-size: 1.06rem;
+    line-height: 1.55;
+  }
+  .page-paper .proof-panel h3 {
+    font-size: 1.42rem;
+  }
+  .page-paper .premise-point h3,
+  .page-paper .craft-card h3,
+  .page-paper .arc-act h3 {
+    font-size: 1.12rem;
+  }
+  .page-paper .proof-strip .proof-panel {
+    width: 100%;
+  }
+  .page-paper .arc-svg-wrap {
+    margin-bottom: 2rem;
+  }
+  .page-paper .marquee {
+    padding: 0.9rem 0;
+  }
+  /* Mobile arc pages: the line segment sits above its act. */
+  .page-paper .arc-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .page-paper .arc-page .arc-svg-wrap {
+    margin-bottom: 0;
+  }
+
+  .manuscript-desk {
+    --desk-pl: 70px;
+    --desk-pr: 44px;
+  }
+  .page-tab {
+    right: -40px;
+    top: calc(100px + var(--tab-row, 0) * 58px);
+    width: 40px;
+    height: 38px;
+    font-size: 0.85rem;
+  }
+  .page-wrap.is-current .page-tab {
+    top: calc(100px + var(--tab-row, 0) * 58px - 8svh);
+  }
+  .read-pile {
+    left: 10px;
+    top: 11%;
+    width: 84px;
+    height: 112px;
+  }
+
+  .help-wanted-flyer {
+    left: calc(24px - var(--desk-pl));
+    top: 62svh;
+    width: 64px;
+  }
+}
+
+/* ============================================================
+   Reduced motion: all in one place (was: 7 blocks).
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .pile-scatter-card { animation: none; }
+
+  .wax-seal {
+    animation: none;
+  }
+
+  .cover-cta .btn {
+    animation: none;
+  }
+
+  .chapter-modal-close {
+    transition: none;
+  }
+
+  .led-wash.on {
+    animation: none;
+  }
+
+  .app-root.breezing .page-paper,
+  .app-root.breezing .pile-page,
+  .breeze.on::before,
+  .breeze.on::after {
+    animation: none;
+  }
 }
