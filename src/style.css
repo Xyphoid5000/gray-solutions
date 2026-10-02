@@ -3145,8 +3145,12 @@ html[data-theme='dark'] .page-paper .proof-panel {
     padding: 1.15rem 1rem;
     font-size: 0.9375rem;
   }
-  /* Every page's header clears the finished-pages pile on mobile. */
+  /* A few px of breathing room on every page; the finale keeps its
+     wider pile-clearing margin. */
   .page-paper .wrap {
+    padding-left: 0.25rem;
+  }
+  .page-paper .finale .wrap {
     padding-left: 1.75rem;
   }
   .page-paper .ch-title {
