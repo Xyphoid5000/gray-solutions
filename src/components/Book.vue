@@ -10,6 +10,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
+import WaxSeal from './WaxSeal.vue';
 
 const props = defineProps<{
   title: string;
@@ -173,7 +174,7 @@ function onKeyDown(e: KeyboardEvent) {
       </span>
       <!-- Front cover. -->
       <span class="book3d-front">
-        <span v-if="mark" class="book3d-front-mark">{{ mark }}</span>
+        <span v-if="mark" class="book3d-front-mark">{{ mark }}<WaxSeal v-if="bonus.enabled && showBonusToggle" class="wax-seal--book3d" /></span>
         <span class="book3d-front-title">{{ title }}</span>
         <span v-if="tagline" class="book3d-front-tag">{{ tagline }}</span>
         <span v-if="author" class="book3d-front-author">{{ author }}</span>
@@ -317,6 +318,33 @@ function onKeyDown(e: KeyboardEvent) {
   font-weight: 700;
   color: rgba(232, 205, 150, 0.95);
   line-height: 1;
+  position: relative;
+}
+/* Wax seal pressed over the G. on the Gray Solutions book (bonus on). */
+.wax-seal--book3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4.2rem;
+  margin: 0;
+  transform: translate(-50%, -52%) rotate(-7deg);
+  animation-name: seal-press-book3d;
+  z-index: 2;
+}
+@keyframes seal-press-book3d {
+  from {
+    transform: translate(-50%, -52%) rotate(-7deg) scale(1.45);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -52%) rotate(-7deg) scale(1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wax-seal--book3d {
+    animation: none;
+  }
 }
 .book3d-front-title {
   font-family: var(--serif);

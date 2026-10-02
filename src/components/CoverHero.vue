@@ -572,7 +572,6 @@ onUnmounted(() => {
         <div class="b-face b-top"></div>
         <div class="b-face b-pages"></div>
         <div class="b-face b-front">
-          <WaxSeal v-if="bonusContent" class="wax-seal--book" />
           <div class="b-cover-frame">
             <span class="b-mark">G.</span>
             <p class="b-title">Gray<br />Solutions<em>.</em></p>

@@ -2,7 +2,7 @@
 import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
 
-defineProps<{ bonusContent?: boolean; isBound?: boolean }>();
+defineProps<{ isBound?: boolean }>();
 </script>
 
 <template>
@@ -19,7 +19,7 @@ defineProps<{ bonusContent?: boolean; isBound?: boolean }>();
           straight to my inbox.
         </p>
         <div v-reveal>
-          <ContactForm :bonus-content="bonusContent" :is-bound="isBound" />
+          <ContactForm :is-bound="isBound" />
         </div>
       </div>
     </section>

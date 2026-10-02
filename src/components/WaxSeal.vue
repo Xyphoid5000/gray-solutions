@@ -1,9 +1,10 @@
 <!--
   Wax seal: glossy bright-red wax, raised rim, drippy organic edge, embossed G.
-  Bonus-only indicator. Used on the manuscript's front page and pressed over
-  the G on the bound book's front cover. Only one instance is ever in the DOM
-  at a time (CoverHero shows manuscript OR bound book), so the SVG ids stay
-  collision-free.
+  Bonus-only indicator. Used on the manuscript's front page (CoverHero) and
+  pressed over the G on the bound Gray Solutions book's front cover (Book.vue
+  shelf overlay). Only one instance is ever in the DOM at a time — the
+  manuscript shows while unbound, the bound book only after binding — so the
+  SVG ids stay collision-free.
 -->
 <template>
   <div class="wax-seal" aria-hidden="true">

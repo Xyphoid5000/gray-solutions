@@ -1892,32 +1892,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
     animation: none;
   }
 }
-/* Wax seal on the bound book: pressed over the G on the front cover. */
-.b-front .wax-seal--book {
-  position: absolute;
-  left: 50%;
-  top: 15%;
-  width: 76px;
-  margin: 0;
-  transform: translateX(-50%) rotate(-7deg);
-  animation-name: seal-press-book;
-  z-index: 5;
-}
-@keyframes seal-press-book {
-  from {
-    transform: translateX(-50%) rotate(-7deg) scale(1.45);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(-50%) rotate(-7deg) scale(1);
-    opacity: 1;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .b-front .wax-seal--book {
-    animation: none;
-  }
-}
 /* "Show hint" text-button inside the discount info. */
 .hint-btn {
   background: none;
