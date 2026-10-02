@@ -34,20 +34,22 @@
 </template>
 
 <script setup lang="ts">
+import { siteConfig } from '../config';
+
 const LINKS = [
   {
     label: 'GitHub',
-    href: 'https://github.com/Xyphoid5000',
+    href: siteConfig.github,
     external: true,
   },
   {
     label: 'Email',
-    href: 'mailto:c90gray@gmail.com?subject=Let%27s%20write%20my%20story',
+    href: `mailto:${siteConfig.email}?subject=Let%27s%20write%20my%20story`,
     external: false,
   },
   {
     label: 'LinkedIn',
-    href: 'https://www.linkedin.com/in/chris-gray-b0b50b1b4',
+    href: siteConfig.linkedIn,
     external: true,
   },
 ];
