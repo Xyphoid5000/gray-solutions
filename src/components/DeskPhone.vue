@@ -10,6 +10,8 @@ import { computed, inject, ref, onUnmounted, nextTick, type Ref } from 'vue';
 import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
 import { useModalA11y } from '../composables/useModalA11y';
 import { scrollToElement } from '../lib/scroll';
+import { useSettingsStore } from '../stores/settings';
+import { useBonusStore } from '../stores/bonus';
 
 const PIN = '4132';
 const MAX_ATTEMPTS = 3;
@@ -22,8 +24,23 @@ interface MatchGuyPhoneApi {
 const matchGuy = inject<MatchGuyPhoneApi | undefined>('matchGuy', undefined);
 const guyQuit = computed(() => matchGuy?.candleGone.value ?? false);
 
+/** The desk's light rig, provided by App — the LED controls below keep
+    the wash, accent state and light sources in sync through it. */
+const lights = inject<{ refresh: () => void }>('lights', { refresh: () => {} });
+function onLedToggle() {
+  bonus.setLed(!bonus.ledOn);
+  lights.refresh();
+}
+function onLedColor(e: Event) {
+  bonus.setLedColor((e.target as HTMLInputElement).value);
+  lights.refresh();
+}
+
 const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call'>('pin');
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings'>('pin');
+const settings = useSettingsStore();
+const bonus = useBonusStore();
+const siteNameDraft = ref(settings.siteName);
 const pinEntry = ref('');
 const pinAttempts = ref(0);
 const pinError = ref(false);
@@ -245,7 +262,7 @@ interface Contact {
 }
 const contacts = computed<Contact[]>(() => {
   const list: Contact[] = [
-    { id: 'gray', name: 'Gray Solutions', note: '', special: 'gray' },
+    { id: 'gray', name: settings.siteName, note: '', special: 'gray' },
     { id: 'pizza', name: 'Pizza Palace', note: 'Nobody picks up. Rude.' },
     { id: 'blockbuster', name: 'Blockbuster Video', note: 'This number has been disconnected since 2013.' },
     { id: 'mom', name: 'Mom', note: "She'll call you back. She always does." },
@@ -410,6 +427,10 @@ onUnmounted(() => {
               <span class="app-glyph app-contacts" aria-hidden="true"></span>
               Contacts
             </button>
+            <button type="button" class="app-icon" @click="screen = 'settings'; siteNameDraft = settings.siteName">
+              <span class="app-glyph app-settings" aria-hidden="true"></span>
+              Settings
+            </button>
           </div>
           <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
         </div>
@@ -453,12 +474,75 @@ onUnmounted(() => {
           <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
         </div>
 
+        <!-- Settings -->
+        <div v-else-if="screen === 'settings'" class="scr scr-settings">
+          <div class="contacts-head">
+            <button type="button" class="snake-back" @click="screen = 'home'" aria-label="Back">‹</button>
+            <span>Settings</span>
+          </div>
+          <div class="set-scroll">
+            <label class="set-row">
+              <span class="set-name">Site name</span>
+              <input
+                v-model="siteNameDraft"
+                class="set-text"
+                type="text"
+                maxlength="40"
+                autocomplete="off"
+                @change="settings.setSiteName(siteNameDraft)"
+              />
+            </label>
+            <div class="set-group">
+              <span class="set-name">Theme</span>
+              <div class="set-btns">
+                <button type="button" :class="{ on: settings.theme === 'storybook' }" @click="settings.setTheme('storybook')">Storybook</button>
+                <button type="button" :class="{ on: settings.theme === 'midnight' }" @click="settings.setTheme('midnight')">Midnight</button>
+                <button type="button" :class="{ on: settings.theme === 'terminal' }" @click="settings.setTheme('terminal')">Terminal</button>
+              </div>
+            </div>
+            <div class="set-group">
+              <span class="set-name">Light / dark</span>
+              <div class="set-btns">
+                <button type="button" :class="{ on: settings.mode === 'auto' }" @click="settings.setMode('auto')">Auto</button>
+                <button type="button" :class="{ on: settings.mode === 'light' }" @click="settings.setMode('light')">Light</button>
+                <button type="button" :class="{ on: settings.mode === 'dark' }" @click="settings.setMode('dark')">Dark</button>
+              </div>
+            </div>
+            <label class="set-row">
+              <span class="set-name">Accent color</span>
+              <input type="color" class="set-color" :value="settings.accent" @input="settings.setAccent(($event.target as HTMLInputElement).value)" />
+            </label>
+            <div class="set-group">
+              <span class="set-name">LED strip</span>
+              <div class="set-btns">
+                <button type="button" :class="{ on: bonus.ledOn }" @click="onLedToggle">{{ bonus.ledOn ? 'On' : 'Off' }}</button>
+                <input type="color" class="set-color" :value="bonus.ledColor" @input="onLedColor" aria-label="LED color" />
+              </div>
+            </div>
+            <button type="button" class="set-row set-toggle" @click="settings.toggleMirror()">
+              <span class="set-name">Mirror site</span>
+              <span class="set-switch" :class="{ on: settings.mirror }"><span class="set-knob"></span></span>
+            </button>
+            <button type="button" class="set-row set-toggle" @click="settings.toggleSandwich()">
+              <span class="set-name">Sandwich mode</span>
+              <span class="set-switch" :class="{ on: settings.sandwich }"><span class="set-knob"></span></span>
+            </button>
+            <button type="button" class="set-row set-toggle" @click="settings.toggleNoCss()">
+              <span class="set-name">No CSS <em>unstyled HTML</em></span>
+              <span class="set-switch" :class="{ on: settings.noCss }"><span class="set-knob"></span></span>
+            </button>
+            <button type="button" class="set-reset" @click="settings.resetAll(); siteNameDraft = settings.siteName">Reset everything</button>
+            <p class="set-note">All toys, no consequences. A refresh restores the storybook.</p>
+          </div>
+          <button type="button" class="phone-putdown" @click="putDown">Put it back</button>
+        </div>
+
         <!-- Call -->
         <div v-else-if="screen === 'call'" class="scr scr-call">
           <p class="call-name">{{ callContact?.name }}</p>
           <p v-if="callStatus === 'calling'" class="call-status">Calling…</p>
           <div v-else-if="callStatus === 'connected' && callContact?.special === 'gray'" class="call-code">
-            <p class="call-thanks">Thanks for calling Gray Solutions!</p>
+            <p class="call-thanks">Thanks for calling {{ settings.siteName }}!</p>
             <p class="call-code-value">{{ activeDiscountCode }}</p>
             <p class="call-code-note">Mention it in the contact form for <strong>20% off</strong> your new website.</p>
             <button type="button" class="call-code-fill" @click="fillForm">Fill it in for me</button>
@@ -760,7 +844,23 @@ html[data-blacklight='on'] .desk-phone-btn {
   background: #f3e3c2;
   box-shadow: 0 0 0 2.5px #8a6420;
 }
-.app-contacts::before {
+.app-settings {
+  background: linear-gradient(135deg, #2a2f3a, #4a5568);
+  position: relative;
+}
+.app-settings::after {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 14px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 3px solid #c6cdd9;
+  border-top-color: transparent;
+  transform: rotate(45deg);
+}
+.app-settings::before {
   content: '';
   position: absolute;
   left: 24px;
@@ -880,7 +980,139 @@ html[data-blacklight='on'] .desk-phone-btn {
   gap: 0.7rem;
   text-align: center;
 }
+.scr-settings {
+  padding-top: 3rem;
+}
+.set-scroll {
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding-bottom: 0.5rem;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.55rem 0.4rem;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #1a2030;
+  color: #e8ecf3;
+  font-size: 0.85rem;
+  text-align: left;
+}
+button.set-row {
+  cursor: pointer;
+}
+button.set-row:active {
+  background: #141a26;
+}
+.set-name {
+  font-weight: 600;
+}
+.set-name em {
+  display: block;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: #8b93a5;
+}
+.set-text {
+  width: 130px;
+  background: #0d1410;
+  border: 1px solid #2f6b3a;
+  border-radius: 0.5rem;
+  color: #7ee787;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+}
+.set-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem 0.4rem;
+  border-bottom: 1px solid #1a2030;
+}
+.set-btns {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+.set-btns button {
+  flex: 1;
+  background: #141a26;
+  border: 1px solid #232c38;
+  border-radius: 999px;
+  color: #c6cdd9;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.4rem 0.2rem;
+  cursor: pointer;
+}
+.set-btns button.on {
+  background: #0d1410;
+  border-color: #2f6b3a;
+  color: #7ee787;
+}
+.set-color {
+  width: 44px;
+  height: 30px;
+  border: 1px solid #232c38;
+  border-radius: 0.5rem;
+  background: none;
+  padding: 2px;
+  cursor: pointer;
+}
+.set-switch {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: #232c38;
+  position: relative;
+  flex: none;
+  transition: background 0.2s ease;
+}
+.set-switch.on {
+  background: #2f6b3a;
+}
+.set-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #c6cdd9;
+  transition: left 0.2s ease;
+}
+.set-switch.on .set-knob {
+  left: 23px;
+  background: #7ee787;
+}
+.set-reset {
+  margin-top: 0.4rem;
+  background: none;
+  border: 1px solid #5a2323;
+  border-radius: 999px;
+  color: #e88;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+.set-note {
+  margin: 0.2rem 0 0;
+  font-size: 0.7rem;
+  color: #8b93a5;
+  text-align: center;
+  line-height: 1.5;
+}
 .call-name {
+
   font-size: 1.3rem;
   font-weight: 600;
   margin: 0;

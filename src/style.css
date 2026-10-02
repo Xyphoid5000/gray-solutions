@@ -2933,3 +2933,46 @@ html[data-theme='dark'] .page-tab {
     animation: none;
   }
 }
+
+/* ============================================================
+   Bonus settings app: story themes + mirror mode.
+   All client-side toys; a refresh restores the storybook default.
+   ============================================================ */
+/* Mirror the whole site horizontally. Fixed elements get weird —
+   that's the joke. */
+:root[data-mirror='on'] #app {
+  transform: scaleX(-1);
+}
+/* Midnight theme: deep space, neon accents. */
+:root[data-storytheme='midnight'] {
+  --bg: #05050f;
+  --bg-2: #0a0a1e;
+  --panel: #0d0d26;
+  --desk: #020208;
+  --page: #0a0a1c;
+  --ink: #e8f4ff;
+  --muted: #8a9cc0;
+  --faint: #5a6a90;
+  --ember: #22d3ee;
+  --ember-deep: #0e7490;
+  --ember-bright: #67e8f9;
+  --line: rgba(103, 232, 249, 0.14);
+  --line-soft: rgba(103, 232, 249, 0.07);
+}
+/* Terminal theme: phosphor green on black, monospace voice. */
+:root[data-storytheme='terminal'] {
+  --bg: #031003;
+  --bg-2: #041604;
+  --panel: #031007;
+  --desk: #020c02;
+  --page: #031007;
+  --ink: #33ff66;
+  --muted: #1fa84a;
+  --faint: #147a35;
+  --ember: #33ff66;
+  --ember-deep: #1fa84a;
+  --ember-bright: #7dff9e;
+  --line: rgba(51, 255, 102, 0.16);
+  --line-soft: rgba(51, 255, 102, 0.08);
+  --serif: ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+}

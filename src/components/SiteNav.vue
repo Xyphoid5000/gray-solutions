@@ -3,8 +3,11 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import PullCord from './PullCord.vue';
 import { a11yModeOn, setA11yMode, initA11yMode, motionReduced } from '../utils/a11y';
+import { useSettingsStore } from '../stores/settings';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{ bonusContent?: boolean }>();
+const { siteName } = storeToRefs(useSettingsStore());
 
 const emit = defineEmits<{
   contact: [];
@@ -148,10 +151,10 @@ function retractCord(done: () => void) {
         class="brand"
         href="#/"
         @click.prevent="emit('home')"
-        aria-label="Gray Solutions — back to the cover"
+        :aria-label="`${siteName} — back to the cover`"
       >
         <span class="brand-mark" aria-hidden="true">G.</span>
-        <span>Gray Solutions<em>.</em></span>
+        <span>{{ siteName }}<em>.</em></span>
       </a>
       <button class="nav-contact" @click="emit('contact')">
         Contact me

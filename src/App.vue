@@ -21,6 +21,7 @@ import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
+import { useSettingsStore } from './stores/settings';
 import { useInteractionsStore } from './stores/interactions';
 import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
@@ -30,6 +31,7 @@ gsap.registerPlugin(ScrollTrigger);
 
 const office = useOfficeStore();
 const bonus = useBonusStore();
+const settings = useSettingsStore();
 const interactions = useInteractionsStore();
 // Device capabilities (touch / screen size). Instantiated here so it's
 // live from startup; components read it when they need touch-vs-desktop
@@ -268,8 +270,13 @@ function clearRitual() {
 
 /** Where the remote lives on the desk — the hand aims for its center.
     The remote keeps its layout box while parked, so it's measurable. */
-/** Plain theme switch, with the half-second palette crossfade. */
+/** Plain theme switch, with the half-second palette crossfade.
+    A manual Light/Dark pick from the phone's settings is authoritative:
+    the rituals still run, but they can't move the base palette until
+    the visitor goes back to Auto. */
 function setThemePlain(light: boolean) {
+  if (settings.mode === 'light') light = true;
+  else if (settings.mode === 'dark') light = false;
   const root = document.documentElement;
   root.classList.add('theme-fade');
   root.dataset.theme = light ? 'light' : 'dark';
@@ -608,6 +615,11 @@ provide('matchGuy', {
   rehire: rehireMatchGuy,
 });
 
+/** The phone's settings app drives the desk's LED rig through this. */
+provide('lights', {
+  refresh: updateLights,
+});
+
 /** The cord was yanked — decide what the yank means. */
 function onCordPulled() {
   if (interactions.ritualRunning || interactions.gagRunning) return;
@@ -740,7 +752,8 @@ onMounted(() => {
   // The page always opens in light mode — the LEDs stay off until the
   // reader pulls the cord. This used to live in PullCord, but the cord
   // only mounts once bonus content is on, so it has to run regardless.
-  document.documentElement.dataset.theme = 'light';
+  // A manual dark pick from the phone's settings wins over the default.
+  document.documentElement.dataset.theme = settings.mode === 'dark' ? 'dark' : 'light';
   try {
     localStorage.removeItem('gs-theme');
   } catch {
@@ -795,7 +808,7 @@ onUnmounted(() => {
   <a href="#main-content" class="skip-link">Skip to content</a>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <main id="main-content">
-  <h1 class="sr-only">Gray Solutions — websites that tell stories</h1>
+  <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>
   <Office
     ref="officeRef"
     @open-book="openBook"

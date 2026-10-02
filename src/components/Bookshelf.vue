@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
 import Book from './Book.vue';
+import { useSettingsStore } from '../stores/settings';
+import { storeToRefs } from 'pinia';
 
 withDefaults(
   defineProps<{
@@ -21,6 +23,8 @@ const emit = defineEmits(['open-book']);
 /** The finished book lives in the slot once the reader binds it.
     Session-scoped — every visit starts with the slot empty. */
 const isBound = manuscriptBound;
+
+const { siteName } = storeToRefs(useSettingsStore());
 
 interface ShelfBook {
   title: string;
@@ -42,6 +46,39 @@ const SHELF_BOOKS: ShelfBook[] = [
 /** Split around the binding slot: 3 left, 2 right. */
 const shelfLeft = SHELF_BOOKS.slice(0, 3);
 const shelfRight = SHELF_BOOKS.slice(3);
+
+/** Sandwich mode: every book becomes a topping. The Gray Solutions
+    book is the patty — the main event. */
+interface SandwichLayer {
+  book: ShelfBook | 'ours';
+  title: string;
+  topping: string;
+  color: string;
+}
+const TOPPINGS: Record<string, { topping: string; color: string }> = {
+  'Pride and Prejudice': { topping: 'Lettuce', color: '#6fa85c' },
+  'Frankenstein': { topping: 'Swiss cheese', color: '#e8c96a' },
+  'Jane Eyre': { topping: 'Tomato', color: '#d9534f' },
+  'Dracula': { topping: 'Pickled beet', color: '#8e244d' },
+  'Wuthering Heights': { topping: 'Bacon', color: '#a85b3f' },
+};
+const sandwichLayers = computed<SandwichLayer[]>(() => {
+  const layers = SHELF_BOOKS.map((b) => ({
+    book: b as ShelfBook | 'ours',
+    title: b.title,
+    topping: TOPPINGS[b.title].topping,
+    color: TOPPINGS[b.title].color,
+  }));
+  if (isBound.value) {
+    layers.push({ book: 'ours', title: siteName.value, topping: 'The patty', color: '#6b4226' });
+  }
+  return layers;
+});
+const sandwich = computed(() => useSettingsStore().sandwich);
+function toggleLayer(layer: SandwichLayer) {
+  if (layer.book === 'ours') toggleOurs();
+  else toggleBook(layer.book);
+}
 
 /** The currently selected (floating) book. Null when none. */
 const selectedBook = ref<ShelfBook | 'ours' | null>(null);
@@ -73,7 +110,7 @@ function toggleOurs() {
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
-        <div class="bs-books">
+        <div v-if="!sandwich" class="bs-books">
           <div
             v-for="b in shelfLeft"
             :key="b.title"
@@ -96,13 +133,13 @@ function toggleOurs() {
               class="bs-book bs-ours"
               :class="{ 'is-interactive': interactive }"
               :style="{ height: '230px', width: '52px', background: '#1a1a1a' }"
-              aria-label="Gray Solutions — open the book"
+              :aria-label="`${siteName} — open the book`"
               data-bind-slot
               @click="interactive && toggleOurs()"
               @keydown.enter="interactive && toggleOurs()"
               @keydown.space.prevent="interactive && toggleOurs()"
             >
-              <span class="bs-spine-label">Gray Solutions</span>
+              <span class="bs-spine-label">{{ siteName }}</span>
             </div>
           </template>
           <template v-else>
@@ -123,6 +160,23 @@ function toggleOurs() {
           >
             <span class="bs-spine-label">{{ b.title }}</span>
           </div>
+        </div>
+        <div v-else class="bs-sandwich" aria-label="Sandwich mode: every book is a topping">
+          <div class="sw-bun sw-bun-top" aria-hidden="true"></div>
+          <button
+            v-for="layer in [...sandwichLayers].reverse()"
+            :key="layer.title"
+            type="button"
+            class="sw-layer"
+            :class="{ 'is-interactive': interactive }"
+            :style="{ background: layer.color }"
+            :aria-label="`${layer.title} — ${layer.topping}`"
+            @click="interactive && toggleLayer(layer)"
+          >
+            <span class="sw-topping">{{ layer.topping }}</span>
+            <span class="sw-title">{{ layer.title }}</span>
+          </button>
+          <div class="sw-bun sw-bun-bottom" aria-hidden="true"></div>
         </div>
         <div class="bs-plank"></div>
       </div>
@@ -170,7 +224,7 @@ function toggleOurs() {
       <div class="bs-book-drop" @click.stop>
         <Book
           v-if="selectedBook === 'ours'"
-          title="Gray Solutions"
+          :title="siteName"
           color="#1a1a1a"
           :width="36"
           :height="220"
@@ -309,6 +363,69 @@ function toggleOurs() {
 }
 .bs-book.is-interactive:hover {
   filter: brightness(1.12);
+}
+/* Sandwich mode: the shelf becomes a sandwich, every book a topping. */
+.bs-sandwich {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 3px;
+  width: min(320px, 80vw);
+  margin: 0 auto;
+  min-height: 244px;
+  padding: 0 6px;
+}
+.sw-bun {
+  height: 34px;
+  background: linear-gradient(180deg, #e0aa5e 0%, #c98f45 60%, #a87434 100%);
+}
+.sw-bun-top {
+  border-radius: 120px 120px 14px 14px;
+  position: relative;
+}
+.sw-bun-top::after {
+  content: '';
+  position: absolute;
+  inset: 6px 18px;
+  background-image: radial-gradient(ellipse 5px 3px at 50% 50%, #f7e3b8 60%, transparent 61%);
+  background-size: 26px 12px;
+  opacity: 0.8;
+}
+.sw-bun-bottom {
+  border-radius: 10px 10px 26px 26px;
+  height: 26px;
+}
+.sw-layer {
+  border: 0;
+  border-radius: 16px;
+  min-height: 34px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgba(20, 12, 6, 0.92);
+  font-size: 0.72rem;
+  cursor: default;
+  box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.25), inset 0 2px 3px rgba(255, 255, 255, 0.25);
+}
+.sw-layer.is-interactive {
+  cursor: pointer;
+}
+.sw-layer:active {
+  filter: brightness(1.1);
+}
+.sw-topping {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+}
+.sw-title {
+  font-style: italic;
+  opacity: 0.85;
+  text-align: right;
 }
 /* Pulled out: lift, come forward, turn to show the front cover. */
 .bs-book .bs-spine-label {

@@ -9,8 +9,11 @@ import DeskCandle from './DeskCandle.vue';
 import DeskPhone from './DeskPhone.vue';
 import FirstDraft from './FirstDraft.vue';
 import RemoteControl from './RemoteControl.vue';
+import { useSettingsStore } from '../stores/settings';
 
 defineProps<{ bonusContent?: boolean }>();
+
+const settings = useSettingsStore();
 
 const emit = defineEmits<{
   done: [];
@@ -33,14 +36,18 @@ const veil = ref<HTMLElement | null>(null);
 const playing = ref(false);
 const titleTyped = ref('');
 const titled = ref(false);
-const TITLE = 'Gray Solutions.';
+/** The book's title, typed on during the binding — follows the
+    settings app's site name like the cover does. */
+function brandTitle() {
+  return `${settings.siteName}.`;
+}
 
 let tl: gsap.core.Timeline | null = null;
 
 /** Restore the overlay to its resting state and hand off. */
 function finish() {
   const ov = overlay.value;
-  titleTyped.value = TITLE;
+  titleTyped.value = brandTitle();
   titled.value = true;
   if (ov) gsap.set(ov, { display: 'none', opacity: 0 });
   if (stack.value) {
@@ -315,8 +322,9 @@ function start() {
 
   // Beat 5 — the title is written on.
   const titleAt = b4 + 0.15;
-  for (let i = 0; i < TITLE.length; i++) {
-    const ch = TITLE[i];
+  const fullTitle = brandTitle();
+  for (let i = 0; i < fullTitle.length; i++) {
+    const ch = fullTitle[i];
     T.call(
       () => {
         titleTyped.value += ch;
@@ -325,7 +333,7 @@ function start() {
       titleAt + i * 0.09,
     );
   }
-  const titledAt = titleAt + TITLE.length * 0.09;
+  const titledAt = titleAt + fullTitle.length * 0.09;
   T.call(
     () => {
       titled.value = true;
@@ -472,19 +480,19 @@ defineExpose({ start });
       <div class="b3d-face b3d-front">
         <div class="b3d-frame">
           <span class="b3d-mark">G.</span>
-          <p class="b3d-title">Gray<br />Solutions<em>.</em></p>
+          <p class="b3d-title">{{ settings.siteName }}<em>.</em></p>
           <p class="b3d-tag"><em>Websites that tell stories.</em></p>
           <p class="b3d-by">Chris Gray</p>
         </div>
       </div>
-      <div class="b3d-face b3d-spine"><span>Gray Solutions</span></div>
+      <div class="b3d-face b3d-spine"><span>{{ settings.siteName }}</span></div>
       <div class="b3d-face b3d-pages"></div>
     </div>
 
     <!-- Flat spine: after the 3D turn, the book goes 2D again and
          scales to fit the shelf gap. -->
     <div ref="flatSpine" class="bind-flat-spine" aria-hidden="true">
-      <span>Gray Solutions</span>
+      <span>{{ settings.siteName }}</span>
     </div>
 
     <!-- Fade-to-black veil for the final beat. -->
