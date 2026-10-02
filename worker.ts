@@ -1,4 +1,11 @@
+// Cloudflare Worker entry: serves the static site, plus the contact-form API.
+//
+// Non-API requests fall through to the static assets (same behavior as the
+// dashboard-managed assets-only setup). POST /api/contact sends the inquiry
+// to chris@graywebsolutions.com via Resend.
+
 interface Env {
+  ASSETS: Fetcher;
   RESEND_API_KEY?: string;
   CONTACT_TO?: string;
   CONTACT_FROM?: string;
@@ -25,9 +32,7 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-export async function onRequestPost(context: { request: Request; env: Env }): Promise<Response> {
-  const { request, env } = context;
-
+async function handleContact(request: Request, env: Env): Promise<Response> {
   if (!env.RESEND_API_KEY) {
     return json({ ok: false, error: 'Email service is not configured yet.' }, 503);
   }
@@ -97,3 +102,16 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
 
   return json({ ok: true });
 }
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === '/api/contact') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      return handleContact(request, env);
+    }
+    return env.ASSETS.fetch(request);
+  },
+};
