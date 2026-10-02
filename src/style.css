@@ -2935,11 +2935,15 @@ html[data-theme='dark'] .page-tab {
 }
 
 /* ============================================================
-   Bonus settings app: mirror mode.
+   Bonus settings app: mirror mode + color invert.
    A client-side toy; a refresh restores the default.
    ============================================================ */
 /* Mirror the whole site horizontally. Fixed elements get weird —
    that's the joke. */
 :root[data-mirror='on'] #app {
   transform: scaleX(-1);
+}
+/* Invert every color. Also a joke. */
+:root[data-invert='on'] #app {
+  filter: invert(1);
 }

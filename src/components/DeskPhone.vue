@@ -526,6 +526,10 @@ onUnmounted(() => {
               <span class="set-name">Mirror site</span>
               <span class="set-switch" :class="{ on: settings.mirror }"><span class="set-knob"></span></span>
             </button>
+            <button type="button" class="set-row set-toggle" @click="settings.toggleInvert()">
+              <span class="set-name">Invert colors</span>
+              <span class="set-switch" :class="{ on: settings.invert }"><span class="set-knob"></span></span>
+            </button>
             <button type="button" class="set-row set-toggle" @click="settings.toggleSandwich()">
               <span class="set-name">Sandwich mode</span>
               <span class="set-switch" :class="{ on: settings.sandwich }"><span class="set-knob"></span></span>

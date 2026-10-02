@@ -20,10 +20,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const accent = ref('#d08a4e');
   /** Mirror the whole site horizontally. Beautifully unreadable. */
   const mirror = ref(false);
+  /** Invert every color on the site. */
+  const invert = ref(false);
   /** Kill every stylesheet: raw unstyled HTML. */
   const noCss = ref(false);
   /** Bookshelf renders as a sandwich; each book is a topping. */
-  const sandwich = ref(false);
+  const sandwich = ref(false)
 
   function setSiteName(v: string) {
     const clean = v.trim().slice(0, 40);
@@ -49,6 +51,9 @@ export const useSettingsStore = defineStore('settings', () => {
   function toggleMirror() {
     mirror.value = !mirror.value;
   }
+  function toggleInvert() {
+    invert.value = !invert.value;
+  }
   function toggleNoCss() {
     setNoCss(!noCss.value);
   }
@@ -62,6 +67,7 @@ export const useSettingsStore = defineStore('settings', () => {
     mode.value = 'auto';
     accent.value = '#d08a4e';
     mirror.value = false;
+    invert.value = false;
     setNoCss(false);
     sandwich.value = false;
   }
@@ -89,6 +95,9 @@ export const useSettingsStore = defineStore('settings', () => {
   watch(mirror, (m) => {
     document.documentElement.dataset.mirror = m ? 'on' : 'off';
   }, { immediate: true });
+  watch(invert, (v) => {
+    document.documentElement.dataset.invert = v ? 'on' : 'off';
+  }, { immediate: true });
   watch(accent, (c) => {
     document.documentElement.style.setProperty('--ember', c);
   }, { immediate: true });
@@ -108,8 +117,8 @@ export const useSettingsStore = defineStore('settings', () => {
   }, { immediate: true });
 
   return {
-    siteName, logoMark, bgColor, textColor, mode, accent, mirror, noCss, sandwich,
+    siteName, logoMark, bgColor, textColor, mode, accent, mirror, invert, noCss, sandwich,
     setSiteName, setBgColor, setTextColor, setMode, setAccent,
-    toggleMirror, toggleNoCss, toggleSandwich, resetAll,
+    toggleMirror, toggleInvert, toggleNoCss, toggleSandwich, resetAll,
   };
 });

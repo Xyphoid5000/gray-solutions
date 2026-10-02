@@ -8,6 +8,7 @@ import Cover from './components/Cover.vue';
 import CoverHero from './components/CoverHero.vue';
 import Office from './components/Office.vue';
 import BindCinematic from './components/BindCinematic.vue';
+import SandwichBite from './components/SandwichBite.vue';
 import OpenTransition from './components/OpenTransition.vue';
 import BookIntroModal from './components/BookIntroModal.vue';
 import RemoteControl from './components/RemoteControl.vue';
@@ -184,13 +185,28 @@ const officeRef = ref<InstanceType<typeof Office> | null>(null);
 /** True while the binding cinematic owns the screen — the site nav
     (and its pull cord) hides so it can't collide with SKIP. */
 const bindingActive = ref(false);
+/** Sandwich binding: the bite overlay owns the screen instead of the
+    sewing cinematic. */
+const biteActive = ref(false)
 /** The binding, from any trigger: the open page joins the pile first so
-    the final page is really in the list, then the cinematic gathers it. */
+    the final page is really in the list, then the cinematic gathers it.
+    In sandwich mode we take a bite instead — that's the binding. */
 async function runBinding() {
-  if (office.manuscriptBound || !bindCinematic.value) return;
-  bindingActive.value = true;
+  if (office.manuscriptBound) return;
   await officeRef.value?.bookView?.tossCurrentToPile();
+  if (settings.sandwich) {
+    bindingActive.value = true;
+    biteActive.value = true;
+    return;
+  }
+  if (!bindCinematic.value) return;
+  bindingActive.value = true;
   bindCinematic.value.start();
+}
+/** Sandwich binding: the bite is done — finish like the cinematic. */
+function onBiteDone() {
+  biteActive.value = false;
+  onBindDone();
 }
 function onFinaleContact() {
   if (!manuscriptBound.value && bindCinematic.value) {
@@ -878,6 +894,7 @@ onUnmounted(() => {
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
   />
+  <SandwichBite v-if="biteActive" @done="onBiteDone" />
   <OpenTransition
     v-if="showOpenTransition"
     @done="onOpenTransitionDone"

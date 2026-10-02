@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
 import Book from './Book.vue';
+import BookSandwich from './BookSandwich.vue';
 import { useSettingsStore } from '../stores/settings';
 import { storeToRefs } from 'pinia';
 
@@ -223,7 +224,7 @@ function toggleOurs() {
     >
       <div class="bs-book-drop" @click.stop>
         <Book
-          v-if="selectedBook === 'ours'"
+          v-if="selectedBook === 'ours' && !sandwich"
           :title="siteName"
           color="#1a1a1a"
           :width="36"
@@ -235,6 +236,11 @@ function toggleOurs() {
           author="Chris Gray"
           :showBonusToggle="true"
         />
+        <!-- Sandwich mode: the book is a sandwich — buns, chapter
+             toppings, no pages. -->
+        <div v-else-if="selectedBook === 'ours'" class="bs-sw-wrap">
+          <BookSandwich />
+        </div>
         <Book
           v-else
           :title="selectedBook.title"
@@ -716,6 +722,11 @@ html[data-theme='dark'] .bookshelf-hero {
   bottom: auto;
   transform: none;
   margin: 0; /* shelf-row spacing must not throw off the centering */
+}
+/* Sandwich mode: the book-sandwich takes the pulled book's middle row. */
+.bs-book-drop .bs-sw-wrap {
+  grid-row: 2;
+  align-self: center;
 }
 /* Buttons ride the bottom row, just under the book. The margin clears the
    3D book's visual overhang below its box, then leaves breathing room. */
