@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
+import { useBonusStore } from '../stores/bonus';
 
 defineProps<{ isBound?: boolean }>();
 
+const bonus = useBonusStore();
 const hasSite = ref('');
 const formStatus = ref('');
 const formError = ref(false);
 const showPuzzleInfo = ref(false);
 const showHint = ref(false);
+/** Bonus state frozen at the moment the hint was revealed — it never updates after. */
+const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
 
@@ -18,6 +22,14 @@ watch(autoFillDiscountCode, (code) => {
   if (discountInput.value) discountInput.value.value = code;
   autoFillDiscountCode.value = '';
 });
+
+/** Reveal the hint, freezing whatever the bonus state is right now —
+    it never updates after this. Bonus already on: point at the first
+    draft. Otherwise: point at turning the document around. */
+function revealHint() {
+  hintSeesBonus.value = bonus.enabled;
+  showHint.value = true;
+}
 
 async function submitContactForm(event: SubmitEvent) {
   const form = event.currentTarget as HTMLFormElement;
@@ -131,8 +143,8 @@ async function submitContactForm(event: SubmitEvent) {
       <small v-if="discountError" id="discount-error" class="discount-error" role="alert">{{ discountError }}</small>
       <span v-if="showPuzzleInfo" class="puzzle-info-text">
         <small>Somewhere on this site is a one time code for 20% off your website.</small>
-        <button v-if="!showHint" type="button" class="hint-btn" @click="showHint = true">Show hint</button>
-        <small v-else class="puzzle-hint">Turn the {{ isBound ? 'Gray Solutions book' : 'manuscript' }} around.</small>
+        <button v-if="!showHint" type="button" class="hint-btn" @click="revealHint">Show hint</button>
+        <small v-else class="puzzle-hint">{{ hintSeesBonus ? 'review the first draft.' : `Turn the ${isBound ? 'Gray Solutions book' : 'manuscript'} around.` }}</small>
       </span>
     </label>
     <div class="contact-submit">
