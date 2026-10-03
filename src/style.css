@@ -754,6 +754,11 @@ a {
 .finale .typed-text {
   white-space: pre-wrap;
 }
+/* Ember accents in the finale body copy — same treatment as .chapter em. */
+.finale em {
+  color: var(--ember);
+  font-style: italic;
+}
 /* Buttons and links wait for the writer to finish. */
 .finale .ui-late {
   opacity: 0;
@@ -2804,6 +2809,18 @@ html[data-theme='dark'] .page-tab {
 .card-plain-tags {
   font-size: 0.85rem;
   color: var(--muted);
+  font-style: italic;
+}
+/* Paginated cards lose their card classes on mobile — keep the ember
+   accent on their <em> phrases (same treatment as .chapter em). */
+.card-plain em {
+  color: var(--ember);
+  font-style: italic;
+}
+/* Mobile-only: the arc pages are built for small screens, so the act
+   phrases get the ember treatment there without touching desktop. */
+.arc-page em {
+  color: var(--ember);
   font-style: italic;
 }
 

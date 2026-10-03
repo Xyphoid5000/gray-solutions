@@ -329,9 +329,18 @@ async function paginateCurrentChapter() {
         const c = card as HTMLElement;
         const plain = document.createElement('div');
         plain.className = 'card-plain';
-        // Extract title, copy, and tags as plain text.
-        const title = c.querySelector('h3')?.textContent || '';
-        const copy = c.querySelector('p')?.textContent || '';
+        // Extract title and copy, keeping <em> (the ember accent) and
+        // unwrapping every other tag so the block stays plain text.
+        const keepEm = (html: string) => {
+          const d = document.createElement('div');
+          d.innerHTML = html;
+          d.querySelectorAll('*').forEach((el) => {
+            if (el.tagName !== 'EM') el.replaceWith(...Array.from(el.childNodes));
+          });
+          return d.innerHTML;
+        };
+        const title = keepEm(c.querySelector('h3')?.innerHTML || '');
+        const copy = keepEm(c.querySelector('p')?.innerHTML || '');
         const tags = Array.from(c.querySelectorAll('li')).map((li) => li.textContent).join(', ');
         plain.innerHTML = `<h3>${title}</h3><p>${copy}</p>${tags ? `<p class="card-plain-tags">${tags}</p>` : ''}`;
         // Keep any call-to-action button — move the real node so its
