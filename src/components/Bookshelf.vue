@@ -141,7 +141,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
     :aria-hidden="backdrop || undefined"
     aria-label="Bookshelf"
   >
-    <div class="bs-vignette" aria-hidden="true"></div>
     <p class="bs-kicker">A portfolio &middot; by Chris Gray</p>
 
     <div class="bs-case" aria-hidden="true">
@@ -381,16 +380,7 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
       #0b0705 100%
     );
 }
-.bs-vignette {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    90% 75% at 50% 45%,
-    transparent 55%,
-    rgba(0, 0, 0, 0.55) 100%
-  );
-}
+/* (bs-vignette removed — the wall behind the shelf stays clean.) */
 
 /* Backdrop mode: the shelf is pure scenery behind the home hero.
    No dimming — a clear veil over it carries the blur. */

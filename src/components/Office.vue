@@ -94,10 +94,8 @@ const trackClass = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Flat wall with plants and a window behind the bookcase — dimmed
-     so the shelf pops. */
+  /* Flat wall with plants and a window behind the bookcase. */
   background:
-    linear-gradient(rgba(10, 6, 3, 0.45), rgba(10, 6, 3, 0.45)),
     url('/office-wall.jpg') center / cover no-repeat,
     #141009;
 }
