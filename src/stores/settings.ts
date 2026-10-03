@@ -1,6 +1,53 @@
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 
+/* ---- contrast helpers for derived muted colors ---- */
+type RGB = [number, number, number];
+function hexToRgb(hex: string): RGB {
+  const h = hex.replace('#', '');
+  const v = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const n = parseInt(v, 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function relLuminance([r, g, b]: RGB): number {
+  const f = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function contrastRatio(a: string, b: string): number {
+  const l1 = relLuminance(hexToRgb(a));
+  const l2 = relLuminance(hexToRgb(b));
+  const [hi, lo] = l1 >= l2 ? [l1, l2] : [l2, l1];
+  return (hi + 0.05) / (lo + 0.05);
+}
+function mixHex(a: string, b: string, t: number): string {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  const m = ca.map((v, i) => Math.round(v + (cb[i] - v) * t));
+  return '#' + m.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+/** Push `ink` toward `bg` as far as possible while keeping `target`
+    contrast — the most-muted-but-still-readable mix. If even the full
+    ink can't hit the target, returns ink unchanged. */
+function fitForContrast(ink: string, bg: string, target: number): string {
+  if (contrastRatio(ink, bg) < target) return ink;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (contrastRatio(mixHex(ink, bg, mid), bg) >= target) lo = mid;
+    else hi = mid;
+  }
+  return mixHex(ink, bg, lo);
+}
+/** Theme bg/ink when the pickers are untouched (null = theme decides). */
+const THEME_COLORS = {
+  light: { bg: '#faf6ec', ink: '#1a1510' },
+  dark: { bg: '#0a0d16', ink: '#f2ecdf' },
+} as const;
+
 /**
  * Bonus settings app (desk phone): playful site-wide overrides.
  * Everything here is client-side cosmetic — nothing touches the
@@ -100,13 +147,34 @@ export const useSettingsStore = defineStore('settings', () => {
 
   // Root-level effects. Mirror rides as an attribute so plain CSS can
   // do the work; colors are variable swaps.
+  /** Recompute the subdued vars from the effective bg/ink so muted text,
+      placeholders and faint borders stay readable under picker colors.
+      Both pickers null -> remove the overrides and let the theme decide
+      (this also keeps Reset behavior intact). */
+  function applyDerivedMuted() {
+    const root = document.documentElement;
+    if (!bgColor.value && !textColor.value) {
+      for (const v of ['--muted', '--faint', '--line', '--line-soft']) root.style.removeProperty(v);
+      return;
+    }
+    const theme = root.dataset.theme === 'light' ? 'light' : 'dark';
+    const bg = bgColor.value ?? THEME_COLORS[theme].bg;
+    const ink = textColor.value ?? THEME_COLORS[theme].ink;
+    const [r, g, b] = hexToRgb(ink);
+    root.style.setProperty('--muted', fitForContrast(ink, bg, 4.5));
+    root.style.setProperty('--faint', fitForContrast(ink, bg, 3));
+    root.style.setProperty('--line', `rgba(${r}, ${g}, ${b}, 0.12)`);
+    root.style.setProperty('--line-soft', `rgba(${r}, ${g}, ${b}, 0.07)`);
+  }
   watch(bgColor, (c) => {
     if (c) document.documentElement.style.setProperty('--bg', c);
     else document.documentElement.style.removeProperty('--bg');
+    applyDerivedMuted();
   }, { immediate: true });
   watch(textColor, (c) => {
     if (c) document.documentElement.style.setProperty('--ink', c);
     else document.documentElement.style.removeProperty('--ink');
+    applyDerivedMuted();
   }, { immediate: true });
   watch(mirror, (m) => {
     document.documentElement.dataset.mirror = m ? 'on' : 'off';
@@ -139,10 +207,14 @@ export const useSettingsStore = defineStore('settings', () => {
   // charge; a manual pick applies immediately (and stays put — the
   // lighting rituals route through setThemePlain, which honors it).
   watch(mode, (m) => {
-    if (m === 'auto') return;
+    if (m === 'auto') {
+      applyDerivedMuted();
+      return;
+    }
     const root = document.documentElement;
     root.classList.add('theme-fade');
     root.dataset.theme = m;
+    applyDerivedMuted();
     window.setTimeout(() => root.classList.remove('theme-fade'), 650);
   }, { immediate: true });
 
