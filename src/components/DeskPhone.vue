@@ -964,6 +964,8 @@ html[data-blacklight='on'] .desk-phone-btn {
   overflow: hidden;
   border: 1px solid #232a38;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .snake-wrap canvas {
   display: block;

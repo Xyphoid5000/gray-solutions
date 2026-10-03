@@ -275,6 +275,8 @@ function toggleUV() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
   gap: 1rem;
 }
 

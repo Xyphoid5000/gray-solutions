@@ -12,6 +12,9 @@ const { siteName } = storeToRefs(useSettingsStore());
 const hasSite = ref('');
 const formStatus = ref('');
 const formError = ref(false);
+/** Session-scoped: once a message sends, the form hides and a success
+    note takes its place. Never persisted — a fresh visit gets a fresh form. */
+const sent = ref(false);
 const showPuzzleInfo = ref(false);
 const showHint = ref(false);
 /** Bonus state frozen at the moment the hint was revealed — it never updates after. */
@@ -82,6 +85,7 @@ async function submitContactForm(event: SubmitEvent) {
       throw new Error(data.error || 'Something went wrong sending your message.');
     }
     formStatus.value = 'Got it — I read every note myself and reply within a couple of days.';
+    sent.value = true;
     form.reset();
     hasSite.value = '';
   } catch (err) {
@@ -92,7 +96,11 @@ async function submitContactForm(event: SubmitEvent) {
 </script>
 
 <template>
-  <form class="contact-form" @submit.prevent="submitContactForm">
+  <div v-if="sent" class="contact-success" role="status">
+    <p class="contact-success-title">Message sent.</p>
+    <p class="contact-success-sub">Got it — I read every note myself and reply within a couple of days.</p>
+  </div>
+  <form v-else class="contact-form" @submit.prevent="submitContactForm">
     <input name="company" type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
     <div class="contact-row">
       <label class="field">

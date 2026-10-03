@@ -169,10 +169,13 @@ function closeBook() {
 async function closeBookToSection(section: 'about' | 'contact', after = 100) {
   if ((office.view === 'desk')) await tiltUp();
   else closeBook();
+  // "Contact me" roads now land on the socials at the page bottom —
+  // the form itself still works for anyone who scrolls to it directly.
+  const target = section === 'contact' ? 'socials' : section;
   // After the shelf is back, scroll to the section.
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' });
     }, after);
   });
 }
@@ -228,13 +231,13 @@ function onFinaleContact() {
 }
 function onBindDone() {
   // The book is bound — skip the trip back to the top entirely and
-  // glide straight to the contact form.
+  // glide straight to the socials at the page bottom.
   bindingActive.value = false;
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('socials')?.scrollIntoView({ behavior: 'smooth' });
     }, 600);
   });
 }
@@ -252,7 +255,7 @@ function onBindBlackout() {
 function onBindShelf() {
   shelfReveal.value = true;
 }
-/** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
+/** Header nav: CONTACT ME lands on the socials at the page bottom; the brand goes home. */
 function onNavContact() {
   if ((office.view === 'desk')) {
     if (!manuscriptBound.value && bindCinematic.value) {
@@ -261,7 +264,7 @@ function onNavContact() {
     }
     closeBookToSection('contact');
   } else {
-    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('socials')?.scrollIntoView({ behavior: 'smooth' });
   }
 }
 function onNavHome() {

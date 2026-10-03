@@ -32,7 +32,7 @@ function takeBite() {
     >
       Take a bite
     </button>
-    <p v-else class="bite-bound">Bound. That's the binding.</p>
+    <p v-else class="bite-bound">Delicious</p>
   </div>
 </template>
 

@@ -218,6 +218,8 @@ defineExpose({ rotateBy });
   --bd: 150px;  /* book depth (cover width) */
   --bc: #333;   /* cover color */
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
   width: var(--bw);
   height: var(--bh);
   padding: 0;

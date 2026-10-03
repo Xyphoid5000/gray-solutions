@@ -20,7 +20,7 @@
     <p class="about-signoff">
       <em>Every business has a story. Mine is helping you tell yours.</em>
     </p>
-    <nav class="about-links" aria-label="Elsewhere">
+    <nav id="socials" class="about-links" aria-label="Elsewhere">
       <a
         v-for="l in LINKS"
         :key="l.label"

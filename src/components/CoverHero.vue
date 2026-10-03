@@ -358,8 +358,10 @@ function open() {
 function playReturn(target: 'contact' | 'about') {
   const book = bookRef.value;
   if (!book) return;
+  // "Contact me" roads land on the socials at the page bottom now.
+  const el = target === 'contact' ? 'socials' : target;
   if (reducedMotion()) {
-    document.getElementById(target)?.scrollIntoView();
+    document.getElementById(el)?.scrollIntoView();
     return;
   }
   // The book turns its back as it lands — scrolling back up will swing
@@ -419,7 +421,7 @@ function playReturn(target: 'contact' | 'about') {
       1.1,
     )
     .add(() => {
-      const el = document.getElementById(target);
+      const el = document.getElementById(target === 'contact' ? 'socials' : target);
       if (el) {
         let spinOn = false;
         const enableSpin = () => {

@@ -1268,6 +1268,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   /* Horizontal drags spin the book; vertical drags scroll the page. */
   touch-action: pan-y;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .book-stage:active {
   cursor: grabbing;
@@ -1592,6 +1594,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   height: 36px;
   border-radius: 50%;
   border: 1px solid var(--ember-deep);
+  user-select: none;
+  -webkit-user-select: none;
   background: radial-gradient(circle at 35% 30%, var(--ember-bright), var(--ember) 55%, var(--ember-deep));
   color: #1a1510;
   cursor: grab;
@@ -1846,6 +1850,20 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   display: grid;
   gap: 1.35rem;
   max-width: 620px;
+}
+/* Post-send state: the form hides, this success note takes its place. */
+.contact-success {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 620px;
+  padding: 2rem 0;
+}
+.contact-success-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.contact-success-sub {
+  opacity: 0.85;
 }
 /* Honeypot anti-spam field — never visible to humans. */
 .contact-form .hp-field {
@@ -2379,6 +2397,8 @@ html[data-theme='dark'] .ms-back {
   position: relative;
   min-height: 100%;
   display: flow-root; /* contain page margins — stops them collapsing through and shoving the desk down */  /* Mahogany desk. */
+  user-select: none;
+  -webkit-user-select: none;
   background-color: #2a140c;
   background-image:
     repeating-linear-gradient(
