@@ -26,6 +26,7 @@ import { useSettingsStore } from './stores/settings';
 import { useInteractionsStore } from './stores/interactions';
 import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
+import { contactTarget } from './lib/contact';
 import { motionReduced } from './utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -169,9 +170,9 @@ function closeBook() {
 async function closeBookToSection(section: 'about' | 'contact', after = 100) {
   if ((office.view === 'desk')) await tiltUp();
   else closeBook();
-  // "Contact me" roads now land on the socials at the page bottom —
-  // the form itself still works for anyone who scrolls to it directly.
-  const target = section === 'contact' ? 'socials' : section;
+  // "Contact me" roads land on the contact form — unless it's been
+  // submitted and retired, in which case they land on the socials.
+  const target = section === 'contact' ? contactTarget() : section;
   // After the shelf is back, scroll to the section.
   requestAnimationFrame(() => {
     setTimeout(() => {
@@ -231,13 +232,14 @@ function onFinaleContact() {
 }
 function onBindDone() {
   // The book is bound — skip the trip back to the top entirely and
-  // glide straight to the socials at the page bottom.
+  // glide straight to the contact form (or the socials, if the form
+  // has already been submitted and retired this visit).
   bindingActive.value = false;
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.getElementById('socials')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
     }, 600);
   });
 }
@@ -255,7 +257,8 @@ function onBindBlackout() {
 function onBindShelf() {
   shelfReveal.value = true;
 }
-/** Header nav: CONTACT ME lands on the socials at the page bottom; the brand goes home. */
+/** Header nav: CONTACT ME lands on the contact form (or the socials once
+    the form has been submitted and retired); the brand goes home. */
 function onNavContact() {
   if ((office.view === 'desk')) {
     if (!manuscriptBound.value && bindCinematic.value) {
@@ -264,7 +267,7 @@ function onNavContact() {
     }
     closeBookToSection('contact');
   } else {
-    document.getElementById('socials')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
   }
 }
 function onNavHome() {

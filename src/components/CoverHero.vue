@@ -4,6 +4,7 @@ import { gsap } from 'gsap';
 import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
+import { contactTarget } from '../lib/contact';
 import { motionReduced } from '../utils/a11y';
 import { useSettingsStore } from '../stores/settings';
 import WaxSeal from './WaxSeal.vue';
@@ -358,8 +359,9 @@ function open() {
 function playReturn(target: 'contact' | 'about') {
   const book = bookRef.value;
   if (!book) return;
-  // "Contact me" roads land on the socials at the page bottom now.
-  const el = target === 'contact' ? 'socials' : target;
+  // "Contact me" roads land on the contact form — or the socials,
+  // if the form has been submitted and retired this visit.
+  const el = target === 'contact' ? contactTarget() : target;
   if (reducedMotion()) {
     document.getElementById(el)?.scrollIntoView();
     return;
@@ -421,7 +423,7 @@ function playReturn(target: 'contact' | 'about') {
       1.1,
     )
     .add(() => {
-      const el = document.getElementById(target === 'contact' ? 'socials' : target);
+      const el = document.getElementById(target === 'contact' ? contactTarget() : target);
       if (el) {
         let spinOn = false;
         const enableSpin = () => {

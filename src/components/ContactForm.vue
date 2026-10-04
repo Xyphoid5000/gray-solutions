@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
+import { activeDiscountCode } from '../lib/discount';
+import { contactSubmitted } from '../lib/contact';
 import { useBonusStore } from '../stores/bonus';
 import { useSettingsStore } from '../stores/settings';
 import { storeToRefs } from 'pinia';
@@ -22,12 +23,17 @@ const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
 
-/** The desk phone can drop this visit's code straight into the field. */
-watch(autoFillDiscountCode, (code) => {
-  if (!code) return;
-  if (discountInput.value) discountInput.value.value = code;
-  autoFillDiscountCode.value = '';
-});
+/** Once the visitor has found this visit's code (via the desk phone),
+    the discount field fills itself in — no button needed. Never
+    clobbers what the visitor typed themselves. */
+watch(
+  activeDiscountCode,
+  (code) => {
+    if (!code || !discountInput.value || discountInput.value.value) return;
+    discountInput.value.value = code;
+  },
+  { immediate: true },
+);
 
 /** Reveal the hint, freezing whatever the bonus state is right now —
     it never updates after this. Bonus already on: point at the first
@@ -86,6 +92,7 @@ async function submitContactForm(event: SubmitEvent) {
     }
     formStatus.value = 'Got it — I read every note myself and reply within a couple of days.';
     sent.value = true;
+    contactSubmitted.value = true;
     form.reset();
     hasSite.value = '';
   } catch (err) {
