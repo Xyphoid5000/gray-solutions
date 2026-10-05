@@ -23,11 +23,6 @@ const trackClass = computed(() => ({
     <div class="office-track" :class="trackClass">
       <!-- Shelf view: the bookshelf (backdrop or interactive when bound). -->
       <div class="office-slide office-shelf" aria-label="Bookshelf">
-        <!-- Night window: in dark mode, covers the daylight window in the
-             wall mural with a starry night sky. -->
-        <div class="night-window" aria-hidden="true">
-          <div class="night-sky"></div>
-        </div>
         <!-- Desk under the bookshelf: a simple background piece, not the
              interactive desk. In dark mode a candle silhouette sits on it. -->
         <div class="shelf-desk" aria-hidden="true">
@@ -108,32 +103,13 @@ const trackClass = computed(() => ({
   justify-content: center;
   /* Flat wall with plants and a window behind the bookcase. */
   background:
-    url('/office-wall.jpg') center / cover no-repeat,
+    url('/office-wall-day.jpg') center / cover no-repeat,
     #141009;
 }
-/* Night window: covers the daylight window in the mural with a starry
-   sky in dark mode. Positioned over the upper-left window; hidden in
-   light mode and on small screens (window is out of frame there). */
-.night-window {
-  position: absolute;
-  left: 7.5%;
-  top: 13%;
-  width: 8.5%;
-  aspect-ratio: 0.62;
-  display: none;
-  z-index: 1;
-  border: 6px solid #2a1f14;
-  border-radius: 2px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.6);
-  overflow: hidden;
-}
-html[data-theme='dark'] .night-window {
-  display: block;
-}
-@media (max-width: 640px) {
-  .night-window {
-    display: none !important;
-  }
+html[data-theme='dark'] .office-scene {
+  background:
+    url('/office-wall-night.jpg') center / cover no-repeat,
+    #0a0d14;
 }
 /* Desk under the bookshelf: a simple front face at the bottom of the
    shelf view. The candle pokes up above it in dark mode only. */

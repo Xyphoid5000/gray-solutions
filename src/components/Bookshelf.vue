@@ -145,7 +145,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
     :aria-hidden="backdrop || undefined"
     aria-label="Bookshelf"
   >
-    <p class="bs-kicker">A portfolio &middot; by Chris Gray</p>
 
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>

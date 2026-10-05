@@ -541,7 +541,6 @@ onUnmounted(() => {
   <div class="cover-desk" aria-hidden="true"></div>
   <div class="cover-glow" aria-hidden="true"></div>
   <div class="cover-scene">
-    <p class="cover-kicker">A portfolio &middot; by Chris Gray</p>
     <div
       ref="stageRef"
       class="book-stage"
