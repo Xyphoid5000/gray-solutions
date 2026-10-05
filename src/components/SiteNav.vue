@@ -14,6 +14,12 @@ const emit = defineEmits<{
   home: [];
 }>();
 
+/** Mobile menu open state. */
+const menuOpen = ref(false);
+function closeMenu() { menuOpen.value = false; }
+function goContact() { closeMenu(); emit('contact'); }
+function goHome() { closeMenu(); emit('home'); }
+
 /** The cord lives here but only while bonus content is on. It mounts
     with everything hidden inside the G. emblem (the G is its housing —
     the cord container clips at the G's bottom edge). The drop is a
@@ -173,6 +179,21 @@ function retractCord(done: () => void) {
       <button class="nav-contact" @click="emit('contact')">
         Contact me
       </button>
+    <!-- Mobile hamburger. -->
+    <button
+      type="button"
+      class="nav-hamburger"
+      @click="menuOpen = !menuOpen"
+      aria-label="Menu"
+      :aria-expanded="menuOpen"
+    >
+      <span></span><span></span><span></span>
+    </button>
+    <!-- Mobile menu. -->
+    <div v-if="menuOpen" class="nav-mobile-menu">
+      <button type="button" @click="goHome">Home</button>
+      <button type="button" @click="goContact">Contact me</button>
+    </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
       <label class="a11y-toggle">
         <input

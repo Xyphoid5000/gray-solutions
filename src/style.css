@@ -3277,3 +3277,64 @@ html[data-theme='dark'] .page-tab {
 :root[data-invert='on'] #app {
   filter: invert(1);
 }
+
+/* Mobile hamburger menu. */
+.nav-hamburger {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  z-index: 11;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--ember);
+  border-radius: 1px;
+}
+.nav-mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg, #14100a);
+  border-bottom: 1px solid rgba(208, 138, 78, 0.2);
+  flex-direction: column;
+  z-index: 1001;
+}
+.nav-mobile-menu button {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 1rem;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(208, 138, 78, 0.1);
+}
+.nav-mobile-menu button:hover {
+  background: rgba(208, 138, 78, 0.1);
+}
+@media (max-width: 640px) {
+  .nav-hamburger {
+    display: flex;
+  }
+  .nav-mobile-menu {
+    display: flex;
+  }
+  .nav-inner .nav-contact {
+    display: none;
+  }
+}
