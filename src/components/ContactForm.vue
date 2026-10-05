@@ -22,6 +22,7 @@ const showHint = ref(false);
 const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
+const phoneInput = ref<HTMLInputElement | null>(null);
 
 /** Once the visitor has found this visit's code (via the desk phone),
     the discount field fills itself in — no button needed. Never
@@ -41,6 +42,43 @@ watch(
 function revealHint() {
   hintSeesBonus.value = bonus.enabled;
   showHint.value = true;
+}
+
+/** Progressive US phone formatting: (xxx) xxx-xxxx. Digits only, max 10. */
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits.length ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+/** Reformat the phone field as the visitor types, pastes, or deletes.
+    The caret is restored next to the digit it was beside, so editing
+    mid-number doesn't jump to the end. */
+function onPhoneInput() {
+  const el = phoneInput.value;
+  if (!el) return;
+  const raw = el.value;
+  const formatted = formatPhone(raw);
+  if (formatted === raw) return;
+  // Digits before the caret in the unformatted value — the anchor we
+  // restore against in the formatted one.
+  const caret = el.selectionStart ?? raw.length;
+  const digitsBefore = raw.slice(0, caret).replace(/\D/g, '').length;
+  el.value = formatted;
+  let pos = 0;
+  if (digitsBefore > 0) {
+    let seen = 0;
+    pos = formatted.length;
+    for (let i = 0; i < formatted.length; i++) {
+      if (/\d/.test(formatted[i])) seen++;
+      if (seen >= digitsBefore) {
+        pos = i + 1;
+        break;
+      }
+    }
+  }
+  el.setSelectionRange(pos, pos);
 }
 
 async function submitContactForm(event: SubmitEvent) {
@@ -122,7 +160,7 @@ async function submitContactForm(event: SubmitEvent) {
       </label>
       <label class="field">
         <span>Phone <em>(optional)</em></span>
-        <input name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" />
+        <input ref="phoneInput" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" @input="onPhoneInput" />
       </label>
     </div>
     <fieldset class="field">

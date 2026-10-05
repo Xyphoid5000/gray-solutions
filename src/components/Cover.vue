@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onUnmounted, ref, watch } from 'vue';
+import { nextTick, onUnmounted, ref, watch } from 'vue';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
 import { contactSubmitted } from '../lib/contact';
@@ -16,6 +17,10 @@ watch(contactSubmitted, (submitted) => {
   if (!submitted || contactGone.value) return;
   hideTimer = window.setTimeout(() => {
     contactGone.value = true;
+    // The section's removal shifts everything below it up — recalculate
+    // scroll triggers so the about section (and its socials) reveals
+    // instead of sitting invisible below the fold.
+    nextTick(() => ScrollTrigger.refresh());
   }, 3000);
 });
 onUnmounted(() => {

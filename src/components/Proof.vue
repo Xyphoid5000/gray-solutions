@@ -20,9 +20,11 @@ function nextPanel() {
   panelIndex.value = Math.min(PANEL_COUNT - 1, panelIndex.value + 1);
 }
 
-/** Arrow keys step between exhibits — only while this chapter is the
-    open book page. At the ends the keys fall through to the book's own
-    page-turn handler (capture + no stopPropagation there). */
+/** Arrow keys step between exhibits — only while the projects strip is
+    on the visible book page. On the chapter's other pages (title, lede)
+    the keys fall through to the book's own page-turn handler, so arrows
+    never advance exhibits you can't see yet. At the first/last exhibit
+    the keys likewise fall through to turn book pages. */
 function onKey(e: KeyboardEvent) {
   if (!props.active) return;
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -30,6 +32,12 @@ function onKey(e: KeyboardEvent) {
   if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
   if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
     return;
+  // The strip lives on its own paginated page — a hidden page reports a
+  // zero rect, so this is false everywhere but the projects page.
+  const strip = document.querySelector('#proof .proof-strip');
+  if (!strip) return;
+  const r = strip.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
   if (e.key === 'ArrowRight' && panelIndex.value < PANEL_COUNT - 1) {
     e.stopPropagation();
     nextPanel();

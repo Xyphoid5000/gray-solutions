@@ -43,12 +43,13 @@ const litCount = ref(0);
 const spineProgress = ref(0);
 let spineTriggers: ScrollTrigger[] = [];
 
-/** Desktop auto-draw: the pen-drawn curve advances on a timer. */
+/** Desktop pen-draw timeline — replay only. The reader drives the pen
+    bullet to bullet; the timeline just replays the full draw. */
 let arcTl: gsap.core.Timeline | null = null;
-let arcPlayed = false;
-/** Draw checkpoints — one per act; the auto-draw pauses at each, and
-    arrow keys / clicks jump the pen straight to them. */
-const ACT_CHECKS = [0.25, 0.5, 0.75, 1];
+/** Draw checkpoints — the true arc-length fractions of each node, so the
+    pen always sits exactly on a bullet. Arrow keys / clicks jump the pen
+    straight to them. */
+const ACT_CHECKS = [0, 0.338, 0.63, 1];
 /** Node positions along the curve, matching the checkpoints. */
 const NODE_POS = [
   [60, 280],
@@ -75,8 +76,8 @@ function setProgress(p: number) {
   const drawn = p * arcLen;
   gsap.set(arcPath, { strokeDashoffset: arcLen - drawn });
   placePen(drawn);
-  // Light each act as the pen reaches its node.
-  const lit = Math.min(acts.length, Math.floor(p * acts.length + 0.15));
+  // Light each act whose bullet the pen has reached.
+  const lit = ACT_CHECKS.filter((c) => c <= p + 1e-4).length;
   if (lit !== litCount.value) {
     litCount.value = lit;
     gsap.set('.arc-node', {
@@ -95,21 +96,27 @@ function setProgress(p: number) {
   }
 }
 
-/** Start the auto-draw the first time the chapter becomes current. */
-function maybePlayArc() {
-  if (!props.active || arcPlayed || !arcTl || reduced) return;
-  arcPlayed = true;
-  arcTl.play();
+/** The arc always starts at the first bullet — no autoplay. The reader
+    drives the pen from bullet to bullet with arrows or clicks. */
+function resetArc() {
+  arcTl?.pause();
+  gsap.killTweensOf(arcProgress);
+  if (!arcPath || reduced) {
+    litCount.value = 1;
+    spineProgress.value = 1 / acts.length;
+    return;
+  }
+  arcProgress.v = ACT_CHECKS[0];
+  setProgress(arcProgress.v);
 }
 /** Simple replay affordance for the finished curve. */
 function replayArc() {
   if (!arcTl || reduced) return;
-  arcPlayed = true;
+  gsap.killTweensOf(arcProgress);
   arcTl.restart();
 }
 /** Jump the pen to an act: the curve draws (or undraws) to that act's
-    checkpoint and the act lights. Arrow keys and clicks land here —
-    this takes over from the auto-draw. */
+    checkpoint and the act lights. Arrow keys and clicks land here. */
 function goToAct(i: number) {
   const idx = Math.max(0, Math.min(acts.length - 1, i));
   if (reduced || !arcPath) {
@@ -117,7 +124,6 @@ function goToAct(i: number) {
     spineProgress.value = (idx + 1) / acts.length;
     return;
   }
-  arcPlayed = true;
   arcTl?.pause();
   gsap.to(arcProgress, {
     v: ACT_CHECKS[idx],
@@ -127,9 +133,9 @@ function goToAct(i: number) {
     onUpdate: () => setProgress(arcProgress.v),
   });
 }
-/** Arrow keys move the highlight between acts — only while the arc
-    chapter is the open page. At the ends the keys fall through to the
-    book's own page-turn handler (capture + no stopPropagation there). */
+/** Arrow keys move the highlight between acts — only while the arc stage
+    is on the visible book page. Everywhere else the keys fall through to
+    the book's own page-turn handler (capture + no stopPropagation there). */
 function onArcKey(e: KeyboardEvent) {
   if (!props.active || !isDesktop) return;
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -137,12 +143,20 @@ function onArcKey(e: KeyboardEvent) {
   if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
   if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
     return;
+  // The stage lives on its own paginated page — a hidden page reports a
+  // zero rect, so this is false everywhere but the arc page.
+  const stage = document.querySelector('#arc .arc-stage');
+  if (!stage) return;
+  const r = stage.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
   const next = litCount.value - 1 + (e.key === 'ArrowRight' ? 1 : -1);
   if (next < 0 || next >= acts.length) return;
   e.stopPropagation();
   goToAct(next);
 }
-watch(() => props.active, maybePlayArc);
+watch(() => props.active, (on) => {
+  if (on && !reduced) resetArc();
+});
 
 onMounted(() => {
   window.addEventListener('keydown', onArcKey, true);
@@ -197,10 +211,10 @@ onMounted(() => {
     return;
   }
 
-  // Desktop: the pen-drawn curve. Page scroll is locked on desktop, so a
-  // timer drives the drawing instead of a scroll scrub: the pen steps
-  // through the acts with a readable pause at each beat, eases between
-  // them, then holds on the finished curve (no loop).
+  // Desktop: the pen-drawn curve. Page scroll is locked on desktop, so
+  // the reader steps the pen through the acts with arrows or clicks —
+  // it eases between bullets and holds on the finished curve. The arc
+  // always starts at the first bullet.
   const svg = document.querySelector<SVGSVGElement>('.arc-svg');
   arcPath = svg?.querySelector<SVGPathElement>('#arc-path') ?? null;
   arcPen = svg?.querySelector<SVGGElement>('.arc-pen') ?? null;
@@ -224,7 +238,8 @@ onMounted(() => {
     // Readable pause at each beat; the last one holds the finished curve.
     arcTl.to({}, { duration: 2 });
   }
-  maybePlayArc();
+  // Start at the first bullet — the reader drives from here.
+  resetArc();
 });
 
 onUnmounted(() => {
