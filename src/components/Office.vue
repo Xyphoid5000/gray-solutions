@@ -3,8 +3,10 @@ import { computed, ref } from 'vue';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
 import { useOfficeStore } from '../stores/office';
+import { useBonusStore } from '../stores/bonus';
 
 const office = useOfficeStore();
+const bonus = useBonusStore();
 const bookViewRef = ref<InstanceType<typeof BookView> | null>(null);
 
 defineEmits(['open-book', 'back-to-cover', 'back-to-cover-section', 'finale-contact']);
@@ -29,6 +31,12 @@ const trackClass = computed(() => ({
           :show-manuscript="!office.manuscriptBound"
           @open-book="$emit('open-book')"
         />
+        <!-- Bonus candle on the background desk. -->
+        <div
+          v-if="bonus.enabled && !bonus.candleGone"
+          class="shelf-candle"
+          aria-hidden="true"
+        ></div>
         <!-- Cover manuscript overlay (home page hero) when not bound. -->
         <div
           v-if="!office.manuscriptBound"
@@ -157,5 +165,37 @@ const trackClass = computed(() => ({
 /* Theme-based background swap (non-scoped: html selector). */
 html[data-theme='dark'] .office-scene {
   background: url('/office-wall-night.jpg') center / cover no-repeat, #0a0d14;
+}
+</style>
+
+<style>
+/* Bonus candle sitting on the background desk. */
+.shelf-candle {
+  position: absolute;
+  left: 38%;
+  bottom: 18%;
+  width: 16px;
+  height: 64px;
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(180deg, #e8dcc0 0%, #c9b896 100%);
+  border-radius: 3px 3px 0 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.shelf-candle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  width: 12px;
+  height: 18px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 70%, #ffd97a 0%, #ff9a3c 60%, transparent 70%);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: shelf-flicker 1.2s ease-in-out infinite alternate;
+}
+@keyframes shelf-flicker {
+  from { transform: translateX(-50%) scale(1); opacity: 1; }
+  to { transform: translateX(-50%) scale(1.08); opacity: 0.92; }
 }
 </style>
