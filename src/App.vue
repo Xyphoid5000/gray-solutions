@@ -43,6 +43,8 @@ const device = useDeviceStore();
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
 const showOpenTransition = ref(false);
+/** Where the manuscript is floating — the page drop starts here. */
+const manuscriptDropY = ref(0);
 /** How-to-read modal, shown once per session on first book open. */
 const showBookIntro = ref(false);
 
@@ -94,15 +96,21 @@ async function openBook(instant = false) {
   office.setTransitioning(true);
   noScroll(true);
   window.scrollTo(0, 0);
-  // Pages fall first, on the shelf view.
-  showOpenTransition.value = true;
-  await new Promise<void>((resolve) => {
-    const check = () => {
-      if (!showOpenTransition.value) resolve();
-      else requestAnimationFrame(check);
-    };
-    check();
-  });
+  // The page drop is only for the manuscript. The bound book opens
+  // straight to the desk — no drop.
+  if (!manuscriptBound.value) {
+    // Start the drop where the manuscript is floating.
+    const ms = document.querySelector('.manuscript-stack');
+    manuscriptDropY.value = ms ? ms.getBoundingClientRect().top : 0;
+    showOpenTransition.value = true;
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (!showOpenTransition.value) resolve();
+        else requestAnimationFrame(check);
+      };
+      check();
+    });
+  }
   // Pages are gone; now slide the office to the desk. The carousel's
   // CSS transition handles the animation — await its transitionend
   // before clearing the transitioning flag.
@@ -967,6 +975,7 @@ onUnmounted(() => {
   </button>
   <OpenTransition
     v-if="showOpenTransition"
+    :start-y="manuscriptDropY"
     @done="onOpenTransitionDone"
   />
   <BookIntroModal

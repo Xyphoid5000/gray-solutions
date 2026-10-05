@@ -9,6 +9,8 @@ gsap.registerPlugin(ScrollTrigger);
 
 const props = defineProps<{ active?: boolean }>();
 
+const stageRef = ref<HTMLElement | null>(null);
+
 const isDesktop = window.matchMedia('(min-width: 641px)').matches;
 const reduced = motionReduced();
 
@@ -111,9 +113,11 @@ function resetArc() {
 }
 /** Simple replay affordance for the finished curve. */
 function replayArc() {
-  if (!arcTl || reduced) return;
+  if (reduced) return;
   gsap.killTweensOf(arcProgress);
-  arcTl.restart();
+  if (!arcTl) return;
+  arcTl.pause(0);
+  arcTl.play();
 }
 /** Jump the pen to an act: the curve draws (or undraws) to that act's
     checkpoint and the act lights. Arrow keys and clicks land here. */
@@ -144,8 +148,9 @@ function onArcKey(e: KeyboardEvent) {
   if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
     return;
   // The stage lives on its own paginated page — a hidden page reports a
-  // zero rect, so this is false everywhere but the arc page.
-  const stage = document.querySelector('#arc .arc-stage');
+  // zero rect, so this is false everywhere but the arc page. Use the
+  // component's own stage (not document.querySelector).
+  const stage = stageRef.value;
   if (!stage) return;
   const r = stage.getBoundingClientRect();
   if (r.width === 0 || r.height === 0) return;
@@ -263,7 +268,7 @@ onUnmounted(() => {
         Stories have run on the same shape for
         <em>three thousand years</em> &mdash; so does my process.
       </p>
-      <div v-reveal class="arc-stage">
+      <div v-reveal ref="stageRef" class="arc-stage">
         <div class="arc-svg-wrap">
           <svg
             class="arc-svg"

@@ -8,6 +8,8 @@ const emit = defineEmits<{
   (e: 'go', index: number): void;
 }>();
 
+const stripRef = ref<HTMLElement | null>(null);
+
 /** Desktop pagination: one exhibit per view with prev/next stepping.
     Mobile keeps the swipe strip (its panels paginate as plain blocks). */
 const panelIndex = ref(0);
@@ -34,7 +36,9 @@ function onKey(e: KeyboardEvent) {
     return;
   // The strip lives on its own paginated page — a hidden page reports a
   // zero rect, so this is false everywhere but the projects page.
-  const strip = document.querySelector('#proof .proof-strip');
+  // Use the component's own strip (not document.querySelector, which can
+  // hit a hidden instance elsewhere in the DOM).
+  const strip = stripRef.value;
   if (!strip) return;
   const r = strip.getBoundingClientRect();
   if (r.width === 0 || r.height === 0) return;
@@ -62,7 +66,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
         A portfolio is a story&rsquo;s evidence locker. Here&rsquo;s what
         happens when a business gets <em>a website with a plot.</em>
       </p>
-      <div v-reveal class="proof-strip">
+      <div v-reveal ref="stripRef" class="proof-strip">
         <article class="proof-panel" :class="{ 'is-current': panelIndex === 0 }">
           <div>
             <span class="proof-index">Exhibit A</span>
@@ -108,7 +112,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
               wish they&rsquo;d done first.
             </p>
           </div>
-          <button class="btn btn-solid" @click="emit('go', 4)">
+          <button class="btn btn-solid claim-btn" @click="emit('go', 4)">
             Claim the page <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
         </article>

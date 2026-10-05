@@ -3,6 +3,11 @@ import { onMounted, ref } from 'vue';
 import { gsap } from 'gsap';
 import { chapters } from '../lib/chapters';
 
+const props = defineProps<{
+  /** Y (px) where the manuscript is floating — the drop starts here. */
+  startY?: number;
+}>();
+
 const emit = defineEmits(['done']);
 
 const pagesRef = ref<HTMLElement | null>(null);
@@ -20,7 +25,9 @@ onMounted(() => {
     return;
   }
   const vh = window.innerHeight;
-  gsap.set(pagesEl.children, { y: -vh * 0.6, opacity: 1, rotation: 0 });
+  // Start where the manuscript is floating (or above the screen as fallback).
+  const startY = props.startY ?? -vh * 0.6;
+  gsap.set(pagesEl.children, { y: startY, opacity: 1, rotation: 0 });
 
   const tl = gsap.timeline({
     onComplete: () => emit('done'),
