@@ -3,8 +3,30 @@ import { computed, ref } from 'vue';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
 import { useOfficeStore } from '../stores/office';
+import { useBonusStore } from '../stores/bonus';
 
 const office = useOfficeStore();
+const bonus = useBonusStore();
+
+/** Reactive dark-mode flag (synced from html[data-theme]). */
+const isDark = ref(document.documentElement.dataset.theme === 'dark');
+let themeObs = null;
+if (typeof MutationObserver !== 'undefined') {
+  themeObs = new MutationObserver(() => {
+    isDark.value = document.documentElement.dataset.theme === 'dark';
+  });
+  themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+/** Background mural: day/night x bonus/candle state (6 versions). */
+const shelfBg = computed(() => {
+  const base = isDark.value ? 'office-wall-night' : 'office-wall-day';
+  let file = base + '.jpg';
+  if (bonus.enabled && !bonus.candleGone) {
+    file = base + (bonus.candleLit ? '-candle-lit.jpg' : '-candle.jpg');
+  }
+  return `url('/${file}') center / cover no-repeat`;
+});
 const bookViewRef = ref<InstanceType<typeof BookView> | null>(null);
 
 defineEmits(['open-book', 'back-to-cover', 'back-to-cover-section', 'finale-contact']);
@@ -22,7 +44,7 @@ const trackClass = computed(() => ({
   <div class="office">
     <div class="office-track" :class="trackClass">
       <!-- Shelf view: the bookshelf (backdrop or interactive when bound). -->
-      <div class="office-slide office-shelf" aria-label="Bookshelf">
+      <div class="office-slide office-shelf" aria-label="Bookshelf" :style="{ background: shelfBg }">
         <Bookshelf
           :backdrop="!office.manuscriptBound"
           :interactive="true"
@@ -95,10 +117,8 @@ const trackClass = computed(() => ({
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Flat wall with plants and a window behind the bookcase. */
-  background:
-    url('/office-wall-day.jpg') center / cover no-repeat,
-    #141009;
+  /* Background set via inline style (shelfBg computed). */
+  background-color: #141009;
 }
 
 .night-sky {
@@ -153,10 +173,4 @@ const trackClass = computed(() => ({
 }
 </style>
 
-<style>
-/* Theme-based background swap (non-scoped: html selector). */
-html[data-theme='dark'] .office-shelf {
-  background: url('/office-wall-night.jpg') center / cover no-repeat, #0a0d14;
-}
-</style>
 
