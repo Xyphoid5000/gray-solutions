@@ -274,14 +274,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
           >Read the manuscript <span aria-hidden="true">&rarr;</span></span
         >
       </button>
-      <button
-        v-else-if="isBound && interactive && selectedBook === 'ours'"
-        type="button"
-        class="bs-reopen"
-        @click="emit('open-book')"
-      >
-        Open the book <span aria-hidden="true">&rarr;</span>
-      </button>
       <p v-if="showManuscript && !isBound" class="bs-hint">
         Six pages &middot; best read front to back
       </p>
