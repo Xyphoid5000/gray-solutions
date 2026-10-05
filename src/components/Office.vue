@@ -100,11 +100,6 @@ const trackClass = computed(() => ({
     url('/office-wall-day.jpg') center / cover no-repeat,
     #141009;
 }
-:global(html[data-theme='dark']) .office-scene {
-  background:
-    url('/office-wall-night.jpg') center / cover no-repeat,
-    #0a0d14;
-}
 
 .night-sky {
   position: absolute;
@@ -155,5 +150,12 @@ const trackClass = computed(() => ({
 }
 .office-cover.is-hiding > * {
   pointer-events: none;
+}
+</style>
+
+<style>
+/* Theme-based background swap (non-scoped: html selector). */
+html[data-theme='dark'] .office-scene {
+  background: url('/office-wall-night.jpg') center / cover no-repeat, #0a0d14;
 }
 </style>
