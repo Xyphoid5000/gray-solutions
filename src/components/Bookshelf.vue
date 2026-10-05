@@ -186,7 +186,7 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
               tabindex="0"
               class="bs-book bs-ours"
               :class="{ 'is-interactive': interactive }"
-              :style="{ height: '230px', width: '52px', background: '#1a1a1a' }"
+              :style="{ height: '230px', width: '52px' }"
               :aria-label="`${siteName} — open the book`"
               data-bind-slot
               @click="interactive && toggleOurs()"
@@ -618,22 +618,19 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   background: linear-gradient(to bottom, #1d140c 0%, #100c07 100%);
   border-radius: 3px 3px 0 0;
   border-left: 1px solid rgba(208, 138, 78, 0.4);
+  box-shadow: none;
+  padding: 0;
   opacity: 0;
-  box-shadow:
-    inset -4px 0 7px rgba(0, 0, 0, 0.5),
-    0 0 22px rgba(208, 138, 78, 0.12);
 }
 .bookshelf-hero.is-bound .bs-ours {
   opacity: 1;
 }
 .bs-ours span {
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
+  font-family: var(--serif);
+  font-size: 1rem;
+  letter-spacing: 0.08em;
   color: #d08a4e;
   white-space: nowrap;
-  padding: 14px 0;
 }
 .bs-plank {
   height: 16px;

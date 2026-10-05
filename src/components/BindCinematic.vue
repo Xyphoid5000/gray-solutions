@@ -853,8 +853,7 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
     #a68f63 2px 3px
   );
 }
-/* Flat spine: the 2D book that seats into the shelf gap. Matches the
-   real bound book (.bs-ours) exactly so the handoff doesn't shift color. */
+/* Flat spine: the 2D book that seats into the shelf gap. */
 .bind-flat-spine {
   position: absolute;
   left: 50%;
@@ -864,12 +863,9 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   display: none;
   opacity: 0;
   z-index: 3;
-  background: #1a1a1a;
+  background: linear-gradient(to bottom, #1d140c 0%, #100c07 100%);
   border-left: 1px solid rgba(208, 138, 78, 0.4);
   border-radius: 3px 3px 0 0;
-  box-shadow:
-    inset -4px 0 7px rgba(0, 0, 0, 0.5),
-    0 0 22px rgba(208, 138, 78, 0.12);
   align-items: center;
   justify-content: center;
 }
@@ -877,12 +873,9 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   writing-mode: vertical-rl;
   font-family: var(--serif);
   color: #d08a4e;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
+  font-size: 1rem;
+  letter-spacing: 0.08em;
   white-space: nowrap;
-  padding: 14px 0;
 }
 /* Fade-to-black veil for the final beat. */
 .bind-veil {

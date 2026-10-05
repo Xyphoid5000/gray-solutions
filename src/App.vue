@@ -237,6 +237,10 @@ function onBindDone() {
   // glide straight to the contact form (or the socials, if the form
   // has already been submitted and retired this visit).
   bindingActive.value = false;
+  // The how-to-read modal is one-time: never let it pop back up after
+  // the binding.
+  showBookIntro.value = false;
+  markBookIntroSeen();
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
   requestAnimationFrame(() => {
