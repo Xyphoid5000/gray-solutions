@@ -253,6 +253,9 @@ function onBindDone() {
     the fade back in lands on the home page with the bound book. */
 function onBindBlackout() {
   shelfReveal.value = false;
+  // The how-to-read modal is one-time: keep it down through the handoff.
+  showBookIntro.value = false;
+  markBookIntroSeen();
   markManuscriptBound();
   // Reset the book view so reopening starts fresh, not at the old desk state.
   officeRef.value?.bookView?.resetBookView();
