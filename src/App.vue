@@ -974,7 +974,7 @@ onUnmounted(() => {
     @close="showBookIntro = false"
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
-  <div class="pitch-black" :class="{ on: interactions.pitchBlack && !interactions.doorOpen }" aria-hidden="true"></div>
+  <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
   <!-- The match guy's doorway (desktop gag levels). Closed: a plain
        flat dark slab faded into the black at the screen midpoint.
        Open: the slab swings open on its hinge, revealing the lit page
