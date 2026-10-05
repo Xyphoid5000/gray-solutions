@@ -404,9 +404,9 @@ async function paginateCurrentChapter() {
   // Group blocks into pages: one per page on mobile and on desktop
   // chapters 2–4, several per page on other desktop chapters. No
   // measuring — deterministic by count and class. In single-file mode
-  // the chapter heading shares page 0 with the block after it, and
-  // short blocks (the lede, the swipe hint) join the page before them
-  // instead of standing alone on an empty page.
+  // each block gets its own page, except short blocks (the lede, the
+  // swipe hint) which join the page before them instead of standing
+  // alone on an empty page.
   const perPage = isMobile || singleFile ? 1 : DESKTOP_BLOCKS_PER_PAGE;
   const pages: HTMLElement[][] = [];
   if (singleFile) {
@@ -414,8 +414,7 @@ async function paginateCurrentChapter() {
       const b = blocks[i];
       const joinsPrev =
         i > 0 &&
-        (blocks[i - 1].classList.contains('ch-head') ||
-          b.classList.contains('lede') ||
+        (b.classList.contains('lede') ||
           b.classList.contains('proof-hint'));
       if (joinsPrev) {
         pages[pages.length - 1].push(b);
