@@ -27,14 +27,15 @@ const phoneInput = ref<HTMLInputElement | null>(null);
 /** Once the visitor has found this visit's code (via the desk phone),
     the discount field fills itself in — no button needed. Never
     clobbers what the visitor typed themselves. */
-watch(
-  activeDiscountCode,
-  (code) => {
-    if (!code || !discountInput.value || discountInput.value.value) return;
-    discountInput.value.value = code;
-  },
-  { immediate: true },
-);
+/** Fill the discount field when the code is available AND the input exists.
+    Handles the code being set before the form mounts. */
+function tryFillDiscount() {
+  const code = activeDiscountCode.value;
+  if (!code || !discountInput.value || discountInput.value.value) return;
+  discountInput.value.value = code;
+}
+watch(activeDiscountCode, tryFillDiscount, { immediate: true });
+watch(discountInput, tryFillDiscount);
 
 /** Reveal the hint, freezing whatever the bonus state is right now —
     it never updates after this. Bonus already on: point at the first
