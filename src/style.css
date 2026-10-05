@@ -280,6 +280,7 @@ a {
   gap: 1rem;
 }
 .brand {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -307,6 +308,12 @@ a {
 .brand em {
   font-style: normal;
   color: var(--ember);
+}
+.brand-cord-wrap {
+  position: absolute;
+  top: 100%;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 .nav-contact {
   font: inherit;
@@ -1568,11 +1575,10 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 /* A ceiling-pull cord hanging from the top of the viewport. It overlays
    the page, sways gently at idle, and toggles the theme when yanked. */
 .pull-cord {
-  /* Lives inside the header, hanging from the bottom-center of the G. mark
-     (34px, vertically centered): top = header middle + half the mark. */
+  /* Lives inside the brand, hanging from the G mark. */
   position: absolute;
-  top: calc(50% + 17px);
-  left: calc((100vw - min(var(--wrap), 100% - 3rem)) / 2 - 0.03rem);
+  top: 0;
+  left: 0;
   z-index: 1100;
   display: flex;
   flex-direction: column;

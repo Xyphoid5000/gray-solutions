@@ -175,6 +175,9 @@ function retractCord(done: () => void) {
       >
         <span class="brand-mark" aria-hidden="true">{{ logoMark }}</span>
         <span>{{ siteName }}<em>.</em></span>
+        <span v-if="cordMounted" ref="cordWrap" class="brand-cord-wrap">
+          <PullCord ref="pullCord" />
+        </span>
       </a>
       <button class="nav-contact" @click="emit('contact')">
         Contact me
@@ -205,8 +208,6 @@ function retractCord(done: () => void) {
         <span class="a11y-toggle-text" aria-hidden="true">Calm mode</span>
       </label>
     </div>
-    <div v-if="cordMounted" ref="cordWrap" class="cord-drop-wrap">
-      <PullCord ref="pullCord" />
-    </div>
+
   </header>
 </template>
