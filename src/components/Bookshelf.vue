@@ -424,6 +424,9 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   border-right: 14px solid transparent;
   border-image: linear-gradient(to bottom, #4a2e18, #2b1a0e) 1;
   padding: 0 10px;
+  /* Sit in the mural's perspective: the wall photo is shot slightly off
+     straight-on, so the case gets the same subtle turn. */
+  transform: perspective(1400px) rotateY(-1.5deg);
 }
 /* Desktop: a few more books join the row — snugger padding so the
    original case still fits them all. */

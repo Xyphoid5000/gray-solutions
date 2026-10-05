@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
+import DeskCandle from './DeskCandle.vue';
 import { useOfficeStore } from '../stores/office';
 
 const office = useOfficeStore();
@@ -27,6 +28,14 @@ const trackClass = computed(() => ({
              wall mural with a starry night sky. -->
         <div class="night-window" aria-hidden="true">
           <div class="night-sky"></div>
+        </div>
+        <!-- Desk under the bookshelf: front face always visible; in dark
+             mode a burning candle pokes up above it. -->
+        <div class="shelf-desk" aria-hidden="true">
+          <div class="shelf-desk-candle">
+            <DeskCandle :lit="true" :smoking="false" />
+          </div>
+          <div class="shelf-desk-front"></div>
         </div>
         <Bookshelf
           :backdrop="!office.manuscriptBound"
@@ -126,6 +135,53 @@ html[data-theme='dark'] .night-window {
 }
 @media (max-width: 640px) {
   .night-window {
+    display: none !important;
+  }
+}
+/* Desk under the bookshelf: a simple front face at the bottom of the
+   shelf view. The candle pokes up above it in dark mode only. */
+.shelf-desk {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 18%;
+  z-index: 2;
+  pointer-events: none;
+}
+.shelf-desk-front {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #3a2412 0%, #2a170b 50%, #1a0e06 100%);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+}
+.shelf-desk-candle {
+  position: absolute;
+  left: 12%;
+  bottom: 85%;
+  width: 48px;
+  height: 72px;
+  display: none;
+  pointer-events: none;
+}
+.shelf-desk-candle .desk-candle {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  cursor: default;
+}
+.shelf-desk-candle .desk-candle.lit {
+  pointer-events: none;
+  cursor: default;
+}
+html[data-theme='dark'] .shelf-desk-candle {
+  display: block;
+}
+@media (max-width: 640px) {
+  .shelf-desk-candle {
     display: none !important;
   }
 }
