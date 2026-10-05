@@ -86,6 +86,7 @@
 }
 
 html {
+  scrollbar-gutter: stable;
   scroll-behavior: auto;
 }
 
@@ -279,6 +280,7 @@ a {
   gap: 1rem;
 }
 .brand {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.7rem;
@@ -306,6 +308,12 @@ a {
 .brand em {
   font-style: normal;
   color: var(--ember);
+}
+.brand-cord-wrap {
+  position: absolute;
+  top: 100%;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 .nav-contact {
   font: inherit;
@@ -582,6 +590,9 @@ a {
   justify-content: center;
   text-align: left;
 }
+.proof-panel .claim-btn {
+  margin-top: 1.5rem;
+}
 .proof-index {
   font-family: var(--serif);
   font-style: italic;
@@ -646,6 +657,10 @@ a {
   border-top: 2px solid var(--line);
   padding-top: 1.3rem;
   transition: border-color 0.5s;
+  cursor: pointer;
+}
+.arc-node {
+  cursor: pointer;
 }
 .arc-act.lit {
   border-top-color: var(--ember);
@@ -726,8 +741,14 @@ a {
 .finale {
   justify-content: flex-start;
   padding-top: 0;
-  /* Stable height — the page shouldn't grow as the typewriter types. */
-  min-height: 78svh;
+  /* Same as the paginated pages — the book's pages are one size. */
+  min-height: 74svh;
+}
+/* Desktop: center like the paginated pages instead of top-aligning. */
+@media (min-width: 641px) {
+  .finale {
+    justify-content: center;
+  }
 }
 /* One continuous page — tight vertical rhythm. */
 .finale .kicker {
@@ -753,6 +774,11 @@ a {
 }
 .finale .typed-text {
   white-space: pre-wrap;
+}
+/* Ember accents in the finale body copy — same treatment as .chapter em. */
+.finale em {
+  color: var(--ember);
+  font-style: italic;
 }
 /* Buttons and links wait for the writer to finish. */
 .finale .ui-late {
@@ -1096,10 +1122,94 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   text-transform: uppercase;
   margin-top: 0.6rem;
 }
+/* Desktop exhibit pagination: one project per view with prev/next.
+   (Mobile keeps the swipe strip; its panels paginate as plain blocks.) */
+.proof-pager {
+  display: none;
+}
+@media (min-width: 641px) {
+  .proof-strip {
+    display: block;
+    overflow: visible;
+    scroll-snap-type: none;
+    padding-bottom: 0.4rem;
+  }
+  .proof-strip .proof-panel {
+    display: none;
+    width: min(100%, 640px);
+    margin: 0 auto;
+  }
+  .proof-strip .proof-panel.is-current {
+    display: block;
+    animation: proof-panel-in 0.4s var(--ease-out);
+  }
+  .proof-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2rem;
+    margin-top: 1.4rem;
+  }
+  /* The swipe hint is meaningless once exhibits paginate. */
+  .proof-hint {
+    display: none;
+  }
+}
+.proof-page-btn {
+  background: var(--ember);
+  border: 1px solid var(--ember);
+  border-radius: 999px;
+  color: #14100a;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.65em 1.4em;
+  cursor: pointer;
+  transition: background 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+}
+.proof-page-btn:hover:not(:disabled) {
+  background: var(--ember-bright, var(--ember));
+  transform: translateY(-1px);
+}
+.proof-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.proof-page-count {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  min-width: 11em;
+  text-align: center;
+}
+@keyframes proof-panel-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* ---------- arc: mobile spine ---------- */
 .arc-spine {
   display: none;
+}
+/* Desktop auto-draw replay. */
+.arc-replay {
+  display: block;
+  margin: 1.5rem auto 0;
+  background: var(--ember);
+  border: 1px solid var(--ember);
+  border-radius: 999px;
+  color: #14100a;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.6em 1.4em;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.arc-replay:hover {
+  background: var(--ember-bright, var(--ember));
+  transform: translateY(-1px);
 }
 
 /* ---------- cover: the falling book ---------- */
@@ -1186,6 +1296,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   /* Horizontal drags spin the book; vertical drags scroll the page. */
   touch-action: pan-y;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .book-stage:active {
   cursor: grabbing;
@@ -1463,11 +1575,10 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 /* A ceiling-pull cord hanging from the top of the viewport. It overlays
    the page, sways gently at idle, and toggles the theme when yanked. */
 .pull-cord {
-  /* Lives inside the header, hanging from the bottom-center of the G. mark
-     (34px, vertically centered): top = header middle + half the mark. */
+  /* Lives inside the brand, hanging from the G mark. */
   position: absolute;
-  top: calc(50% + 17px);
-  left: max(calc(1.5rem - 1px), calc((100vw - var(--wrap)) / 2 - 1px));
+  top: 0;
+  left: 0;
   z-index: 1100;
   display: flex;
   flex-direction: column;
@@ -1475,11 +1586,15 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   transform-origin: top center;
   pointer-events: none;
   /* The G emblem is the cord's housing: the top edge sits exactly at the
-     G's bottom, and everything above it is clipped — the base, string and
-     ball emerge from and return into the G, never fading through it.
+     G's bottom, and everything above it emerges from behind the G.
+     While the drop/retract animation plays, the root clips at the G's
+     bottom edge so the parked parts stay hidden inside the G; when idle
+     there's no clipping, so glows and shadows render round, never boxy.
      Height clears the full drop plus a max pull. */
-  overflow: hidden;
   height: 300px;
+}
+.pull-cord.is-animating {
+  overflow: hidden;
 }
 .cord-mount {
   width: 12px;
@@ -1511,6 +1626,8 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   height: 36px;
   border-radius: 50%;
   border: 1px solid var(--ember-deep);
+  user-select: none;
+  -webkit-user-select: none;
   background: radial-gradient(circle at 35% 30%, var(--ember-bright), var(--ember) 55%, var(--ember-deep));
   color: #1a1510;
   cursor: grab;
@@ -1520,10 +1637,12 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   padding: 0;
   /* Parked up inside the G until the entrance (see .cord-mount). */
   transform: translateY(-200px);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.45),
-    0 0 12px rgba(208, 138, 78, 0.5);
-  transition: transform 0.2s var(--ease-out), box-shadow 0.2s;
+  /* Drop-shadow instead of box-shadow: follows the round bulb instead of
+     the box, so the glow never looks clipped or square. */
+  filter:
+    drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 0 12px rgba(208, 138, 78, 0.5));
+  transition: transform 0.2s var(--ease-out), filter 0.2s;
 }
 .cord-knob:hover {
   transform: scale(1.08);
@@ -1729,6 +1848,27 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
     rgba(208, 138, 78, 0.06),
     transparent 70%
   );
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease,
+    max-height 0.7s ease,
+    padding-top 0.7s ease,
+    padding-bottom 0.7s ease;
+}
+/* Post-send retirement: the section fades, rises, and collapses after
+   the green confirmation has had its 3 seconds. */
+.cover-contact.is-leaving {
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-28px);
+  max-height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cover-contact {
+    transition: none;
+  }
 }
 .contact-kicker {
   font-size: 0.72rem;
@@ -1757,12 +1897,79 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   max-width: 54ch;
   margin: 0 0 2.6rem;
 }
+/* Re-read card under the contact section: prominent, with air around it —
+   it stays after the contact section retires itself post-send. */
+.reread-card {
+  max-width: 620px;
+  margin: 3.5rem auto;
+  padding: 2.5rem 2rem;
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+  text-align: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--ember) 6%, transparent);
+}
+.reread-text {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.reread-link {
+  background: var(--ember);
+  border: 1px solid var(--ember);
+  border-radius: 999px;
+  color: #14100a;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.8em 2em;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.reread-link:hover {
+  background: var(--ember-bright, var(--ember));
+  transform: translateY(-1px);
+}
 
 /* ---------- contact form ---------- */
 .contact-form {
   display: grid;
   gap: 1.35rem;
   max-width: 620px;
+}
+/* Post-send state: the form hides, this success note takes its place. */
+.contact-success {
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
+  text-align: center;
+  max-width: 620px;
+  padding: 2.5rem 2.25rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(160deg, #206040, #17492f);
+  border: 1px solid rgba(125, 216, 168, 0.35);
+  box-shadow: 0 12px 40px rgba(20, 80, 45, 0.35);
+  color: #eefbf3;
+}
+.contact-success-check {
+  color: #8fe3ae;
+  line-height: 0;
+}
+.contact-success-title {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.contact-success-sub {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+  opacity: 0.92;
+  max-width: 44ch;
 }
 /* Honeypot anti-spam field — never visible to humans. */
 .contact-form .hp-field {
@@ -1950,6 +2157,74 @@ html[data-blacklight='on'] body::after {  content: '';
 .pitch-black.on {
   opacity: 0.97;
   pointer-events: auto;
+}
+/* The match guy's doorway: a black overlay with a plain rectangular
+   door hole masked through it, revealing the lit page beneath.
+   Fades up behind the swinging slab; the swing is the reveal. */
+.pitch-door {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+.pitch-door.open {
+  opacity: 1;
+}
+/* The closed door: a plain flat dark slab in a simple dark frame,
+   standing at the screen midpoint. Fades into the dark just before
+   the reveal, then swings open on a left-edge hinge to reveal the
+   doorway behind it. Layered above the blaze so the swing reads. */
+.door-slab {
+  position: fixed;
+  left: 44%;
+  top: 40%;
+  width: 12%;
+  height: 36%;
+  z-index: 2002;
+  pointer-events: none;
+  background: #0b0b0d;
+  box-shadow: 0 0 0 4px #17171b, 0 0 60px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  transform-origin: left center;
+  transform: perspective(800px) rotateY(0deg);
+  transition: opacity 0.3s ease, transform 0.7s cubic-bezier(0.6, 0, 0.3, 1);
+}
+.door-slab.on {
+  opacity: 1;
+}
+.door-slab.open {
+  transform: perspective(800px) rotateY(-72deg);
+}
+/* The open doorway: light spilling onto the floor below it. The doorway
+   itself is just the masked hole over the lit page — no amber blaze. */
+.doorway {
+  position: fixed;
+  inset: 0;
+  z-index: 2001;
+  pointer-events: none;
+}
+.doorway-spill {
+  position: absolute;
+  left: 50%;
+  top: 74%;
+  width: 36%;
+  height: 18%;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(255, 157, 46, 0.5) 0%,
+    rgba(255, 157, 46, 0) 70%
+  );
+  filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.doorway.on .doorway-spill {
+  opacity: 1;
+  transition: none;
 }
 /* Candlelight vignette: when the candle is lit, the desk and the page
    nearest the flame sit in a warm pool that falls off with distance —
@@ -2213,8 +2488,9 @@ html[data-theme='dark'] .ms-back {
 .manuscript-desk {
   position: relative;
   min-height: 100%;
-  display: flow-root; /* contain page margins — stops them collapsing through and shoving the desk down */
-  /* Mahogany desk. */
+  display: flow-root; /* contain page margins — stops them collapsing through and shoving the desk down */  /* Mahogany desk. */
+  user-select: none;
+  -webkit-user-select: none;
   background-color: #2a140c;
   background-image:
     repeating-linear-gradient(
@@ -2231,6 +2507,18 @@ html[data-theme='dark'] .ms-back {
   --desk-pr: 60px;
   padding-left: var(--desk-pl);
   padding-right: var(--desk-pr);
+}
+/* Sandwich mode: the open manuscript becomes the sandwich — chapters as
+   toppings, no pages. Centered on the desk where the open book sat. */
+.manuscript-sandwich {
+  margin: 10vh auto;
+  position: relative;
+  z-index: 1;
+  animation: manuscript-sandwich-in 0.4s var(--ease-out);
+}
+@keyframes manuscript-sandwich-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 /* The desk stage: a zero-height sticky layer pinned to the top of the
    viewport while the desk is on screen. The candle and pencil live on
@@ -2351,9 +2639,11 @@ html[data-theme='dark'] .page-paper {
 }
 /* Dark cards sitting on the paper keep their light ink. */
 html[data-theme='dark'] .page-paper .proof-panel {
-  --ink: #f2ecdf;
-  --muted: #a7a192;
-  --faint: #6f6a5e;
+  --ink: #1c1712;
+  --muted: #6d6455;
+  --faint: #a39c8a;
+  background: linear-gradient(165deg, #fffdf6 0%, var(--paper) 70%);
+  border-color: var(--line-soft);
 }
 .page-paper img,
 .page-paper video,
@@ -2610,6 +2900,18 @@ html[data-theme='dark'] .page-tab {
   color: var(--muted);
   font-style: italic;
 }
+/* Paginated cards lose their card classes on mobile — keep the ember
+   accent on their <em> phrases (same treatment as .chapter em). */
+.card-plain em {
+  color: var(--ember);
+  font-style: italic;
+}
+/* Mobile-only: the arc pages are built for small screens, so the act
+   phrases get the ember treatment there without touching desktop. */
+.arc-page em {
+  color: var(--ember);
+  font-style: italic;
+}
 
 /* Accessibility toggle: visually hidden checkbox, revealed on focus. */
 .a11y-toggle {
@@ -2703,6 +3005,41 @@ html[data-theme='dark'] .page-tab {
   .pile-scatter-card {
     width: 84px;
     height: 116px;
+  }
+
+  /* Finale: scale down to match the paginated page size on mobile. */
+  .finale {
+    min-height: 59svh;
+  }
+  .finale .h-display {
+    font-size: 1.15rem;
+    margin-bottom: 0.7rem;
+  }
+  .finale .fin h3 {
+    font-size: 1.05rem;
+    margin-bottom: 0.4rem;
+  }
+  .finale .fin > p {
+    font-size: 0.85rem;
+    margin-bottom: 0.7rem;
+    line-height: 1.45;
+  }
+  .finale .kicker {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .finale .fin {
+    margin-top: 0.8rem;
+  }
+  .finale .fin-actions {
+    margin-top: 0.7rem;
+  }
+  .finale .fin-actions .btn {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  .finale p.ui-late {
+    margin-bottom: 0.7rem;
   }
 
   .read-pile .pile-page .pile-tab-mark {
@@ -2932,4 +3269,122 @@ html[data-theme='dark'] .page-tab {
   .breeze.on::after {
     animation: none;
   }
+}
+
+/* ============================================================
+   Bonus settings app: mirror mode + color invert.
+   A client-side toy; a refresh restores the default.
+   ============================================================ */
+/* Mirror the whole site horizontally. Fixed elements get weird —
+   that's the joke. */
+:root[data-mirror='on'] #app {
+  transform: scaleX(-1);
+}
+/* Invert every color. Also a joke. */
+:root[data-invert='on'] #app {
+  filter: invert(1);
+}
+
+/* Mobile hamburger menu. */
+.nav-hamburger {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  z-index: 11;
+}
+.nav-hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--ember);
+  border-radius: 1px;
+}
+.nav-mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg, #14100a);
+  border-bottom: 1px solid rgba(208, 138, 78, 0.2);
+  flex-direction: column;
+  z-index: 1001;
+}
+.nav-mobile-menu button {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 1rem;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(208, 138, 78, 0.1);
+}
+.nav-mobile-menu button:hover {
+  background: rgba(208, 138, 78, 0.1);
+}
+@media (max-width: 640px) {
+  .nav-hamburger {
+    display: flex;
+  }
+  .nav-mobile-menu {
+    display: flex;
+  }
+  .nav-inner .nav-contact {
+    display: none;
+  }
+}
+
+/* Contact success modal. */
+.contact-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 8, 5, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 1rem;
+}
+.contact-modal {
+  background: var(--paper, #fffdf6);
+  color: #1a1510;
+  border-radius: 1.25rem;
+  padding: 2.5rem 2.25rem;
+  max-width: 480px;
+  width: 100%;
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+.contact-modal .contact-success-check {
+  color: #2e7d32;
+}
+.contact-modal-close {
+  margin-top: 0.5rem;
+  padding: 0.7rem 2rem;
+  background: var(--ember);
+  color: #1a1510;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.contact-modal-close:hover {
+  filter: brightness(1.05);
 }

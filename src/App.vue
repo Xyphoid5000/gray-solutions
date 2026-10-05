@@ -8,6 +8,7 @@ import Cover from './components/Cover.vue';
 import CoverHero from './components/CoverHero.vue';
 import Office from './components/Office.vue';
 import BindCinematic from './components/BindCinematic.vue';
+import SandwichBite from './components/SandwichBite.vue';
 import OpenTransition from './components/OpenTransition.vue';
 import BookIntroModal from './components/BookIntroModal.vue';
 import RemoteControl from './components/RemoteControl.vue';
@@ -21,15 +22,18 @@ import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
+import { useSettingsStore } from './stores/settings';
 import { useInteractionsStore } from './stores/interactions';
 import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
+import { contactTarget } from './lib/contact';
 import { motionReduced } from './utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const office = useOfficeStore();
 const bonus = useBonusStore();
+const settings = useSettingsStore();
 const interactions = useInteractionsStore();
 // Device capabilities (touch / screen size). Instantiated here so it's
 // live from startup; components read it when they need touch-vs-desktop
@@ -39,6 +43,8 @@ const device = useDeviceStore();
 /** The book is a SPA now — no router. The Office carousel handles
     shelf vs desk; `office.view` is the single source of truth. */
 const showOpenTransition = ref(false);
+/** Where the manuscript is floating — the page drop starts here. */
+const manuscriptDropY = ref(0);
 /** How-to-read modal, shown once per session on first book open. */
 const showBookIntro = ref(false);
 
@@ -68,8 +74,10 @@ function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
 }
 
-/** Tilt down: pages fall first, then the office carousel slides shelf→desk. */
-async function openBook() {
+/** Tilt down: pages fall first, then the office carousel slides shelf→desk.
+    With `instant`, it does the same thing minus the animation — used by
+    the contact section's re-read link. */
+async function openBook(instant = false) {
   if ((office.view === 'desk') || office.transitioning) return;
   // Re-entering always starts at chapter 1 with an empty pile.
   officeRef.value?.bookView?.resetBookView();
@@ -78,7 +86,7 @@ async function openBook() {
   if (isDark() && bonus.enabled && !bonus.candleGone) {
     bonus.candleLit = true;
   }
-  if (reducedMotion()) {
+  if (instant || reducedMotion()) {
     office.showDesk();
     window.scrollTo(0, 0);
     updateLights();
@@ -88,15 +96,21 @@ async function openBook() {
   office.setTransitioning(true);
   noScroll(true);
   window.scrollTo(0, 0);
-  // Pages fall first, on the shelf view.
-  showOpenTransition.value = true;
-  await new Promise<void>((resolve) => {
-    const check = () => {
-      if (!showOpenTransition.value) resolve();
-      else requestAnimationFrame(check);
-    };
-    check();
-  });
+  // The page drop is only for the manuscript. The bound book opens
+  // straight to the desk — no drop.
+  if (!manuscriptBound.value) {
+    // Start the drop where the manuscript is floating.
+    const ms = document.querySelector('.manuscript-stack');
+    manuscriptDropY.value = ms ? ms.getBoundingClientRect().top : 0;
+    showOpenTransition.value = true;
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (!showOpenTransition.value) resolve();
+        else requestAnimationFrame(check);
+      };
+      check();
+    });
+  }
   // Pages are gone; now slide the office to the desk. The carousel's
   // CSS transition handles the animation — await its transitionend
   // before clearing the transitioning flag.
@@ -166,10 +180,13 @@ function closeBook() {
 async function closeBookToSection(section: 'about' | 'contact', after = 100) {
   if ((office.view === 'desk')) await tiltUp();
   else closeBook();
+  // "Contact me" roads land on the contact form — unless it's been
+  // submitted and retired, in which case they land on the socials.
+  const target = section === 'contact' ? contactTarget() : section;
   // After the shelf is back, scroll to the section.
   requestAnimationFrame(() => {
     setTimeout(() => {
-      document.getElementById(section)?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' });
     }, after);
   });
 }
@@ -179,16 +196,42 @@ async function closeBookToSection(section: 'about' | 'contact', after = 100) {
     open. The book-closed header link just scrolls (nothing to bind). */
 const bindCinematic = ref<InstanceType<typeof BindCinematic> | null>(null);
 const officeRef = ref<InstanceType<typeof Office> | null>(null);
+/** Floating settings shortcut: the desk phone stays mounted (its desk
+    slide hides in shelf view, but the picked-up modal teleports to
+    <body>), so this reaches it anywhere on the main screen — it picks
+    the phone up straight into the Settings app. */
+function openPhoneSettings() {
+  window.dispatchEvent(new CustomEvent('gs:open-phone-settings'));
+}
 /** True while the binding cinematic owns the screen — the site nav
     (and its pull cord) hides so it can't collide with SKIP. */
 const bindingActive = ref(false);
+/** Sandwich binding: the bite overlay owns the screen instead of the
+    sewing cinematic. */
+const biteActive = ref(false)
 /** The binding, from any trigger: the open page joins the pile first so
-    the final page is really in the list, then the cinematic gathers it. */
+    the final page is really in the list, then the cinematic gathers it.
+    In sandwich mode we take a bite instead — that's the binding. */
 async function runBinding() {
-  if (office.manuscriptBound || !bindCinematic.value) return;
-  bindingActive.value = true;
+  if (office.manuscriptBound) return;
   await officeRef.value?.bookView?.tossCurrentToPile();
+  if (settings.sandwich) {
+    bindingActive.value = true;
+    biteActive.value = true;
+    return;
+  }
+  if (!bindCinematic.value) return;
+  bindingActive.value = true;
   bindCinematic.value.start();
+}
+/** Sandwich binding: the bite is done — finish like the cinematic,
+    then back to the main page (the bite skips the cinematic's
+    blackout, which is what normally closes the book). */
+function onBiteDone() {
+  biteActive.value = false;
+  onBindDone();
+  officeRef.value?.bookView?.resetBookView();
+  closeBook();
 }
 function onFinaleContact() {
   if (!manuscriptBound.value && bindCinematic.value) {
@@ -199,31 +242,40 @@ function onFinaleContact() {
 }
 function onBindDone() {
   // The book is bound — skip the trip back to the top entirely and
-  // glide straight to the contact form.
+  // glide straight to the contact form (or the socials, if the form
+  // has already been submitted and retired this visit).
   bindingActive.value = false;
+  // The how-to-read modal is one-time: never let it pop back up after
+  // the binding.
+  showBookIntro.value = false;
+  markBookIntroSeen();
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
+  // Switch views and scroll in the same frame — the shelf lands and we
+  // glide to contact without an intermediate scroll-to-top.
+  closeBook();
   requestAnimationFrame(() => {
-    setTimeout(() => {
-      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-    }, 600);
+    document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
   });
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
     the fade back in lands on the home page with the bound book. */
 function onBindBlackout() {
   shelfReveal.value = false;
+  // The how-to-read modal is one-time: keep it down through the handoff.
+  showBookIntro.value = false;
+  markBookIntroSeen();
   markManuscriptBound();
   // Reset the book view so reopening starts fresh, not at the old desk state.
   officeRef.value?.bookView?.resetBookView();
-  closeBook();
 }
 /** The binding's shelf beat: mount the home page behind the cinematic
     so the 3D book files into the real bookshelf. */
 function onBindShelf() {
   shelfReveal.value = true;
 }
-/** Header nav: CONTACT ME lands on the contact section; the brand goes home. */
+/** Header nav: CONTACT ME lands on the contact form (or the socials once
+    the form has been submitted and retired); the brand goes home. */
 function onNavContact() {
   if ((office.view === 'desk')) {
     if (!manuscriptBound.value && bindCinematic.value) {
@@ -232,7 +284,7 @@ function onNavContact() {
     }
     closeBookToSection('contact');
   } else {
-    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
   }
 }
 function onNavHome() {
@@ -268,8 +320,13 @@ function clearRitual() {
 
 /** Where the remote lives on the desk — the hand aims for its center.
     The remote keeps its layout box while parked, so it's measurable. */
-/** Plain theme switch, with the half-second palette crossfade. */
+/** Plain theme switch, with the half-second palette crossfade.
+    A manual Light/Dark pick from the phone's settings is authoritative:
+    the rituals still run, but they can't move the base palette until
+    the visitor goes back to Auto. */
 function setThemePlain(light: boolean) {
+  if (settings.mode === 'light') light = true;
+  else if (settings.mode === 'dark') light = false;
   const root = document.documentElement;
   root.classList.add('theme-fade');
   root.dataset.theme = light ? 'light' : 'dark';
@@ -447,7 +504,8 @@ function matchGuyGag(level: 1 | 2 | 3) {
     interactions.guyX = -160;
     interactions.guyLine = GUY_LINES[level - 1];
     interactions.guyMounted = true;
-    walkGuyTo(doorway ? 200 : vw + 160, 110, () => {
+    // Desktop: he stops at the screen midpoint, where the doorway is.
+    walkGuyTo(doorway ? vw / 2 : vw + 160, 110, () => {
       const afterComplaint = () => {
         // Back with a lit match — and he doesn't break stride. Past
         // the candle; the flame catches a beat after he's gone.
@@ -455,15 +513,33 @@ function matchGuyGag(level: 1 | 2 | 3) {
         interactions.guyLine = null;
         interactions.guyMounted = true;
         if (doorway) {
-          // In from the left (nearest the candle), past it, then out
-          // through the doorway.
-          interactions.guyFacing = 1;
-          interactions.guyX = -160;
-          walkGuyTo(240, 110, () => {
-            walkGuyToDoorway(() => {
-              stopGuy();
-              lightCandleAfterGag();
-            });
+          // Back through the doorway the other way, match in hand:
+          // fade in just right of it, walk left through the doorway,
+          // past the candle, off the left edge — the door swings shut
+          // behind him while he's still walking.
+          interactions.guyFacing = -1;
+          interactions.guyX = vw / 2 + 80;
+          interactions.guyFading = true;
+          interactions.guyMounted = true;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            interactions.guyFading = false;
+          }));
+          // The door swings shut behind him once he's through it — while
+          // he's still walking the match back to the candle, not after
+          // he exits.
+          const doorWatcher = setInterval(() => {
+            if (interactions.guyX < vw * 0.44 - 80) {
+              clearInterval(doorWatcher);
+              interactions.doorOpen = false;
+              later(() => {
+                interactions.doorSlab = false;
+              }, 750);
+            }
+          }, 100);
+          walkGuyTo(-160, 110, () => {
+            clearInterval(doorWatcher);
+            stopGuy();
+            lightCandleAfterGag();
           });
         } else {
           interactions.guyFacing = -1;
@@ -475,13 +551,26 @@ function matchGuyGag(level: 1 | 2 | 3) {
         }
       };
       if (doorway) {
-        // He stops by the candle, delivers the line, then steps
-        // through the invisible doorway.
+        // He stops at the midpoint, delivers the line, and a plain dark
+        // slab door fades into the black in front of him — then it swings
+        // open on its hinge, revealing the doorway blazing amber over the
+        // lit page beneath. He walks through silhouetted; the door stays
+        // open behind him until he comes back.
         later(() => {
-          walkGuyToDoorway(() => {
-            stopGuy();
-            later(afterComplaint, 1200);
-          });
+          interactions.doorSlab = true;
+          later(() => {
+            // The slab stays mounted and swings open (CSS hinge) while
+            // the floor spill fades up below it.
+            interactions.doorOpen = true;
+            later(() => {
+              interactions.guyFading = true;
+              walkGuyTo(vw / 2 + 220, 110, () => {
+                stopGuy();
+                // The open doorway holds a beat, then he's back.
+                later(afterComplaint, 1200);
+              });
+            }, 750);
+          }, 650);
         }, 1400);
       } else {
         stopGuy();
@@ -606,6 +695,11 @@ function rehireMatchGuy() {
 provide('matchGuy', {
   candleGone: toRef(bonus, 'candleGone'),
   rehire: rehireMatchGuy,
+});
+
+/** The phone's settings app drives the desk's LED rig through this. */
+provide('lights', {
+  refresh: updateLights,
 });
 
 /** The cord was yanked — decide what the yank means. */
@@ -740,7 +834,8 @@ onMounted(() => {
   // The page always opens in light mode — the LEDs stay off until the
   // reader pulls the cord. This used to live in PullCord, but the cord
   // only mounts once bonus content is on, so it has to run regardless.
-  document.documentElement.dataset.theme = 'light';
+  // A manual dark pick from the phone's settings wins over the default.
+  document.documentElement.dataset.theme = settings.mode === 'dark' ? 'dark' : 'light';
   try {
     localStorage.removeItem('gs-theme');
   } catch {
@@ -793,9 +888,25 @@ onUnmounted(() => {
 <template>
   <div class="app-root" :class="{ 'camera-moving': office.transitioning, breezing: bonus.breezeOn, 'binding-active': bindingActive }">
   <a href="#main-content" class="skip-link">Skip to content</a>
+  <!-- No-CSS escape hatch: raw HTML is deliberately disorienting, so the
+       way back is always one tap away. Inline styles survive the
+       stylesheet kill switch. -->
+  <div
+    v-if="settings.noCss"
+    style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#fff;color:#000;padding:10px 14px;font:14px/1.4 sans-serif;border-bottom:2px solid #000;"
+  >
+    <span>You're browsing raw, unstyled HTML. </span>
+    <button
+      type="button"
+      style="font:inherit;padding:6px 12px;cursor:pointer;"
+      @click="settings.toggleNoCss()"
+    >
+      Turn the styles back on
+    </button>
+  </div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
   <main id="main-content">
-  <h1 class="sr-only">Gray Solutions — websites that tell stories</h1>
+  <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>
   <Office
     ref="officeRef"
     @open-book="openBook"
@@ -834,13 +945,13 @@ onUnmounted(() => {
       <DeskPencil />
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
-      <DeskPhone v-if="bonus.enabled" />
+      <DeskPhone v-if="bonus.enabled" shortcut />
     </template>
   </Office>
   </main>
   <!-- Contact/about sections (below the Office carousel, shelf view only). -->
   <div v-if="office.view === 'shelf'" class="home-sections">
-    <Cover :is-bound="manuscriptBound" />
+    <Cover :is-bound="manuscriptBound" @open-book-instant="openBook(true)" />
   </div>
   <BindCinematic
     ref="bindCinematic"
@@ -849,8 +960,22 @@ onUnmounted(() => {
     @blackout="onBindBlackout"
     @shelf="onBindShelf"
   />
+  <SandwichBite v-if="biteActive" @done="onBiteDone" />
+  <!-- Settings shortcut: appears on the main screen only when the user
+       has changed something, and only while the book is closed. Taps
+       open the desk phone's Settings app. -->
+  <button
+    v-if="settings.isModified && office.view !== 'desk' && !bindingActive"
+    type="button"
+    class="settings-fab"
+    aria-label="Open phone settings"
+    @click="openPhoneSettings"
+  >
+    <span aria-hidden="true">⚙</span>
+  </button>
   <OpenTransition
     v-if="showOpenTransition"
+    :start-y="manuscriptDropY"
     @done="onOpenTransitionDone"
   />
   <BookIntroModal
@@ -859,6 +984,30 @@ onUnmounted(() => {
   />
   <!-- Light rituals: true darkness before the match hand comes in. -->
   <div class="pitch-black" :class="{ on: interactions.pitchBlack }" aria-hidden="true"></div>
+  <!-- The match guy's doorway (desktop gag levels). Closed: a plain
+       flat dark slab faded into the black at the screen midpoint.
+       Open: the slab swings open on its hinge, revealing the lit page
+       beneath through the doorway, with light spilling onto the floor
+       below. No fire — the reveal is the swing. -->
+  <div class="door-slab" :class="{ on: interactions.doorSlab, open: interactions.doorOpen }" aria-hidden="true"></div>
+  <svg
+    class="pitch-door"
+    :class="{ open: interactions.doorOpen }"
+    viewBox="0 0 100 100"
+    preserveAspectRatio="none"
+    aria-hidden="true"
+  >
+    <defs>
+      <mask id="mgDoorMask">
+        <rect x="0" y="0" width="100" height="100" fill="#fff" />
+        <path d="M44 76 V40 H56 V76 Z" fill="#000" />
+      </mask>
+    </defs>
+    <rect x="0" y="0" width="100" height="100" fill="#000" mask="url(#mgDoorMask)" />
+  </svg>
+  <div class="doorway" :class="{ on: interactions.doorOpen }" aria-hidden="true">
+    <div class="doorway-spill"></div>
+  </div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->
   <div class="led-wash" :class="{ on: bonus.ledOn, accent: bonus.ledAccent }" aria-hidden="true"></div>
   <!-- Candlelight: warm wash while the candle burns. Desk view only —
@@ -880,6 +1029,7 @@ onUnmounted(() => {
     :facing="interactions.guyFacing"
     :line="interactions.guyLine"
     :fading="interactions.guyFading"
+    :class="{ 'door-glow': interactions.doorOpen }"
   />
   </div>
 </template>
@@ -887,6 +1037,30 @@ onUnmounted(() => {
 <style>
 .gs-no-scroll {
   overflow: hidden;
+}
+/* Floating settings shortcut: bottom-right, only when the user has
+   changed a setting and the book is closed. */
+.settings-fab {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 900;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(16, 14, 12, 0.82);
+  color: #f5ead6;
+  font-size: 1.3rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease;
+}
+.settings-fab:hover {
+  transform: scale(1.08);
 }
 /* During the binding's shelf beat the home page sits behind the
    cinematic; hide its manuscript stack so the filing reads clean. */

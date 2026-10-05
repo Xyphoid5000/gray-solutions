@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import ChapterHeading from './ChapterHeading.vue';
 import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
+
+const props = defineProps<{ active?: boolean }>();
+
+const stageRef = ref<HTMLElement | null>(null);
+
+const isDesktop = window.matchMedia('(min-width: 641px)').matches;
+const reduced = motionReduced();
 
 const acts = [
   {
@@ -36,17 +43,134 @@ const acts = [
 
 const litCount = ref(0);
 const spineProgress = ref(0);
-let st: ScrollTrigger | undefined;
 let spineTriggers: ScrollTrigger[] = [];
 
+/** Desktop pen-draw timeline — replay only. The reader drives the pen
+    bullet to bullet; the timeline just replays the full draw. */
+let arcTl: gsap.core.Timeline | null = null;
+/** Draw checkpoints — the true arc-length fractions of each node, so the
+    pen always sits exactly on a bullet. Arrow keys / clicks jump the pen
+    straight to them. */
+const ACT_CHECKS = [0, 0.338, 0.63, 1];
+/** Node positions along the curve, matching the checkpoints. */
+const NODE_POS = [
+  [60, 280],
+  [360, 170],
+  [620, 90],
+  [940, 250],
+];
+
+/** Pen-draw state, wired up in onMounted (desktop only). */
+let arcPath: SVGPathElement | null = null;
+let arcPen: SVGGElement | null = null;
+let arcLen = 0;
+const arcProgress = { v: 0 };
+
+function placePen(dist: number) {
+  if (!arcPath || !arcPen) return;
+  const pt = arcPath.getPointAtLength(Math.max(0, Math.min(arcLen, dist)));
+  gsap.set(arcPen, { x: pt.x, y: pt.y });
+}
+
+/** Apply a draw progress of 0..1: curve, pen, and lit acts. */
+function setProgress(p: number) {
+  if (!arcPath) return;
+  const drawn = p * arcLen;
+  gsap.set(arcPath, { strokeDashoffset: arcLen - drawn });
+  placePen(drawn);
+  // Light each act whose bullet the pen has reached.
+  const lit = ACT_CHECKS.filter((c) => c <= p + 1e-4).length;
+  if (lit !== litCount.value) {
+    litCount.value = lit;
+    gsap.set('.arc-node', {
+      opacity: (i: number) => (i < lit ? 1 : 0.15),
+    });
+    // Pulse the newly lit node.
+    const nodes = document.querySelectorAll('.arc-node');
+    const node = nodes[lit - 1] as SVGCircleElement | undefined;
+    if (node) {
+      gsap.fromTo(
+        node,
+        { scale: 1.8, transformOrigin: 'center' },
+        { scale: 1, duration: 0.6, ease: 'back.out(2)' },
+      );
+    }
+  }
+}
+
+/** The arc always starts at the first bullet — no autoplay. The reader
+    drives the pen from bullet to bullet with arrows or clicks. */
+function resetArc() {
+  arcTl?.pause();
+  gsap.killTweensOf(arcProgress);
+  if (!arcPath || reduced) {
+    litCount.value = 1;
+    spineProgress.value = 1 / acts.length;
+    return;
+  }
+  arcProgress.v = ACT_CHECKS[0];
+  setProgress(arcProgress.v);
+}
+/** Simple replay affordance for the finished curve. */
+function replayArc() {
+  if (reduced) return;
+  gsap.killTweensOf(arcProgress);
+  if (!arcTl) return;
+  arcTl.pause(0);
+  arcTl.play();
+}
+/** Jump the pen to an act: the curve draws (or undraws) to that act's
+    checkpoint and the act lights. Arrow keys and clicks land here. */
+function goToAct(i: number) {
+  const idx = Math.max(0, Math.min(acts.length - 1, i));
+  if (reduced || !arcPath) {
+    litCount.value = idx + 1;
+    spineProgress.value = (idx + 1) / acts.length;
+    return;
+  }
+  arcTl?.pause();
+  gsap.to(arcProgress, {
+    v: ACT_CHECKS[idx],
+    duration: 0.9,
+    ease: 'power2.inOut',
+    overwrite: true,
+    onUpdate: () => setProgress(arcProgress.v),
+  });
+}
+/** Arrow keys move the highlight between acts — only while the arc stage
+    is on the visible book page. Everywhere else the keys fall through to
+    the book's own page-turn handler (capture + no stopPropagation there). */
+function onArcKey(e: KeyboardEvent) {
+  if (!props.active || !isDesktop) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+  if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
+    return;
+  // The stage lives on its own paginated page — a hidden page reports a
+  // zero rect, so this is false everywhere but the arc page. Use the
+  // component's own stage (not document.querySelector).
+  const stage = stageRef.value;
+  if (!stage) return;
+  const r = stage.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
+  const next = litCount.value - 1 + (e.key === 'ArrowRight' ? 1 : -1);
+  if (next < 0 || next >= acts.length) return;
+  e.stopPropagation();
+  goToAct(next);
+}
+watch(() => props.active, (on) => {
+  if (on && !reduced) resetArc();
+});
+
 onMounted(() => {
-  if (motionReduced()) {
+  window.addEventListener('keydown', onArcKey, true);
+
+  if (reduced) {
     litCount.value = acts.length;
     spineProgress.value = 1;
     return;
   }
-
-  const isDesktop = window.matchMedia('(min-width: 641px)').matches;
 
   if (!isDesktop) {
     // Mobile: each stop lights as it scrolls into view, and the glowing
@@ -92,65 +216,41 @@ onMounted(() => {
     return;
   }
 
-  // Desktop: the pen-drawn curve. A glowing pen tip travels the path as
-  // it draws, and each act node pulses as the pen reaches it.
+  // Desktop: the pen-drawn curve. Page scroll is locked on desktop, so
+  // the reader steps the pen through the acts with arrows or clicks —
+  // it eases between bullets and holds on the finished curve. The arc
+  // always starts at the first bullet.
   const svg = document.querySelector<SVGSVGElement>('.arc-svg');
-  const path = svg?.querySelector<SVGPathElement>('#arc-path');
-  const pen = svg?.querySelector<SVGGElement>('.arc-pen');
-  if (!svg || !path || !pen) return;
+  arcPath = svg?.querySelector<SVGPathElement>('#arc-path') ?? null;
+  arcPen = svg?.querySelector<SVGGElement>('.arc-pen') ?? null;
+  if (!svg || !arcPath || !arcPen) return;
 
-  const len = path.getTotalLength();
-  gsap.set(path, { strokeDasharray: len, strokeDashoffset: len });
+  arcLen = arcPath.getTotalLength();
+  gsap.set(arcPath, { strokeDasharray: arcLen, strokeDashoffset: arcLen });
   gsap.set('.arc-node', { opacity: 0.15 });
-  gsap.set(pen, { opacity: 1 });
-
-  const placePen = (dist: number) => {
-    const pt = path.getPointAtLength(Math.max(0, Math.min(len, dist)));
-    gsap.set(pen, { x: pt.x, y: pt.y });
-  };
+  gsap.set(arcPen, { opacity: 1 });
   placePen(0);
 
-  const draw = gsap.to(path, {
-    strokeDashoffset: 0,
-    ease: 'none',
-    scrollTrigger: {
-      trigger: '.arc-stage',
-      start: 'top 72%',
-      end: 'bottom 62%',
-      scrub: 0.6,
-      onUpdate: (self) => {
-        const drawn = self.progress * len;
-        placePen(drawn);
-        // Light each act as the pen reaches its node.
-        const lit = Math.min(
-          acts.length,
-          Math.floor(self.progress * acts.length + 0.15),
-        );
-        if (lit !== litCount.value) {
-          litCount.value = lit;
-          gsap.set('.arc-node', {
-            opacity: (i: number) => (i < lit ? 1 : 0.15),
-          });
-          // Pulse the newly lit node.
-          const nodes = document.querySelectorAll('.arc-node');
-          const node = nodes[lit - 1] as SVGCircleElement | undefined;
-          if (node) {
-            gsap.fromTo(
-              node,
-              { scale: 1.8, transformOrigin: 'center' },
-              { scale: 1, duration: 0.6, ease: 'back.out(2)' },
-            );
-          }
-        }
-      },
-    },
-  });
-  st = draw.scrollTrigger ?? undefined;
+  arcTl = gsap.timeline({ paused: true });
+  // Checkpoints chosen so each one lights the next act.
+  for (const cp of ACT_CHECKS) {
+    arcTl.to(arcProgress, {
+      v: cp,
+      duration: 1.2,
+      ease: 'power2.inOut',
+      onUpdate: () => setProgress(arcProgress.v),
+    });
+    // Readable pause at each beat; the last one holds the finished curve.
+    arcTl.to({}, { duration: 2 });
+  }
+  // Start at the first bullet — the reader drives from here.
+  resetArc();
 });
 
 onUnmounted(() => {
-  st?.kill();
-  st = undefined;
+  window.removeEventListener('keydown', onArcKey, true);
+  arcTl?.kill();
+  arcTl = null;
   spineTriggers.forEach((t) => t.kill());
   spineTriggers = [];
 });
@@ -168,7 +268,7 @@ onUnmounted(() => {
         Stories have run on the same shape for
         <em>three thousand years</em> &mdash; so does my process.
       </p>
-      <div v-reveal class="arc-stage">
+      <div v-reveal ref="stageRef" class="arc-stage">
         <div class="arc-svg-wrap">
           <svg
             class="arc-svg"
@@ -186,10 +286,15 @@ onUnmounted(() => {
               stroke-linecap="round"
             />
             <g class="arc-nodes" fill="#d08a4e">
-              <circle class="arc-node" cx="60" cy="280" r="7" />
-              <circle class="arc-node" cx="360" cy="170" r="7" />
-              <circle class="arc-node" cx="620" cy="90" r="9" />
-              <circle class="arc-node" cx="940" cy="250" r="7" />
+              <circle
+                v-for="(act, i) in acts"
+                :key="act.num"
+                class="arc-node"
+                :cx="NODE_POS[i][0]"
+                :cy="NODE_POS[i][1]"
+                :r="i === 2 ? 9 : 7"
+                @click="goToAct(i)"
+              />
             </g>
             <g class="arc-pen" opacity="0">
               <circle class="arc-pen-glow" cx="0" cy="0" r="16" fill="#d08a4e" opacity="0.25" />
@@ -210,6 +315,7 @@ onUnmounted(() => {
             :key="act.num"
             class="arc-act"
             :class="{ lit: i < litCount }"
+            @click="goToAct(i)"
           >
             <span class="act-num">{{ act.num }} &mdash; {{ act.sub }}</span>
             <h3>{{ act.title }}</h3>
@@ -236,6 +342,14 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
+        <button
+          v-if="isDesktop && !reduced"
+          type="button"
+          class="arc-replay"
+          @click="replayArc"
+        >
+          Replay the arc
+        </button>
       </div>
     </div>
   </section>

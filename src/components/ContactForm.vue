@@ -1,27 +1,41 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { activeDiscountCode, autoFillDiscountCode } from '../lib/discount';
+import { activeDiscountCode } from '../lib/discount';
+import { contactSubmitted } from '../lib/contact';
 import { useBonusStore } from '../stores/bonus';
+import { useSettingsStore } from '../stores/settings';
+import { storeToRefs } from 'pinia';
 
 defineProps<{ isBound?: boolean }>();
 
 const bonus = useBonusStore();
+const { siteName } = storeToRefs(useSettingsStore());
 const hasSite = ref('');
 const formStatus = ref('');
 const formError = ref(false);
+/** Session-scoped: once a message sends, a success modal appears.
+    The form stays visible — the section is never removed. */
+const sent = ref(false);
 const showPuzzleInfo = ref(false);
 const showHint = ref(false);
 /** Bonus state frozen at the moment the hint was revealed — it never updates after. */
 const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
+const phoneInput = ref<HTMLInputElement | null>(null);
 
-/** The desk phone can drop this visit's code straight into the field. */
-watch(autoFillDiscountCode, (code) => {
-  if (!code) return;
-  if (discountInput.value) discountInput.value.value = code;
-  autoFillDiscountCode.value = '';
-});
+/** Once the visitor has found this visit's code (via the desk phone),
+    the discount field fills itself in — no button needed. Never
+    clobbers what the visitor typed themselves. */
+/** Fill the discount field when the code is available AND the input exists.
+    Handles the code being set before the form mounts. */
+function tryFillDiscount() {
+  const code = activeDiscountCode.value;
+  if (!code || !discountInput.value || discountInput.value.value) return;
+  discountInput.value.value = code;
+}
+watch(activeDiscountCode, tryFillDiscount, { immediate: true });
+watch(discountInput, tryFillDiscount);
 
 /** Reveal the hint, freezing whatever the bonus state is right now —
     it never updates after this. Bonus already on: point at the first
@@ -29,6 +43,43 @@ watch(autoFillDiscountCode, (code) => {
 function revealHint() {
   hintSeesBonus.value = bonus.enabled;
   showHint.value = true;
+}
+
+/** Progressive US phone formatting: (xxx) xxx-xxxx. Digits only, max 10. */
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits.length ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+/** Reformat the phone field as the visitor types, pastes, or deletes.
+    The caret is restored next to the digit it was beside, so editing
+    mid-number doesn't jump to the end. */
+function onPhoneInput() {
+  const el = phoneInput.value;
+  if (!el) return;
+  const raw = el.value;
+  const formatted = formatPhone(raw);
+  if (formatted === raw) return;
+  // Digits before the caret in the unformatted value — the anchor we
+  // restore against in the formatted one.
+  const caret = el.selectionStart ?? raw.length;
+  const digitsBefore = raw.slice(0, caret).replace(/\D/g, '').length;
+  el.value = formatted;
+  let pos = 0;
+  if (digitsBefore > 0) {
+    let seen = 0;
+    pos = formatted.length;
+    for (let i = 0; i < formatted.length; i++) {
+      if (/\d/.test(formatted[i])) seen++;
+      if (seen >= digitsBefore) {
+        pos = i + 1;
+        break;
+      }
+    }
+  }
+  el.setSelectionRange(pos, pos);
 }
 
 async function submitContactForm(event: SubmitEvent) {
@@ -79,6 +130,8 @@ async function submitContactForm(event: SubmitEvent) {
       throw new Error(data.error || 'Something went wrong sending your message.');
     }
     formStatus.value = 'Got it — I read every note myself and reply within a couple of days.';
+    sent.value = true;
+    contactSubmitted.value = true;
     form.reset();
     hasSite.value = '';
   } catch (err) {
@@ -89,6 +142,23 @@ async function submitContactForm(event: SubmitEvent) {
 </script>
 
 <template>
+  <Teleport to="body">
+    <div v-if="sent" class="contact-modal-backdrop" @click.self="sent = false">
+      <div class="contact-modal" role="dialog" aria-modal="true" aria-label="Message sent">
+        <span class="contact-success-check" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="28" height="28">
+            <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <p class="contact-success-title">Thank you for choosing Gray Solutions.</p>
+        <p class="contact-success-sub">Your message has been sent. Chris will follow up with you within 3 days to discuss your project.</p>
+        <button type="button" class="contact-modal-close" @click="sent = false">
+          Done
+        </button>
+      </div>
+    </div>
+  </Teleport>
   <form class="contact-form" @submit.prevent="submitContactForm">
     <input name="company" type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
     <div class="contact-row">
@@ -104,7 +174,7 @@ async function submitContactForm(event: SubmitEvent) {
       </label>
       <label class="field">
         <span>Phone <em>(optional)</em></span>
-        <input name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" />
+        <input ref="phoneInput" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" @input="onPhoneInput" />
       </label>
     </div>
     <fieldset class="field">
@@ -144,7 +214,7 @@ async function submitContactForm(event: SubmitEvent) {
       <span v-if="showPuzzleInfo" class="puzzle-info-text">
         <small>Somewhere on this site is a one time code for 20% off your website.</small>
         <button v-if="!showHint" type="button" class="hint-btn" @click="revealHint">Show hint</button>
-        <small v-else class="puzzle-hint">{{ hintSeesBonus ? 'review the first draft.' : `Turn the ${isBound ? 'Gray Solutions book' : 'manuscript'} around.` }}</small>
+        <small v-else class="puzzle-hint">{{ hintSeesBonus ? 'review the first draft.' : `Turn the ${isBound ? siteName + ' book' : 'manuscript'} around.` }}</small>
       </span>
     </label>
     <div class="contact-submit">

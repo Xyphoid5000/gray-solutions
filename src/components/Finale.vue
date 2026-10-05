@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { manuscriptBound } from '../lib/manuscript';
 import { motionReduced } from '../utils/a11y';
 
@@ -38,6 +38,19 @@ function showFullText() {
   bodyText.value = BODY;
   activeField.value = -1;
   typingDone.value = true;
+  nextTick(applyEmber);
+}
+
+/** Wrap the two ember phrases once the full body text is on the page.
+    The strings are constants, so plain replacement is safe. */
+function applyEmber() {
+  const el = document.querySelector('.finale .fin > p .typed-text');
+  if (!el || el.querySelector('em')) return;
+  el.innerHTML = el
+    .innerHTML.split('story worth telling')
+    .join('<em>story worth telling</em>')
+    .split('next chapter')
+    .join('<em>next chapter</em>');
 }
 
 /** The manuscript being finished live — types out only while the book
@@ -67,6 +80,7 @@ function startTyping() {
   const type = () => {
     if (si >= steps.length) {
       typingDone.value = true;
+      nextTick(applyEmber);
       return;
     }
     const step = steps[si];

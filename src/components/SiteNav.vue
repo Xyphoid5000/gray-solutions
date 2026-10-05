@@ -3,13 +3,22 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import PullCord from './PullCord.vue';
 import { a11yModeOn, setA11yMode, initA11yMode, motionReduced } from '../utils/a11y';
+import { useSettingsStore } from '../stores/settings';
+import { storeToRefs } from 'pinia';
 
 const props = defineProps<{ bonusContent?: boolean }>();
+const { siteName, logoMark } = storeToRefs(useSettingsStore());
 
 const emit = defineEmits<{
   contact: [];
   home: [];
 }>();
+
+/** Mobile menu open state. */
+const menuOpen = ref(false);
+function closeMenu() { menuOpen.value = false; }
+function goContact() { closeMenu(); emit('contact'); }
+function goHome() { closeMenu(); emit('home'); }
 
 /** The cord lives here but only while bonus content is on. It mounts
     with everything hidden inside the G. emblem (the G is its housing —
@@ -30,10 +39,11 @@ const reducedMotion = () =>
   motionReduced();
 
 /** A grab during the entrance wins — stop the scheduled ball drop so it
-    never fights the user's hand. */
+    never fights the user's hand, and drop the animation clipping. */
 const onCordGrabbed = () => {
   dropTl?.kill();
   dropTl = null;
+  pullCord.value?.setAnimating(false);
 };
 
 /** Accessibility toggle: hidden checkbox that forces off animations. */
@@ -86,19 +96,29 @@ function dropCord() {
   pullCord.value?.parkBase();
   pullCord.value?.parkLine();
   pullCord.value?.parkBall();
+  pullCord.value?.setAnimating(true);
   gsap.set(el, { y: 0, rotation: 0, opacity: 1, visibility: 'visible' });
   if (reducedMotion()) {
     pullCord.value?.settleBase();
     pullCord.value?.settleLine();
     pullCord.value?.settleBall();
+    pullCord.value?.setAnimating(false);
     return;
   }
   dropTl?.kill();
   dropTl = gsap
-    .timeline()
+    .timeline({
+      onComplete: () => {
+        dropTl = null;
+        pullCord.value?.setAnimating(false);
+      },
+    })
     .add(() => pullCord.value?.dropBase(), 0)
     .add(() => pullCord.value?.dropLine(), 0.9)
-    .add(() => pullCord.value?.dropBall(), 1.9);
+    .add(() => pullCord.value?.dropBall(), 1.9)
+    // The callbacks above fire-and-forget their tweens; hold the timeline
+    // open until the ball finishes falling (1.9s + 0.8s).
+    .to({}, { duration: 2.7 });
 }
 
 /** The exit, clipped by the G emblem: the ball rises back into the G,
@@ -117,10 +137,12 @@ function retractCord(done: () => void) {
   riseTl?.kill();
   riseTl = null;
   pullCord.value?.cancelDrag();
+  pullCord.value?.setAnimating(true);
   if (reducedMotion()) {
     pullCord.value?.parkBase();
     pullCord.value?.parkLine();
     pullCord.value?.parkBall();
+    pullCord.value?.setAnimating(false);
     done();
     return;
   }
@@ -128,6 +150,7 @@ function retractCord(done: () => void) {
     .timeline({
       onComplete: () => {
         riseTl = null;
+        pullCord.value?.setAnimating(false);
         done();
       },
     })
@@ -148,14 +171,32 @@ function retractCord(done: () => void) {
         class="brand"
         href="#/"
         @click.prevent="emit('home')"
-        aria-label="Gray Solutions — back to the cover"
+        :aria-label="`${siteName} — back to the cover`"
       >
-        <span class="brand-mark" aria-hidden="true">G.</span>
-        <span>Gray Solutions<em>.</em></span>
+        <span class="brand-mark" aria-hidden="true">{{ logoMark }}</span>
+        <span>{{ siteName }}<em>.</em></span>
+        <span v-if="cordMounted" ref="cordWrap" class="brand-cord-wrap">
+          <PullCord ref="pullCord" />
+        </span>
       </a>
       <button class="nav-contact" @click="emit('contact')">
         Contact me
       </button>
+    <!-- Mobile hamburger. -->
+    <button
+      type="button"
+      class="nav-hamburger"
+      @click="menuOpen = !menuOpen"
+      aria-label="Menu"
+      :aria-expanded="menuOpen"
+    >
+      <span></span><span></span><span></span>
+    </button>
+    <!-- Mobile menu. -->
+    <div v-if="menuOpen" class="nav-mobile-menu">
+      <button type="button" @click="goHome">Home</button>
+      <button type="button" @click="goContact">Contact me</button>
+    </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
       <label class="a11y-toggle">
         <input
@@ -167,8 +208,6 @@ function retractCord(done: () => void) {
         <span class="a11y-toggle-text" aria-hidden="true">Calm mode</span>
       </label>
     </div>
-    <div v-if="cordMounted" ref="cordWrap" class="cord-drop-wrap">
-      <PullCord ref="pullCord" />
-    </div>
+
   </header>
 </template>

@@ -3,8 +3,32 @@ import { computed, ref } from 'vue';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
 import { useOfficeStore } from '../stores/office';
+import { useBonusStore } from '../stores/bonus';
 
 const office = useOfficeStore();
+const bonus = useBonusStore();
+
+/** Reactive dark-mode flag (synced from html[data-theme]). */
+const isDark = ref(document.documentElement.dataset.theme === 'dark');
+let themeObs = null;
+if (typeof MutationObserver !== 'undefined') {
+  themeObs = new MutationObserver(() => {
+    isDark.value = document.documentElement.dataset.theme === 'dark';
+  });
+  themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+}
+
+/** Background mural (3 versions):
+    - Bonus off: day, no candle.
+    - Bonus on, day: candle unlit.
+    - Bonus on, night: candle lit (night only shows with candle). */
+const shelfBg = computed(() => {
+  let file = 'office-wall-day.jpg';
+  if (bonus.enabled && !bonus.candleGone) {
+    file = isDark.value ? 'office-wall-night-candle-lit.jpg' : 'office-wall-day-candle.jpg';
+  }
+  return `url('/${file}') center / cover no-repeat`;
+});
 const bookViewRef = ref<InstanceType<typeof BookView> | null>(null);
 
 defineEmits(['open-book', 'back-to-cover', 'back-to-cover-section', 'finale-contact']);
@@ -22,7 +46,7 @@ const trackClass = computed(() => ({
   <div class="office">
     <div class="office-track" :class="trackClass">
       <!-- Shelf view: the bookshelf (backdrop or interactive when bound). -->
-      <div class="office-slide office-shelf" aria-label="Bookshelf">
+      <div class="office-slide office-shelf" aria-label="Bookshelf" :style="{ background: shelfBg }">
         <Bookshelf
           :backdrop="!office.manuscriptBound"
           :interactive="true"
@@ -91,9 +115,47 @@ const trackClass = computed(() => ({
   overflow: hidden;
 }
 .office-shelf {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Background set via inline style (shelfBg computed). */
+  background-color: #141009;
+}
+
+.night-sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #060a18 0%, #0d1530 60%, #16204a 100%);
+}
+/* Stars: layered radial gradients for a scattered night sky. */
+.night-sky::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, #fff 100%, transparent 100%),
+    radial-gradient(1px 1px at 60% 15%, #fff 100%, transparent 100%),
+    radial-gradient(2px 2px at 80% 45%, #fff 100%, transparent 100%),
+    radial-gradient(1px 1px at 35% 60%, #fff 100%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 70% 75%, #fff 100%, transparent 100%),
+    radial-gradient(1px 1px at 15% 80%, #fff 100%, transparent 100%),
+    radial-gradient(2px 2px at 45% 25%, #ffe9c4 100%, transparent 100%),
+    radial-gradient(1px 1px at 90% 20%, #fff 100%, transparent 100%);
+  opacity: 0.9;
+}
+/* Window crossbars. */
+.night-sky::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 48%, #2a1f14 48%, #2a1f14 52%, transparent 52%),
+    linear-gradient(0deg, transparent 48%, #2a1f14 48%, #2a1f14 52%, transparent 52%);
+}
+/* Let the library show through around the case. */
+.office-shelf :deep(.bookshelf-hero) {
+  background: transparent;
 }
 .office-cover {
   position: absolute;
@@ -112,3 +174,5 @@ const trackClass = computed(() => ({
   pointer-events: none;
 }
 </style>
+
+

@@ -1,9 +1,57 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
 import ChapterHeading from './ChapterHeading.vue';
+
+const props = defineProps<{ active?: boolean }>();
 
 const emit = defineEmits<{
   (e: 'go', index: number): void;
 }>();
+
+const stripRef = ref<HTMLElement | null>(null);
+
+/** Desktop pagination: one exhibit per view with prev/next stepping.
+    Mobile keeps the swipe strip (its panels paginate as plain blocks). */
+const panelIndex = ref(0);
+const PANEL_COUNT = 3;
+const PANEL_LETTERS = ['A', 'B', 'C'];
+function prevPanel() {
+  panelIndex.value = Math.max(0, panelIndex.value - 1);
+}
+function nextPanel() {
+  panelIndex.value = Math.min(PANEL_COUNT - 1, panelIndex.value + 1);
+}
+
+/** Arrow keys step between exhibits — only while the projects strip is
+    on the visible book page. On the chapter's other pages (title, lede)
+    the keys fall through to the book's own page-turn handler, so arrows
+    never advance exhibits you can't see yet. At the first/last exhibit
+    the keys likewise fall through to turn book pages. */
+function onKey(e: KeyboardEvent) {
+  if (!props.active) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+  if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
+    return;
+  // The strip lives on its own paginated page — a hidden page reports a
+  // zero rect, so this is false everywhere but the projects page.
+  // Use the component's own strip (not document.querySelector, which can
+  // hit a hidden instance elsewhere in the DOM).
+  const strip = stripRef.value;
+  if (!strip) return;
+  const r = strip.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return;
+  if (e.key === 'ArrowRight' && panelIndex.value < PANEL_COUNT - 1) {
+    e.stopPropagation();
+    nextPanel();
+  } else if (e.key === 'ArrowLeft' && panelIndex.value > 0) {
+    e.stopPropagation();
+    prevPanel();
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKey, true));
+onUnmounted(() => window.removeEventListener('keydown', onKey, true));
 </script>
 
 <template>
@@ -18,8 +66,8 @@ const emit = defineEmits<{
         A portfolio is a story&rsquo;s evidence locker. Here&rsquo;s what
         happens when a business gets <em>a website with a plot.</em>
       </p>
-      <div v-reveal class="proof-strip">
-        <article class="proof-panel">
+      <div v-reveal ref="stripRef" class="proof-strip">
+        <article class="proof-panel" :class="{ 'is-current': panelIndex === 0 }">
           <div>
             <span class="proof-index">Exhibit A</span>
             <h3>Burning River Auto Glass</h3>
@@ -37,7 +85,7 @@ const emit = defineEmits<{
             </ul>
           </div>
         </article>
-        <article class="proof-panel">
+        <article class="proof-panel" :class="{ 'is-current': panelIndex === 1 }">
           <div>
             <span class="proof-index">Exhibit B</span>
             <h3>This very website</h3>
@@ -54,7 +102,7 @@ const emit = defineEmits<{
             </ul>
           </div>
         </article>
-        <article class="proof-panel cta-panel">
+        <article class="proof-panel cta-panel" :class="{ 'is-current': panelIndex === 2 }">
           <div>
             <span class="proof-index">Exhibit C</span>
             <h3>Your business here.</h3>
@@ -64,10 +112,33 @@ const emit = defineEmits<{
               wish they&rsquo;d done first.
             </p>
           </div>
-          <button class="btn btn-solid" @click="emit('go', 4)">
+          <button class="btn btn-solid claim-btn" @click="emit('go', 4)">
             Claim the page <span class="arrow" aria-hidden="true">&rarr;</span>
           </button>
         </article>
+        <nav class="proof-pager" aria-label="Project exhibits">
+          <button
+            type="button"
+            class="proof-page-btn"
+            :disabled="panelIndex === 0"
+            @click="prevPanel"
+            aria-label="Previous project"
+          >
+            &larr; Prev
+          </button>
+          <span class="proof-page-count" aria-live="polite">
+            Exhibit {{ PANEL_LETTERS[panelIndex] }} &middot; {{ panelIndex + 1 }} of {{ PANEL_COUNT }}
+          </span>
+          <button
+            type="button"
+            class="proof-page-btn"
+            :disabled="panelIndex === PANEL_COUNT - 1"
+            @click="nextPanel"
+            aria-label="Next project"
+          >
+            Next &rarr;
+          </button>
+        </nav>
       </div>
       <p class="proof-hint" aria-hidden="true">
         <span>Swipe</span><span>&rarr;</span>

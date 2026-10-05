@@ -126,8 +126,7 @@ function onClick(e: Event) {
 }
 
 /** Keyboard activation for the book (outer is role="button"). */
-function onKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape' && focused.value) {
+function onKeyDown(e: KeyboardEvent) {  if (e.key === 'Escape' && focused.value) {
     // Release focus so the wheel scrolls the page again.
     (e.currentTarget as HTMLElement).blur();
     return;
@@ -139,6 +138,14 @@ function onKeyDown(e: KeyboardEvent) {
     if (props.interactive) emit('toggle');
   }
 }
+
+/** Arrow-key rotation: the same Y axis the drag spins. Exposed so the
+    shelf overlay can rotate the selected book from its own keys. */
+function rotateBy(deg: number) {
+  if (!props.pulled) return;
+  dragRotY.value += deg;
+}
+defineExpose({ rotateBy });
 </script>
 
 <template>
@@ -211,6 +218,8 @@ function onKeyDown(e: KeyboardEvent) {
   --bd: 150px;  /* book depth (cover width) */
   --bc: #333;   /* cover color */
   position: relative;
+  user-select: none;
+  -webkit-user-select: none;
   width: var(--bw);
   height: var(--bh);
   padding: 0;

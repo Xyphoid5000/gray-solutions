@@ -4,8 +4,12 @@ import { gsap } from 'gsap';
 import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
 import { manuscriptBound } from '../lib/manuscript';
+import { contactTarget } from '../lib/contact';
 import { motionReduced } from '../utils/a11y';
+import { useSettingsStore } from '../stores/settings';
 import WaxSeal from './WaxSeal.vue';
+
+const settings = useSettingsStore();
 
 const emit = defineEmits(['open-book', 'toggle-bonus']);
 const props = defineProps<{ bookDropKey?: number; bonusContent?: boolean }>();
@@ -355,8 +359,11 @@ function open() {
 function playReturn(target: 'contact' | 'about') {
   const book = bookRef.value;
   if (!book) return;
+  // "Contact me" roads land on the contact form — or the socials,
+  // if the form has been submitted and retired this visit.
+  const el = target === 'contact' ? contactTarget() : target;
   if (reducedMotion()) {
-    document.getElementById(target)?.scrollIntoView();
+    document.getElementById(el)?.scrollIntoView();
     return;
   }
   // The book turns its back as it lands — scrolling back up will swing
@@ -416,7 +423,7 @@ function playReturn(target: 'contact' | 'about') {
       1.1,
     )
     .add(() => {
-      const el = document.getElementById(target);
+      const el = document.getElementById(target === 'contact' ? contactTarget() : target);
       if (el) {
         let spinOn = false;
         const enableSpin = () => {
@@ -534,7 +541,6 @@ onUnmounted(() => {
   <div class="cover-desk" aria-hidden="true"></div>
   <div class="cover-glow" aria-hidden="true"></div>
   <div class="cover-scene">
-    <p class="cover-kicker">A portfolio &middot; by Chris Gray</p>
     <div
       ref="stageRef"
       class="book-stage"
@@ -568,13 +574,13 @@ onUnmounted(() => {
             </span>
           </button>
         </div>
-        <div class="b-face b-spine"><span>Gray Solutions</span></div>
+        <div class="b-face b-spine"><span>{{ settings.siteName }}</span></div>
         <div class="b-face b-top"></div>
         <div class="b-face b-pages"></div>
         <div class="b-face b-front">
           <div class="b-cover-frame">
-            <span class="b-mark">G.</span>
-            <p class="b-title">Gray<br />Solutions<em>.</em></p>
+            <span class="b-mark">{{ settings.logoMark }}</span>
+            <p class="b-title">{{ settings.siteName }}<em>.</em></p>
             <p class="b-tag"><em>Websites that tell stories.</em></p>
             <p class="b-by">Chris Gray</p>
           </div>
