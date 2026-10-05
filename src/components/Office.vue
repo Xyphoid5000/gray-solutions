@@ -18,12 +18,14 @@ if (typeof MutationObserver !== 'undefined') {
   themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 
-/** Background mural: day/night x bonus/candle state (6 versions). */
+/** Background mural: day/night x bonus/candle state.
+    The candle is never lit in day mode. */
 const shelfBg = computed(() => {
   const base = isDark.value ? 'office-wall-night' : 'office-wall-day';
   let file = base + '.jpg';
   if (bonus.enabled && !bonus.candleGone) {
-    file = base + (bonus.candleLit ? '-candle-lit.jpg' : '-candle.jpg');
+    const lit = isDark.value && bonus.candleLit;
+    file = base + (lit ? '-candle-lit.jpg' : '-candle.jpg');
   }
   return `url('/${file}') center / cover no-repeat`;
 });
