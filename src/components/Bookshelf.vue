@@ -119,7 +119,9 @@ function toggleOurs() {
 const bookRef = ref<InstanceType<typeof Book> | null>(null);
 const showRotateHint = ref(false);
 watch(selectedBook, (b) => {
-  showRotateHint.value = !!b && !(b === 'ours' && sandwich.value);
+  // Arrow keys are a desktop affordance — touch devices don't get the hint.
+  const isTouch = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+  showRotateHint.value = !!b && !(b === 'ours' && sandwich.value) && !isTouch;
 });
 /** Leaving book view clears any pulled book — the shelf always lands clean. */
 watch(() => useOfficeStore().view, (v) => {
@@ -365,7 +367,9 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  /* Let the pulled book overflow visibly — the page (overflow-x: hidden
+     on body) still prevents horizontal scroll. */
+  overflow: visible;
   background:
     radial-gradient(
       130% 100% at 50% 0%,
