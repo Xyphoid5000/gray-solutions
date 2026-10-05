@@ -83,7 +83,7 @@ function skip() {
  * 6. the finished book rises as a 3D object; the dark backdrop dissolves
  *    to reveal the home page's real bookshelf, and the book files itself
  *    into its waiting slot, staying as the 3D model;
- * 7. fade to black, fade back in on the home page with the finished book.
+ * 7. fade straight into the home page with the finished book.
  *
  * App tosses the open page into the pile before calling start(), so
  * page 5 is always the real page, never a stand-in.
@@ -382,7 +382,8 @@ function start() {
         const r = slot.getBoundingClientRect();
         dx = r.left + r.width / 2 - cx;
         dy = r.top + r.height / 2 - cy;
-        s = Math.min(0.75, (r.height - 10) / 340);
+        // The flat spine is 230px tall, like the slot — scale to fill it.
+        s = Math.min(1, (r.height - 10) / 230);
       }
       const file = gsap.timeline();
       const spine = flatSpine.value!;
@@ -417,11 +418,10 @@ function start() {
   );
   const b8 = b7 + 2.7;
 
-  // Beat 7 — hold on the completed shelf; fade to black; behind it the
-  // home page takes the bound shelf; fade back in on it.
-  T.to(vl, { opacity: 1, duration: 0.8, ease: 'power1.inOut' }, b8);
-  T.call(() => emit('blackout'), [], b8 + 0.85);
-  T.to(ov, { opacity: 0, duration: 1.0, ease: 'power1.inOut' }, b8 + 1.35);
+  // Beat 7 — the book is filed. Fade the cinematic straight into the
+  // home page behind it — no hold, no fade to black.
+  T.call(() => emit('blackout'), [], b8);
+  T.to(ov, { opacity: 0, duration: 1.2, ease: 'power1.inOut' }, b8 + 0.1);
 }
 
 defineExpose({ start });
@@ -853,7 +853,8 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
     #a68f63 2px 3px
   );
 }
-/* Flat spine: the 2D book that seats into the shelf gap. */
+/* Flat spine: the 2D book that seats into the shelf gap. Matches the
+   real bound book (.bs-ours) exactly so the handoff doesn't shift color. */
 .bind-flat-spine {
   position: absolute;
   left: 50%;
@@ -863,9 +864,12 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   display: none;
   opacity: 0;
   z-index: 3;
-  background: linear-gradient(to bottom, #1d140c 0%, #100c07 100%);
+  background: #1a1a1a;
   border-left: 1px solid rgba(208, 138, 78, 0.4);
   border-radius: 3px 3px 0 0;
+  box-shadow:
+    inset -4px 0 7px rgba(0, 0, 0, 0.5),
+    0 0 22px rgba(208, 138, 78, 0.12);
   align-items: center;
   justify-content: center;
 }
@@ -873,9 +877,12 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
   writing-mode: vertical-rl;
   font-family: var(--serif);
   color: #d08a4e;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
   white-space: nowrap;
+  padding: 14px 0;
 }
 /* Fade-to-black veil for the final beat. */
 .bind-veil {
