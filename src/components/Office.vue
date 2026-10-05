@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue';
 import Bookshelf from './Bookshelf.vue';
 import BookView from './BookView.vue';
-import DeskCandle from './DeskCandle.vue';
 import { useOfficeStore } from '../stores/office';
 
 const office = useOfficeStore();
@@ -29,12 +28,10 @@ const trackClass = computed(() => ({
         <div class="night-window" aria-hidden="true">
           <div class="night-sky"></div>
         </div>
-        <!-- Desk under the bookshelf: front face always visible; in dark
-             mode a burning candle pokes up above it. -->
+        <!-- Desk under the bookshelf: a simple background piece, not the
+             interactive desk. In dark mode a candle silhouette sits on it. -->
         <div class="shelf-desk" aria-hidden="true">
-          <div class="shelf-desk-candle">
-            <DeskCandle :lit="true" :smoking="false" />
-          </div>
+          <div class="shelf-desk-candle"></div>
           <div class="shelf-desk-front"></div>
         </div>
         <Bookshelf
@@ -159,31 +156,26 @@ html[data-theme='dark'] .night-window {
   position: absolute;
   left: 12%;
   bottom: 85%;
-  width: 48px;
-  height: 72px;
+  width: 14px;
+  height: 56px;
   display: none;
   pointer-events: none;
+  background: linear-gradient(180deg, #e8dcc0 0%, #c9b896 100%);
+  border-radius: 3px 3px 0 0;
 }
-.shelf-desk-candle .desk-candle {
-  position: relative;
-  left: auto;
-  top: auto;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  cursor: default;
-}
-.shelf-desk-candle .desk-candle.lit {
-  pointer-events: none;
-  cursor: default;
+.shelf-desk-candle::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  width: 10px;
+  height: 16px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 70%, #ffd97a 0%, #ff9a3c 60%, transparent 70%);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
 }
 html[data-theme='dark'] .shelf-desk-candle {
   display: block;
-}
-@media (max-width: 640px) {
-  .shelf-desk-candle {
-    display: none !important;
-  }
 }
 .night-sky {
   position: absolute;
