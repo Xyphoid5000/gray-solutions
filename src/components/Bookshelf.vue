@@ -254,7 +254,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
         </div>
         <div class="bs-plank"></div>
       </div>
-      <div class="bs-base"></div>
     </div>
     <div v-if="backdrop" class="bs-blur-veil" aria-hidden="true"></div>
 
@@ -644,13 +643,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   background: linear-gradient(180deg, #4a2c17 0%, #2e1a0d 60%, #1d1008 100%);
   border-radius: 2px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
-}
-.bs-base {
-  height: 26px;
-  margin: 26px -24px 0;
-  background: linear-gradient(180deg, #3a2412 0%, #211307 100%);
-  border-radius: 0 0 4px 4px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
 }
 /* The manuscript waits in front of the books. */
 .bs-foreground {
