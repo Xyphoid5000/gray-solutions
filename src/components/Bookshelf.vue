@@ -737,7 +737,8 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   margin: 0;
   font-size: 0.78rem;
   letter-spacing: 0.08em;
-  color: rgba(232, 205, 150, 0.5);
+  color: rgba(232, 205, 150, 0.85);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
 }
 .bs-reopen {
   background: rgba(208, 138, 78, 0.12);
