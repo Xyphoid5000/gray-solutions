@@ -3339,3 +3339,46 @@ html[data-theme='dark'] .page-tab {
     display: none;
   }
 }
+
+/* Contact success modal. */
+.contact-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 8, 5, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  padding: 1rem;
+}
+.contact-modal {
+  background: var(--paper, #fffdf6);
+  color: #1a1510;
+  border-radius: 1.25rem;
+  padding: 2.5rem 2.25rem;
+  max-width: 480px;
+  width: 100%;
+  display: grid;
+  gap: 0.7rem;
+  justify-items: center;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+.contact-modal .contact-success-check {
+  color: #2e7d32;
+}
+.contact-modal-close {
+  margin-top: 0.5rem;
+  padding: 0.7rem 2rem;
+  background: var(--ember);
+  color: #1a1510;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.contact-modal-close:hover {
+  filter: brightness(1.05);
+}

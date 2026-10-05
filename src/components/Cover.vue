@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from 'vue';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { onUnmounted, ref, watch } from 'vue';
 import ContactForm from './ContactForm.vue';
 import AboutMe from './AboutMe.vue';
 import { contactSubmitted } from '../lib/contact';
-import { motionReduced } from '../utils/a11y';
 
 defineProps<{ isBound?: boolean }>();
 defineEmits(['open-book-instant']);
@@ -14,37 +12,12 @@ defineEmits(['open-book-instant']);
     and collapse) and retires for the visit. Session-scoped — a refresh
     brings it back. */
 const contactGone = ref(false);
-let hideTimer: number | null = null;
-watch(contactSubmitted, (submitted) => {
-  if (!submitted || contactGone.value) return;
-  hideTimer = window.setTimeout(() => {
-    if (motionReduced()) {
-      contactGone.value = true;
-      nextTick(() => ScrollTrigger.refresh());
-      return;
-    }
-    const el = document.getElementById('contact');
-    if (el) {
-      // Lock the real height so the collapse animates from full size.
-      el.style.maxHeight = `${el.scrollHeight}px`;
-      void el.offsetHeight; // reflow
-      el.classList.add('is-leaving');
-      hideTimer = window.setTimeout(() => {
-        contactGone.value = true;
-        // The section's removal shifts everything below it up —
-        // recalculate scroll triggers so the about section (and its
-        // socials) reveals instead of sitting invisible below the fold.
-        nextTick(() => ScrollTrigger.refresh());
-      }, 750);
-    } else {
-      contactGone.value = true;
-      nextTick(() => ScrollTrigger.refresh());
-    }
-  }, 3000);
+// The contact section stays after submit — the success modal confirms,
+// the section is never removed.
+watch(contactSubmitted, () => {
+  // Intentionally empty: the section stays.
 });
-onUnmounted(() => {
-  if (hideTimer) window.clearTimeout(hideTimer);
-});
+onUnmounted(() => {});
 </script>
 
 <template>
