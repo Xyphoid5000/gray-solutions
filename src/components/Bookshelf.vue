@@ -121,6 +121,10 @@ const showRotateHint = ref(false);
 watch(selectedBook, (b) => {
   showRotateHint.value = !!b && !(b === 'ours' && sandwich.value);
 });
+/** Leaving book view clears any pulled book — the shelf always lands clean. */
+watch(() => useOfficeStore().view, (v) => {
+  if (v === 'shelf') selectedBook.value = null;
+});
 function onShelfKey(e: KeyboardEvent) {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   // The open book owns the arrow keys — page turns, not shelf spins.
