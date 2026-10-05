@@ -23,12 +23,6 @@ const trackClass = computed(() => ({
     <div class="office-track" :class="trackClass">
       <!-- Shelf view: the bookshelf (backdrop or interactive when bound). -->
       <div class="office-slide office-shelf" aria-label="Bookshelf">
-        <!-- Desk under the bookshelf: a simple background piece, not the
-             interactive desk. In dark mode a candle silhouette sits on it. -->
-        <div class="shelf-desk" aria-hidden="true">
-          <div class="shelf-desk-candle"></div>
-          <div class="shelf-desk-front"></div>
-        </div>
         <Bookshelf
           :backdrop="!office.manuscriptBound"
           :interactive="true"
@@ -106,53 +100,12 @@ const trackClass = computed(() => ({
     url('/office-wall-day.jpg') center / cover no-repeat,
     #141009;
 }
-html[data-theme='dark'] .office-scene {
+:global(html[data-theme='dark']) .office-scene {
   background:
     url('/office-wall-night.jpg') center / cover no-repeat,
     #0a0d14;
 }
-/* Desk under the bookshelf: a simple front face at the bottom of the
-   shelf view. The candle pokes up above it in dark mode only. */
-.shelf-desk {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 18%;
-  z-index: 2;
-  pointer-events: none;
-}
-.shelf-desk-front {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, #3a2412 0%, #2a170b 50%, #1a0e06 100%);
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
-}
-.shelf-desk-candle {
-  position: absolute;
-  left: 12%;
-  bottom: 85%;
-  width: 14px;
-  height: 56px;
-  display: none;
-  pointer-events: none;
-  background: linear-gradient(180deg, #e8dcc0 0%, #c9b896 100%);
-  border-radius: 3px 3px 0 0;
-}
-.shelf-desk-candle::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -14px;
-  width: 10px;
-  height: 16px;
-  transform: translateX(-50%);
-  background: radial-gradient(ellipse at 50% 70%, #ffd97a 0%, #ff9a3c 60%, transparent 70%);
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-}
-html[data-theme='dark'] .shelf-desk-candle {
-  display: block;
-}
+
 .night-sky {
   position: absolute;
   inset: 0;
