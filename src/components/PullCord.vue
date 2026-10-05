@@ -16,6 +16,13 @@ const MOUNT_HIDE = 16;
 let dragging = false;
 /** True while the cord is retracting into the G — grabs are ignored. */
 let retracting = false;
+/** True while the drop/retract animation plays — the root clips at the
+    G's bottom edge so parked parts stay hidden inside the G. Off when
+    idle so glows and shadows render round, never boxy. */
+const animating = ref(false);
+const setAnimating = (on: boolean) => {
+  animating.value = on;
+};
 let startY = 0;
 let pull = 0;
 let sway: gsap.core.Tween | null = null;
@@ -215,15 +222,15 @@ const retractLine = () => {
   gsap.to(line.value, { scaleY: 0, duration: 0.6, ease: 'sine.in' });
 };
 
-/** How far up the ball must go to hide fully above the header. The cord's
+/** How far up the ball must go to hide inside the G emblem. The cord's
     top edge sits at the G's bottom (53px from viewport top); the knob's
-    layout origin is 112px below that, so y must clear -(53 + 112) = -165.
-    -200 parks it 35px above the viewport top — fully hidden, never
-    overlapping the logo. (Matches the CSS initial parked transform.) */
-const ballHideY = () => -200;
+    layout origin is 112px below that, so it parks tucked up behind the
+    G — clipped by the root while is-animating, invisible until the drop. */
+const ballHideY = () =>
+  -((line.value?.offsetHeight || LINE_H) + (knob.value?.offsetHeight || 36) + 16);
 
-/** Park the ball up above the header (fully hidden) — it lives up there
-    until the string has dropped, so it never overlaps the logo. */
+/** Park the ball up inside the G (clipped while animating) — it lives up
+    there until the string has dropped, so it never overlaps the logo. */
 const parkBall = () => {
   if (!knob.value || !line.value) return;
   gsap.killTweensOf(knob.value);
@@ -279,6 +286,7 @@ defineExpose({
   settleBall,
   retractBall,
   cancelDrag,
+  setAnimating,
 });
 
 onMounted(() => {
@@ -307,7 +315,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="root" class="pull-cord" aria-hidden="false">
+  <div ref="root" class="pull-cord" :class="{ 'is-animating': animating }" aria-hidden="false">
     <span ref="mount" class="cord-mount" aria-hidden="true"></span>
     <span ref="line" class="cord-line" aria-hidden="true"></span>
     <button

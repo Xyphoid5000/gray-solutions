@@ -1576,10 +1576,15 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   transform-origin: top center;
   pointer-events: none;
   /* The G emblem is the cord's housing: the top edge sits exactly at the
-     G's bottom, and everything above it emerges from behind the G —
-     no clipping, so glows and shadows render round, never boxy.
+     G's bottom, and everything above it emerges from behind the G.
+     While the drop/retract animation plays, the root clips at the G's
+     bottom edge so the parked parts stay hidden inside the G; when idle
+     there's no clipping, so glows and shadows render round, never boxy.
      Height clears the full drop plus a max pull. */
   height: 300px;
+}
+.pull-cord.is-animating {
+  overflow: hidden;
 }
 .cord-mount {
   width: 12px;
@@ -2133,32 +2138,13 @@ html[data-blacklight='on'] body::after {  content: '';
 .door-slab.open {
   transform: perspective(800px) rotateY(-72deg);
 }
-/* The open doorway blazes amber: white-hot core over the lit page,
-   soft falloff at the edges, and light spilling onto the floor in
-   front of it. Fades up behind the swinging slab; fades on close. */
+/* The open doorway: light spilling onto the floor below it. The doorway
+   itself is just the masked hole over the lit page — no amber blaze. */
 .doorway {
   position: fixed;
   inset: 0;
   z-index: 2001;
   pointer-events: none;
-}
-.doorway-blaze {
-  position: absolute;
-  left: 44%;
-  top: 40%;
-  width: 12%;
-  height: 36%;
-  background: radial-gradient(
-    ellipse at 50% 55%,
-    #fff8e6 0%,
-    #ffd27a 20%,
-    #ff9d2e 45%,
-    rgba(224, 106, 18, 0.55) 70%,
-    rgba(224, 106, 18, 0) 100%
-  );
-  mix-blend-mode: screen;
-  opacity: 0;
-  transition: opacity 0.5s ease;
 }
 .doorway-spill {
   position: absolute;
@@ -2176,7 +2162,6 @@ html[data-blacklight='on'] body::after {  content: '';
   opacity: 0;
   transition: opacity 0.5s ease;
 }
-.doorway.on .doorway-blaze,
 .doorway.on .doorway-spill {
   opacity: 1;
   transition: none;

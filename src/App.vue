@@ -499,9 +499,9 @@ function matchGuyGag(level: 1 | 2 | 3) {
         interactions.guyMounted = true;
         if (doorway) {
           // Back through the doorway the other way, match in hand:
-          // fade in just right of it, walk left through the lit
-          // doorway, past the candle, off the left edge — then the
-          // door closes behind him.
+          // fade in just right of it, walk left through the doorway,
+          // past the candle, off the left edge — the door swings shut
+          // behind him while he's still walking.
           interactions.guyFacing = -1;
           interactions.guyX = vw / 2 + 80;
           interactions.guyFading = true;
@@ -509,14 +509,22 @@ function matchGuyGag(level: 1 | 2 | 3) {
           requestAnimationFrame(() => requestAnimationFrame(() => {
             interactions.guyFading = false;
           }));
+          // The door swings shut behind him once he's through it — while
+          // he's still walking the match back to the candle, not after
+          // he exits.
+          const doorWatcher = setInterval(() => {
+            if (interactions.guyX < vw * 0.44 - 80) {
+              clearInterval(doorWatcher);
+              interactions.doorOpen = false;
+              later(() => {
+                interactions.doorSlab = false;
+              }, 750);
+            }
+          }, 100);
           walkGuyTo(-160, 110, () => {
-            // The door swings shut behind him, then the slab fades away.
-            interactions.doorOpen = false;
-            later(() => {
-              interactions.doorSlab = false;
-              stopGuy();
-              lightCandleAfterGag();
-            }, 750);
+            clearInterval(doorWatcher);
+            stopGuy();
+            lightCandleAfterGag();
           });
         } else {
           interactions.guyFacing = -1;
@@ -537,7 +545,7 @@ function matchGuyGag(level: 1 | 2 | 3) {
           interactions.doorSlab = true;
           later(() => {
             // The slab stays mounted and swings open (CSS hinge) while
-            // the amber blaze fades up behind it.
+            // the floor spill fades up below it.
             interactions.doorOpen = true;
             later(() => {
               interactions.guyFading = true;
@@ -962,9 +970,9 @@ onUnmounted(() => {
   <div class="pitch-black" :class="{ on: interactions.pitchBlack && !interactions.doorOpen }" aria-hidden="true"></div>
   <!-- The match guy's doorway (desktop gag levels). Closed: a plain
        flat dark slab faded into the black at the screen midpoint.
-       Open: the slab swings open on its hinge to a doorway blazing
-       amber, revealing the lit page beneath, with light spilling onto
-       the floor. No fire — the reveal is the swing. -->
+       Open: the slab swings open on its hinge, revealing the lit page
+       beneath through the doorway, with light spilling onto the floor
+       below. No fire — the reveal is the swing. -->
   <div class="door-slab" :class="{ on: interactions.doorSlab, open: interactions.doorOpen }" aria-hidden="true"></div>
   <svg
     class="pitch-door"
@@ -982,7 +990,6 @@ onUnmounted(() => {
     <rect x="0" y="0" width="100" height="100" fill="#000" mask="url(#mgDoorMask)" />
   </svg>
   <div class="doorway" :class="{ on: interactions.doorOpen }" aria-hidden="true">
-    <div class="doorway-blaze"></div>
     <div class="doorway-spill"></div>
   </div>
   <!-- LED wash: the room lit by the strip, tinted to the remote's color. -->

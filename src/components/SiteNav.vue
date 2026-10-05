@@ -33,10 +33,11 @@ const reducedMotion = () =>
   motionReduced();
 
 /** A grab during the entrance wins — stop the scheduled ball drop so it
-    never fights the user's hand. */
+    never fights the user's hand, and drop the animation clipping. */
 const onCordGrabbed = () => {
   dropTl?.kill();
   dropTl = null;
+  pullCord.value?.setAnimating(false);
 };
 
 /** Accessibility toggle: hidden checkbox that forces off animations. */
@@ -89,19 +90,29 @@ function dropCord() {
   pullCord.value?.parkBase();
   pullCord.value?.parkLine();
   pullCord.value?.parkBall();
+  pullCord.value?.setAnimating(true);
   gsap.set(el, { y: 0, rotation: 0, opacity: 1, visibility: 'visible' });
   if (reducedMotion()) {
     pullCord.value?.settleBase();
     pullCord.value?.settleLine();
     pullCord.value?.settleBall();
+    pullCord.value?.setAnimating(false);
     return;
   }
   dropTl?.kill();
   dropTl = gsap
-    .timeline()
+    .timeline({
+      onComplete: () => {
+        dropTl = null;
+        pullCord.value?.setAnimating(false);
+      },
+    })
     .add(() => pullCord.value?.dropBase(), 0)
     .add(() => pullCord.value?.dropLine(), 0.9)
-    .add(() => pullCord.value?.dropBall(), 1.9);
+    .add(() => pullCord.value?.dropBall(), 1.9)
+    // The callbacks above fire-and-forget their tweens; hold the timeline
+    // open until the ball finishes falling (1.9s + 0.8s).
+    .to({}, { duration: 2.7 });
 }
 
 /** The exit, clipped by the G emblem: the ball rises back into the G,
@@ -120,10 +131,12 @@ function retractCord(done: () => void) {
   riseTl?.kill();
   riseTl = null;
   pullCord.value?.cancelDrag();
+  pullCord.value?.setAnimating(true);
   if (reducedMotion()) {
     pullCord.value?.parkBase();
     pullCord.value?.parkLine();
     pullCord.value?.parkBall();
+    pullCord.value?.setAnimating(false);
     done();
     return;
   }
@@ -131,6 +144,7 @@ function retractCord(done: () => void) {
     .timeline({
       onComplete: () => {
         riseTl = null;
+        pullCord.value?.setAnimating(false);
         done();
       },
     })
