@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { gsap } from 'gsap';
 import { returnToSection } from '../lib/ui';
 import { scrollSlowTo } from '../lib/scroll';
@@ -445,11 +445,40 @@ function playReturn(target: 'contact' | 'about') {
     }, 2.1);
 }
 
+/** Small-viewport CTA fallback: the "Read the manuscript" button lives
+    below the 3D manuscript in normal flow, but on short viewports (an old
+    iPhone SE, or Safari chrome eating the height) it gets pushed below the
+    fold. Measure the real layout — if the button doesn't fit on screen,
+    it overlays the lower part of the scene instead. */
+const coverUiRef = ref<HTMLElement | null>(null);
+const ctaOverlay = ref(false);
+let ctaMeasureRaf = 0;
+async function measureCtaFit() {
+  const btn = coverUiRef.value?.querySelector<HTMLElement>('.cover-cta .btn');
+  if (!btn) return;
+  // Measure in normal flow so the reading is honest.
+  if (ctaOverlay.value) {
+    ctaOverlay.value = false;
+    await nextTick();
+  }
+  await new Promise(requestAnimationFrame);
+  const r = btn.getBoundingClientRect();
+  ctaOverlay.value = r.bottom > window.innerHeight - 4;
+}
+function scheduleCtaMeasure() {
+  cancelAnimationFrame(ctaMeasureRaf);
+  ctaMeasureRaf = requestAnimationFrame(() => {
+    void measureCtaFit();
+  });
+}
+
 onMounted(() => {
   sprite = makeSprite();
   sizeCanvas();
   window.addEventListener('resize', sizeCanvas);
+  window.addEventListener('resize', scheduleCtaMeasure);
   window.addEventListener('scroll', onScrollSpin, { passive: true });
+  void measureCtaFit();
 
   const book = bookRef.value;
   const shadow = shadowRef.value;
@@ -532,7 +561,9 @@ onUnmounted(() => {
   dragging = false;
   dragPointerId = null;
   window.removeEventListener('resize', sizeCanvas);
+  window.removeEventListener('resize', scheduleCtaMeasure);
   window.removeEventListener('scroll', onScrollSpin);
+  cancelAnimationFrame(ctaMeasureRaf);
 });
 </script>
 
@@ -615,7 +646,7 @@ onUnmounted(() => {
       </div>
       <canvas ref="canvasRef" class="dust-canvas" aria-hidden="true"></canvas>
     </div>
-    <div class="cover-ui">
+    <div ref="coverUiRef" class="cover-ui" :class="{ 'is-overlay': ctaOverlay }">
       <div class="cover-cta">
         <button class="btn btn-solid" @click="open()">
           {{ isBound ? 'Open the book' : 'Read the manuscript' }} <span class="arrow" aria-hidden="true">&rarr;</span>

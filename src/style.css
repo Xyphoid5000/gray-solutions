@@ -1214,6 +1214,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 
 /* ---------- cover: the falling book ---------- */
 .cover {
+  position: relative;
   min-height: 100svh;
   overflow: clip;
   padding: calc(var(--nav-h) + 1rem) 0 6rem;
@@ -1533,6 +1534,25 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   flex-direction: column;
   align-items: center;
   margin-top: 1.4rem;
+}
+/* Short viewports: the CTA can't fit below the manuscript, so it
+   overlays the lower part of the 3D scene instead of falling off the
+   bottom of the screen. Taps pass through around the button so the
+   book stays draggable. */
+.cover-ui.is-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  margin-top: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.cover-ui.is-overlay .cover-cta {
+  pointer-events: auto;
+}
+.cover-ui.is-overlay .cover-hint {
+  display: none;
 }
 .cover-cta .btn {
   font-size: 1.02rem;
