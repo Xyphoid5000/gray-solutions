@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import ChapterHeading from './ChapterHeading.vue';
+
+const props = defineProps<{ active?: boolean }>();
 
 const emit = defineEmits<{
   (e: 'go', index: number): void;
@@ -17,6 +19,27 @@ function prevPanel() {
 function nextPanel() {
   panelIndex.value = Math.min(PANEL_COUNT - 1, panelIndex.value + 1);
 }
+
+/** Arrow keys step between exhibits — only while this chapter is the
+    open book page. At the ends the keys fall through to the book's own
+    page-turn handler (capture + no stopPropagation there). */
+function onKey(e: KeyboardEvent) {
+  if (!props.active) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  const t = e.target as HTMLElement | null;
+  if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+  if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
+    return;
+  if (e.key === 'ArrowRight' && panelIndex.value < PANEL_COUNT - 1) {
+    e.stopPropagation();
+    nextPanel();
+  } else if (e.key === 'ArrowLeft' && panelIndex.value > 0) {
+    e.stopPropagation();
+    prevPanel();
+  }
+}
+onMounted(() => window.addEventListener('keydown', onKey, true));
+onUnmounted(() => window.removeEventListener('keydown', onKey, true));
 </script>
 
 <template>

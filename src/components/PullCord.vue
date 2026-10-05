@@ -215,12 +215,15 @@ const retractLine = () => {
   gsap.to(line.value, { scaleY: 0, duration: 0.6, ease: 'sine.in' });
 };
 
-/** How far up the ball must go to hide fully inside the G emblem. */
-const ballHideY = () =>
-  -((line.value?.offsetHeight || LINE_H) + (knob.value?.offsetHeight || 36) + 16);
+/** How far up the ball must go to hide fully above the header. The cord's
+    top edge sits at the G's bottom (53px from viewport top); the knob's
+    layout origin is 112px below that, so y must clear -(53 + 112) = -165.
+    -200 parks it 35px above the viewport top — fully hidden, never
+    overlapping the logo. (Matches the CSS initial parked transform.) */
+const ballHideY = () => -200;
 
-/** Park the ball up inside the G emblem (clipped, invisible) — it lives
-    in there until the string has dropped. */
+/** Park the ball up above the header (fully hidden) — it lives up there
+    until the string has dropped, so it never overlaps the logo. */
 const parkBall = () => {
   if (!knob.value || !line.value) return;
   gsap.killTweensOf(knob.value);

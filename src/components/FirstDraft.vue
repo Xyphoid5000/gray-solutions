@@ -9,7 +9,7 @@
  * four marks; read them in order against the pages and you've got the
  * phone PIN (4132).
  */
-import { ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { useModalA11y } from '../composables/useModalA11y';
 
 const open = ref(false);
@@ -116,6 +116,38 @@ function onSwipeEnd(e: TouchEvent) {
 function toggleUV() {
   uvOn.value = !uvOn.value;
 }
+
+/** Arrow-key page turns, active only while the draft is open.
+    Never hijacks arrows when typing in a field. */
+function onArrowKeys(e: KeyboardEvent) {
+  const t = e.target as HTMLElement | null;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    nextPage();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    prevPage();
+  }
+}
+
+/** The arrow listener lives only while the modal is open — attached on
+    open, detached on close, and always cleaned up on unmount. */
+let stopArrowWatch: (() => void) | null = null;
+onMounted(() => {
+  stopArrowWatch = watch(
+    open,
+    (isOpen) => {
+      if (isOpen) document.addEventListener('keydown', onArrowKeys);
+      else document.removeEventListener('keydown', onArrowKeys);
+    },
+    { immediate: true },
+  );
+});
+onUnmounted(() => {
+  document.removeEventListener('keydown', onArrowKeys);
+  stopArrowWatch?.();
+});
 </script>
 
 <template>

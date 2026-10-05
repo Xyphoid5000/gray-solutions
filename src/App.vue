@@ -72,8 +72,10 @@ function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
 }
 
-/** Tilt down: pages fall first, then the office carousel slides shelf→desk. */
-async function openBook() {
+/** Tilt down: pages fall first, then the office carousel slides shelf→desk.
+    With `instant`, it does the same thing minus the animation — used by
+    the contact section's re-read link. */
+async function openBook(instant = false) {
   if ((office.view === 'desk') || office.transitioning) return;
   // Re-entering always starts at chapter 1 with an empty pile.
   officeRef.value?.bookView?.resetBookView();
@@ -82,7 +84,7 @@ async function openBook() {
   if (isDark() && bonus.enabled && !bonus.candleGone) {
     bonus.candleLit = true;
   }
-  if (reducedMotion()) {
+  if (instant || reducedMotion()) {
     office.showDesk();
     window.scrollTo(0, 0);
     updateLights();
@@ -508,10 +510,13 @@ function matchGuyGag(level: 1 | 2 | 3) {
             interactions.guyFading = false;
           }));
           walkGuyTo(-160, 110, () => {
-            // The door closes (hard cut) and the amber glow fades.
+            // The door swings shut behind him, then the slab fades away.
             interactions.doorOpen = false;
-            stopGuy();
-            lightCandleAfterGag();
+            later(() => {
+              interactions.doorSlab = false;
+              stopGuy();
+              lightCandleAfterGag();
+            }, 750);
           });
         } else {
           interactions.guyFacing = -1;
@@ -524,14 +529,15 @@ function matchGuyGag(level: 1 | 2 | 3) {
       };
       if (doorway) {
         // He stops at the midpoint, delivers the line, and a plain dark
-        // slab door fades into the black in front of him — then a hard
-        // cut: the doorway is already open, blazing amber over the lit
-        // page beneath. He walks through silhouetted; the door stays
+        // slab door fades into the black in front of him — then it swings
+        // open on its hinge, revealing the doorway blazing amber over the
+        // lit page beneath. He walks through silhouetted; the door stays
         // open behind him until he comes back.
         later(() => {
           interactions.doorSlab = true;
           later(() => {
-            interactions.doorSlab = false;
+            // The slab stays mounted and swings open (CSS hinge) while
+            // the amber blaze fades up behind it.
             interactions.doorOpen = true;
             later(() => {
               interactions.guyFading = true;
@@ -540,7 +546,7 @@ function matchGuyGag(level: 1 | 2 | 3) {
                 // The open doorway holds a beat, then he's back.
                 later(afterComplaint, 1200);
               });
-            }, 450);
+            }, 750);
           }, 650);
         }, 1400);
       } else {
@@ -922,7 +928,7 @@ onUnmounted(() => {
   </main>
   <!-- Contact/about sections (below the Office carousel, shelf view only). -->
   <div v-if="office.view === 'shelf'" class="home-sections">
-    <Cover :is-bound="manuscriptBound" />
+    <Cover :is-bound="manuscriptBound" @open-book-instant="openBook(true)" />
   </div>
   <BindCinematic
     ref="bindCinematic"
@@ -956,10 +962,10 @@ onUnmounted(() => {
   <div class="pitch-black" :class="{ on: interactions.pitchBlack && !interactions.doorOpen }" aria-hidden="true"></div>
   <!-- The match guy's doorway (desktop gag levels). Closed: a plain
        flat dark slab faded into the black at the screen midpoint.
-       Open: a hard cut to a doorway blazing amber, revealing the lit
-       page beneath, with light spilling onto the floor. No swing, no
-       fire — the reveal is instant. -->
-  <div class="door-slab" :class="{ on: interactions.doorSlab }" aria-hidden="true"></div>
+       Open: the slab swings open on its hinge to a doorway blazing
+       amber, revealing the lit page beneath, with light spilling onto
+       the floor. No fire — the reveal is the swing. -->
+  <div class="door-slab" :class="{ on: interactions.doorSlab, open: interactions.doorOpen }" aria-hidden="true"></div>
   <svg
     class="pitch-door"
     :class="{ open: interactions.doorOpen }"

@@ -5,6 +5,7 @@ import AboutMe from './AboutMe.vue';
 import { contactSubmitted } from '../lib/contact';
 
 defineProps<{ isBound?: boolean }>();
+defineEmits(['open-book-instant']);
 
 /** After a successful send the visitor gets 3 seconds with the
     confirmation, then the whole contact section retires for the visit.
@@ -40,6 +41,15 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
+    <!-- Re-read line: lives under the contact section so it survives the
+         section's retirement after a send. Bound-only — the book has to
+         exist before anyone can open it again. -->
+    <p v-if="isBound" class="reread-line">
+      Miss something or want to read again?
+      <button type="button" class="reread-link" @click="$emit('open-book-instant')">
+        Open the book <span aria-hidden="true">&rarr;</span>
+      </button>
+    </p>
     <section v-reveal id="about" class="about-section" aria-label="About me">
       <div class="wrap">
         <AboutMe />

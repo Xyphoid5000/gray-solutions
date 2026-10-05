@@ -646,6 +646,10 @@ a {
   border-top: 2px solid var(--line);
   padding-top: 1.3rem;
   transition: border-color 0.5s;
+  cursor: pointer;
+}
+.arc-node {
+  cursor: pointer;
 }
 .arc-act.lit {
   border-top-color: var(--ember);
@@ -728,6 +732,12 @@ a {
   padding-top: 0;
   /* Stable height — the page shouldn't grow as the typewriter types. */
   min-height: 78svh;
+}
+/* Desktop: center like the paginated pages instead of top-aligning. */
+@media (min-width: 641px) {
+  .finale {
+    justify-content: center;
+  }
 }
 /* One continuous page — tight vertical rhythm. */
 .finale .kicker {
@@ -1135,19 +1145,20 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   }
 }
 .proof-page-btn {
-  background: rgba(208, 138, 78, 0.12);
-  border: 1px solid rgba(208, 138, 78, 0.45);
+  background: var(--ember);
+  border: 1px solid var(--ember);
   border-radius: 999px;
-  color: #e8cd96;
+  color: #14100a;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.04em;
-  padding: 0.55em 1.2em;
+  padding: 0.65em 1.4em;
   cursor: pointer;
-  transition: background 0.25s ease, opacity 0.25s ease;
+  transition: background 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
 }
 .proof-page-btn:hover:not(:disabled) {
-  background: rgba(208, 138, 78, 0.24);
+  background: var(--ember-bright, var(--ember));
+  transform: translateY(-1px);
 }
 .proof-page-btn:disabled {
   opacity: 0.35;
@@ -1174,19 +1185,20 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .arc-replay {
   display: block;
   margin: 1.5rem auto 0;
-  background: none;
-  border: 1px solid rgba(208, 138, 78, 0.45);
+  background: var(--ember);
+  border: 1px solid var(--ember);
   border-radius: 999px;
-  color: #e8cd96;
+  color: #14100a;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.06em;
-  padding: 0.55em 1.3em;
+  padding: 0.6em 1.4em;
   cursor: pointer;
-  transition: background 0.25s ease;
+  transition: background 0.25s ease, transform 0.25s ease;
 }
 .arc-replay:hover {
-  background: rgba(208, 138, 78, 0.16);
+  background: var(--ember-bright, var(--ember));
+  transform: translateY(-1px);
 }
 
 /* ---------- cover: the falling book ---------- */
@@ -1849,6 +1861,30 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   max-width: 54ch;
   margin: 0 0 2.6rem;
 }
+/* Re-read line under the contact section: small, quiet, persistent —
+   it stays after the contact section retires itself post-send. */
+.reread-line {
+  text-align: center;
+  padding: 0 1.5rem 4rem;
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.reread-link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.35em;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ember);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.reread-link:hover {
+  color: var(--ink);
+}
 
 /* ---------- contact form ---------- */
 .contact-form {
@@ -2059,7 +2095,7 @@ html[data-blacklight='on'] body::after {  content: '';
 }
 /* The match guy's doorway: a black overlay with a plain rectangular
    door hole masked through it, revealing the lit page beneath.
-   The reveal is a hard cut — no swing, no fade. */
+   Fades up behind the swinging slab; the swing is the reveal. */
 .pitch-door {
   position: fixed;
   inset: 0;
@@ -2074,26 +2110,32 @@ html[data-blacklight='on'] body::after {  content: '';
 }
 /* The closed door: a plain flat dark slab in a simple dark frame,
    standing at the screen midpoint. Fades into the dark just before
-   the reveal. */
+   the reveal, then swings open on a left-edge hinge to reveal the
+   doorway behind it. Layered above the blaze so the swing reads. */
 .door-slab {
   position: fixed;
   left: 44%;
   top: 40%;
   width: 12%;
   height: 36%;
-  z-index: 2000;
+  z-index: 2002;
   pointer-events: none;
   background: #0b0b0d;
   box-shadow: 0 0 0 4px #17171b, 0 0 60px rgba(0, 0, 0, 0.9);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transform-origin: left center;
+  transform: perspective(800px) rotateY(0deg);
+  transition: opacity 0.3s ease, transform 0.7s cubic-bezier(0.6, 0, 0.3, 1);
 }
 .door-slab.on {
   opacity: 1;
 }
+.door-slab.open {
+  transform: perspective(800px) rotateY(-72deg);
+}
 /* The open doorway blazes amber: white-hot core over the lit page,
    soft falloff at the edges, and light spilling onto the floor in
-   front of it. Hard cut on open; the glow fades on close. */
+   front of it. Fades up behind the swinging slab; fades on close. */
 .doorway {
   position: fixed;
   inset: 0;

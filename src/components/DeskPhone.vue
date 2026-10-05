@@ -508,7 +508,7 @@ onUnmounted(() => {
             <button type="button" class="snake-back" @click="screen = 'home'" aria-label="Back">‹</button>
             <span>Contacts</span>
           </div>
-          <ul class="contacts-list">
+          <ul class="contacts-list" data-lenis-prevent>
             <li v-for="c in contacts" :key="c.id">
               <button type="button" class="contact-row" @click="startCall(c)">
                 <span class="contact-avatar" aria-hidden="true">{{ c.name.charAt(0) }}</span>
@@ -526,7 +526,7 @@ onUnmounted(() => {
             <button type="button" class="snake-back" @click="screen = 'home'" aria-label="Back">‹</button>
             <span>Settings</span>
           </div>
-          <div class="set-scroll">
+          <div class="set-scroll" data-lenis-prevent>
             <label class="set-row">
               <span class="set-name">Site name</span>
               <input
