@@ -243,10 +243,11 @@ function onBindDone() {
   markBookIntroSeen();
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
+  // Switch views and scroll in the same frame — the shelf lands and we
+  // glide to contact without an intermediate scroll-to-top.
+  closeBook();
   requestAnimationFrame(() => {
-    setTimeout(() => {
-      document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
-    }, 600);
+    document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
   });
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
@@ -259,7 +260,6 @@ function onBindBlackout() {
   markManuscriptBound();
   // Reset the book view so reopening starts fresh, not at the old desk state.
   officeRef.value?.bookView?.resetBookView();
-  closeBook();
 }
 /** The binding's shelf beat: mount the home page behind the cinematic
     so the 3D book files into the real bookshelf. */

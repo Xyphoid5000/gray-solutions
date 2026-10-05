@@ -773,7 +773,7 @@ html[data-theme='dark'] .bookshelf-hero {
   line-height: 1;
   margin-bottom: 0.5rem;
 }
-/* 3D book overlay: dims the shelf, drops the real Book.vue in. */
+/* 3D book overlay: drops the real Book.vue in (no dimming). */
 .bs-book-overlay {
   position: absolute;
   inset: 0;
@@ -781,7 +781,7 @@ html[data-theme='dark'] .bookshelf-hero {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 6, 3, 0.85);
+  background: transparent;
   animation: bs-overlay-in 0.25s ease;
 }
 @keyframes bs-overlay-in {
