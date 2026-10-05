@@ -142,8 +142,14 @@ async function submitContactForm(event: SubmitEvent) {
 
 <template>
   <div v-if="sent" class="contact-success" role="status">
-    <p class="contact-success-title">Message sent.</p>
-    <p class="contact-success-sub">Got it — I read every note myself and reply within a couple of days.</p>
+    <span class="contact-success-check" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="28" height="28">
+        <circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="2" />
+        <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
+    <p class="contact-success-title">Thank you for choosing Gray Solutions.</p>
+    <p class="contact-success-sub">Your message has been sent. Chris will follow up with you within 3 days to discuss your project.</p>
   </div>
   <form v-else class="contact-form" @submit.prevent="submitContactForm">
     <input name="company" type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
