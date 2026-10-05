@@ -730,8 +730,8 @@ a {
 .finale {
   justify-content: flex-start;
   padding-top: 0;
-  /* Stable height — the page shouldn't grow as the typewriter types. */
-  min-height: 78svh;
+  /* Same as the paginated pages — the book's pages are one size. */
+  min-height: 74svh;
 }
 /* Desktop: center like the paginated pages instead of top-aligning. */
 @media (min-width: 641px) {
@@ -2993,6 +2993,41 @@ html[data-theme='dark'] .page-tab {
   .pile-scatter-card {
     width: 84px;
     height: 116px;
+  }
+
+  /* Finale: scale down to match the paginated page size on mobile. */
+  .finale {
+    min-height: 59svh;
+  }
+  .finale .h-display {
+    font-size: 1.15rem;
+    margin-bottom: 0.7rem;
+  }
+  .finale .fin h3 {
+    font-size: 1.05rem;
+    margin-bottom: 0.4rem;
+  }
+  .finale .fin > p {
+    font-size: 0.85rem;
+    margin-bottom: 0.7rem;
+    line-height: 1.45;
+  }
+  .finale .kicker {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .finale .fin {
+    margin-top: 0.8rem;
+  }
+  .finale .fin-actions {
+    margin-top: 0.7rem;
+  }
+  .finale .fin-actions .btn {
+    padding: 0.7rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  .finale p.ui-late {
+    margin-bottom: 0.7rem;
   }
 
   .read-pile .pile-page .pile-tab-mark {
