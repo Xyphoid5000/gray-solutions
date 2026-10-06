@@ -456,101 +456,23 @@ a {
   gap: clamp(1.5rem, 4vw, 3.5rem);
   align-items: start;
 }
-/* The laptop, from a slightly elevated view: the screen leans back a
-   touch and the keyboard deck lies open below it, seen from above. */
-.laptop {
-  perspective: 1600px;
-}
-.laptop-screen {
+/* The laptop: Chris's photo frame with the site screenshot laid into
+   the screen area (measured at 12.4% / 14.9% / 75.2% x 42.6%). */
+.laptop-photo {
   position: relative;
-  z-index: 1;
-  transform: rotateX(9deg);
-  transform-origin: 50% 100%;
-  background: #0b0908;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px 14px 0 0;
-  overflow: hidden;
-  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.7);
+  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.45));
 }
-.laptop-deck {
-  position: relative;
-  height: clamp(100px, 12vw, 160px);
-  margin-top: -2px;
-  transform: rotateX(55deg);
-  transform-origin: 50% 0;
-  background: linear-gradient(180deg, #3a332b 0%, #26211b 55%, #161210 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-top: none;
-  border-radius: 4px 4px 26px 26px;
-  box-shadow: 0 34px 60px -18px rgba(0, 0, 0, 0.65);
-}
-.laptop-keys {
-  position: absolute;
-  top: 9%;
-  left: 9%;
-  right: 9%;
-  height: 50%;
-  border-radius: 8px;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(242, 236, 223, 0.07) 0 3px,
-      transparent 3px 12px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(242, 236, 223, 0.05) 0 3px,
-      transparent 3px 17px
-    ),
-    #100d0a;
-  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.65);
-}
-.laptop-pad {
-  position: absolute;
-  bottom: 10%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 26%;
-  height: 24%;
-  border-radius: 8px;
-  background: rgba(242, 236, 223, 0.05);
-  border: 1px solid rgba(242, 236, 223, 0.09);
-}
-/* Browser chrome across the top of the screen. */
-.device-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  background: #1b1712;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 0.6rem 0.9rem;
-}
-.device-dot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background: rgba(242, 236, 223, 0.22);
-  flex: none;
-}
-.device-dot:first-child {
-  background: rgba(208, 138, 78, 0.75);
-}
-.device-url {
-  margin-left: 0.5rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  color: rgba(242, 236, 223, 0.55);
-  background: rgba(242, 236, 223, 0.07);
-  border-radius: 999px;
-  padding: 0.2rem 0.8rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.device-view img {
+.laptop-photo-frame {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: auto;
+}
+.laptop-photo-shot {
+  position: absolute;
+  left: 12.4%;
+  top: 14.9%;
+  width: 75.2%;
+  height: 42.6%;
   object-fit: cover;
   object-position: top center;
 }

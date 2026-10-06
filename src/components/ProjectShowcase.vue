@@ -9,22 +9,9 @@ defineProps<{ project: Project }>();
 
 <template>
   <article class="project-showcase" :aria-label="project.name">
-    <div class="laptop" role="img" :aria-label="project.imageAlt">
-      <div class="laptop-screen">
-        <div class="device-bar" aria-hidden="true">
-          <span class="device-dot"></span>
-          <span class="device-dot"></span>
-          <span class="device-dot"></span>
-          <span class="device-url">{{ project.url.replace('https://', '') }}</span>
-        </div>
-        <div class="device-view">
-          <img :src="project.image" :alt="''" loading="lazy" />
-        </div>
-      </div>
-      <div class="laptop-deck" aria-hidden="true">
-        <div class="laptop-keys"></div>
-        <div class="laptop-pad"></div>
-      </div>
+    <div class="laptop-photo" role="img" :aria-label="project.imageAlt">
+      <img class="laptop-photo-frame" src="/projects/laptop-frame.png" alt="" />
+      <img class="laptop-photo-shot" :src="project.image" :alt="''" loading="lazy" />
     </div>
     <div class="project-body">
       <p class="ch-kicker">{{ project.kicker }}</p>
