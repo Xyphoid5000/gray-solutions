@@ -728,6 +728,20 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   color: rgba(232, 205, 150, 0.85);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.9);
 }
+/* Light mode: the day mural sits behind this text, so the gold needs to
+   go deep and the dark glow has to go. */
+html[data-theme='light'] .bs-hint,
+html[data-theme='light'] .bs-ms-label,
+html[data-theme='light'] .bs-reopen {
+  color: #7a4d1c;
+}
+html[data-theme='light'] .bs-hint {
+  text-shadow: none;
+}
+html[data-theme='light'] .bs-reopen {
+  background: rgba(176, 106, 42, 0.1);
+  border-color: rgba(176, 106, 42, 0.5);
+}
 .bs-reopen {
   background: rgba(208, 138, 78, 0.12);
   border: 1px solid rgba(208, 138, 78, 0.45);
