@@ -60,10 +60,17 @@ function goContactRoad() {
   else window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-/** Route transition: a sheet of manuscript paper covers the old page and
-    types out the incoming route's name before the swap. Skipped on first
-    load and on same-page hash scrolls. */
-const routeTransition = ref({ active: false, typed: '', done: false });
+/** Route transition: a sheet of manuscript paper lays down in 3D and
+    types out the incoming route's name as a chapter title before the
+    swap. Skipped on first load and on same-page hash scrolls. */
+const routeTransition = ref({
+  active: false,
+  lifting: false,
+  typed: '',
+  done: false,
+  letter: '',
+  kicker: '',
+});
 let transitionGen = 0;
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -79,11 +86,20 @@ function routeLabel(name: unknown): string {
 router.beforeEach(async (to, from) => {
   if (from === START_LOCATION || to.path === from.path) return true;
   const gen = ++transitionGen;
-  noScroll(true);
-  routeTransition.value = { active: true, typed: '', done: false };
-  await wait(reducedMotion() ? 60 : 380);
+  const calm = reducedMotion();
   const label = routeLabel(to.name);
-  if (reducedMotion()) {
+  noScroll(true);
+  routeTransition.value = {
+    active: true,
+    lifting: false,
+    typed: '',
+    done: false,
+    letter: label.charAt(0),
+    kicker: 'Turning the page',
+  };
+  // Let the sheet lay down before the first keystroke.
+  await wait(calm ? 60 : 700);
+  if (calm) {
     routeTransition.value.typed = label;
   } else {
     // Finale-style typewriter: character by character, breath on spaces.
@@ -95,11 +111,15 @@ router.beforeEach(async (to, from) => {
   }
   if (gen !== transitionGen) return true;
   routeTransition.value.done = true;
-  await wait(450);
+  await wait(calm ? 120 : 450);
+  if (gen !== transitionGen) return true;
+  // Lift the sheet off the page, then let the new page through.
+  routeTransition.value.lifting = true;
+  await wait(calm ? 60 : 620);
   return true;
 });
 router.afterEach(() => {
-  // The new page is in place underneath — lift the paper.
+  // The new page is in place underneath — the sheet is gone.
   routeTransition.value.active = false;
   noScroll(false);
 });
@@ -970,12 +990,15 @@ onUnmounted(() => {
     </button>
   </div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
-  <!-- Paper wipe between routes: covers the old page, types the new
-       route's name, lifts on the new page. -->
+  <!-- Paper wipe between routes: the sheet lays down in 3D, types the
+       new route's name as a chapter title, then lifts off. -->
   <RouteTransition
     :active="routeTransition.active"
+    :lifting="routeTransition.lifting"
     :typed="routeTransition.typed"
     :done="routeTransition.done"
+    :letter="routeTransition.letter"
+    :kicker="routeTransition.kicker"
   />
   <main id="main-content">
   <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>

@@ -379,34 +379,56 @@ a {
   }
 }
 
-/* Route transition: a full-screen sheet of manuscript paper. The router
-   guard covers the old page, types the route name, then lifts the sheet
-   on the new page. Paper + ink match the manuscript surfaces. */
-.route-paper {
+/* Route transition: a full-screen sheet of manuscript paper that lays
+   down in 3D, types the route name as a chapter title, then lifts off.
+   Paper + ink match the manuscript surfaces; the outlined lead letter
+   gets a dark stroke so it reads on the sheet. */
+.route-paper-stage {
   position: fixed;
   inset: 0;
   z-index: 2500;
+  perspective: 1400px;
+  pointer-events: all;
+}
+.route-paper {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
   background: var(--paper);
   color: #1c1712;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease;
+  transform-origin: 50% 100%;
+  animation: paper-lay-down 0.65s var(--ease-out) forwards;
 }
-.route-paper.on {
-  opacity: 1;
-  pointer-events: all;
+.route-paper.lift {
+  animation: paper-lift-off 0.6s cubic-bezier(0.5, 0, 0.75, 0) forwards;
 }
-.route-paper-label {
-  font-family: var(--serif);
-  font-weight: 500;
-  font-size: clamp(2.5rem, 8vw, 5rem);
-  line-height: 1.05;
-  letter-spacing: -0.01em;
+@keyframes paper-lay-down {
+  from {
+    opacity: 0;
+    transform: rotateX(26deg) translateY(-6%) scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: rotateX(0deg) translateY(0) scale(1);
+  }
 }
-.route-paper .type-cursor {
-  font-size: clamp(2.5rem, 8vw, 5rem);
+@keyframes paper-lift-off {
+  from {
+    opacity: 1;
+    transform: rotateX(0deg) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: rotateX(-22deg) translateY(-10%) scale(1.06);
+  }
+}
+.route-paper .ch-num {
+  -webkit-text-stroke: 1px rgba(28, 23, 18, 0.32);
+}
+.route-ch {
+  width: min(720px, 100% - 3rem);
+  margin-bottom: 0;
 }
 .hero-sub {
   max-width: 60ch;
