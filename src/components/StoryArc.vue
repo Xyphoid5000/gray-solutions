@@ -236,29 +236,19 @@ onMounted(() => {
   if (props.scrollDriven) {
     // Routed chapter page: the original scroll-driven design. The page
     // scrolls, so the pen draws the curve with the reader — every scroll
-    // position maps to a draw progress via setProgress.
+    // position maps to a draw progress via setProgress. The scrub ends at
+    // the page's real max scroll, so the finale always lands no matter
+    // what follows the stage (no viewport-guessing, no margin hacks).
     const scrub = ScrollTrigger.create({
       trigger: '.arc-stage',
       start: 'top 72%',
-      end: 'bottom 62%',
+      end: 'max',
       onUpdate: (self) => {
         spineProgress.value = self.progress;
         setProgress(self.progress);
       },
     });
     spineTriggers.push(scrub);
-    // The scrub's end position can sit below max scroll on a short page —
-    // guarantee the finale lands when the last act arrives. Scrolling back
-    // up hands control to the scrub's onUpdate again.
-    const ender = ScrollTrigger.create({
-      trigger: '.arc-stage .arc-act:last-child',
-      start: 'top 85%',
-      onEnter: () => {
-        spineProgress.value = 1;
-        setProgress(1);
-      },
-    });
-    spineTriggers.push(ender);
     return;
   }
 
