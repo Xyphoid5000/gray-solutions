@@ -3329,6 +3329,56 @@ html[data-theme='dark'] .page-tab {
   height: 2px;
   background: var(--ember);
   border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+/* The hamburger morphs into an X while its menu is open. */
+.nav-hamburger.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.nav-hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+.nav-hamburger.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+/* Desktop hamburger: About and Projects live here. Hidden on mobile,
+   where the full menu has them. */
+.nav-hamburger-desktop {
+  display: none;
+  position: static;
+  transform: none;
+}
+@media (min-width: 641px) {
+  .nav-hamburger-desktop {
+    display: flex;
+  }
+}
+/* Desktop dropdown for the About/Projects pages. */
+.nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 1rem;
+  min-width: 12rem;
+  background: var(--bg, #14100a);
+  border: 1px solid rgba(208, 138, 78, 0.2);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  z-index: 1001;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.nav-dropdown-menu button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0.9rem 1.2rem;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-dropdown-menu button:hover {
+  background: rgba(208, 138, 78, 0.1);
 }
 .nav-mobile-menu {
   display: none;
