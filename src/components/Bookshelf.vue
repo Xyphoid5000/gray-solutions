@@ -149,15 +149,15 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
     :aria-hidden="backdrop || undefined"
     aria-label="Bookshelf"
   >
+    <!-- Hanging shop sign high on the wall — landing page only. -->
+    <div v-if="showBanner" class="bs-banner" aria-hidden="true">
+      <span class="bs-banner-rod"></span>
+      <span class="bs-banner-cord left"></span>
+      <span class="bs-banner-cord right"></span>
+      <span class="bs-banner-cloth">{{ siteName }}</span>
+    </div>
 
     <div class="bs-case" aria-hidden="true">
-      <!-- Hanging shop sign on the wall above the case — landing page only. -->
-      <div v-if="showBanner" class="bs-banner" aria-hidden="true">
-        <span class="bs-banner-rod"></span>
-        <span class="bs-banner-cord left"></span>
-        <span class="bs-banner-cord right"></span>
-        <span class="bs-banner-cloth">{{ siteName }}</span>
-      </div>
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
         <div v-if="!sandwich" class="bs-books">
@@ -448,11 +448,11 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   border-radius: 4px 4px 0 0;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
 }
-/* Hanging shop-sign banner on the wall above the case. Canvas cloth on
-   cords from a wood rod — catches the candlelight in dark mode. */
+/* Hanging shop-sign banner high on the wall. Canvas cloth on cords
+   from a wood rod — catches the candlelight in dark mode. */
 .bs-banner {
   position: absolute;
-  bottom: calc(100% + 30px);
+  top: clamp(88px, 13vh, 132px);
   left: 50%;
   transform: translateX(-50%);
   width: min(360px, 76vw);
