@@ -88,6 +88,7 @@ function routeTitle(name: unknown): { label: string; letter: string } {
     case 'premise': return { label: 'The Premise', letter: '1' };
     case 'craft': return { label: 'The Craft', letter: '2' };
     case 'arc': return { label: 'The Arc', letter: '4' };
+    case 'pricing': return { label: 'Pricing', letter: '$' };
     default: return { label: 'Home', letter: 'H' };
   }
 }

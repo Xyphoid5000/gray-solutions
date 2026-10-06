@@ -23,7 +23,7 @@ const menuOpen = ref(false);
 /** Desktop "more pages" menu open state. */
 const desktopMenuOpen = ref(false);
 function closeMenu() { menuOpen.value = false; }
-function goContact() { closeMenu(); emit('contact'); }
+function goContact() { closeMenu(); desktopMenuOpen.value = false; emit('contact'); }
 function goHome() { closeMenu(); desktopMenuOpen.value = false; emit('home'); }
 /** Chapter pages and About are plain routes — no binding logic, just go. */
 function goPath(path: string) {
@@ -215,6 +215,8 @@ function retractCord(done: () => void) {
       <button type="button" @click="goPath('/craft')">The Craft</button>
       <button type="button" @click="goPath('/projects')">The Proof</button>
       <button type="button" @click="goPath('/arc')">The Arc</button>
+      <button type="button" @click="goPath('/pricing')">Pricing</button>
+      <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
     </div>
     <!-- Mobile hamburger. -->
@@ -232,11 +234,12 @@ function retractCord(done: () => void) {
     <div v-if="menuOpen" class="nav-mobile-menu">
       <div class="nav-menu-kicker" aria-hidden="true">Menu</div>
       <button type="button" @click="goHome">Home</button>
-      <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/premise')">The Premise</button>
       <button type="button" @click="goPath('/craft')">The Craft</button>
       <button type="button" @click="goPath('/projects')">The Proof</button>
       <button type="button" @click="goPath('/arc')">The Arc</button>
+      <button type="button" @click="goPath('/pricing')">Pricing</button>
+      <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
     </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
