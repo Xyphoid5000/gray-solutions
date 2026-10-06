@@ -2092,6 +2092,11 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .page {
   padding-top: calc(var(--nav-h) + 1rem);
 }
+/* The arc's deep bottom padding is pagination breathing room for the
+   book — the routed page doesn't need it. */
+.page #arc {
+  padding-bottom: 0;
+}
 
 .cover-contact {
   position: relative;
