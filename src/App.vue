@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { START_LOCATION, useRoute, useRouter } from 'vue-router';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SiteNav from './components/SiteNav.vue';
+import RouteTransition from './components/RouteTransition.vue';
 import Cover from './components/Cover.vue';
 import CoverHero from './components/CoverHero.vue';
 import Office from './components/Office.vue';
@@ -58,6 +59,50 @@ function goContactRoad() {
   if (route.path !== '/contact') router.push('/contact');
   else window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+/** Route transition: a sheet of manuscript paper covers the old page and
+    types out the incoming route's name before the swap. Skipped on first
+    load and on same-page hash scrolls. */
+const routeTransition = ref({ active: false, typed: '', done: false });
+let transitionGen = 0;
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function routeLabel(name: unknown): string {
+  switch (name) {
+    case 'contact': return 'Contact';
+    case 'about': return 'About';
+    case 'projects': return 'Projects';
+    default: return 'Home';
+  }
+}
+
+router.beforeEach(async (to, from) => {
+  if (from === START_LOCATION || to.path === from.path) return true;
+  const gen = ++transitionGen;
+  noScroll(true);
+  routeTransition.value = { active: true, typed: '', done: false };
+  await wait(reducedMotion() ? 60 : 380);
+  const label = routeLabel(to.name);
+  if (reducedMotion()) {
+    routeTransition.value.typed = label;
+  } else {
+    // Finale-style typewriter: character by character, breath on spaces.
+    for (const ch of label) {
+      if (gen !== transitionGen) return true; // superseded — let it go
+      routeTransition.value.typed += ch;
+      await wait((ch === ' ' ? 65 : 40) + Math.random() * 28);
+    }
+  }
+  if (gen !== transitionGen) return true;
+  routeTransition.value.done = true;
+  await wait(450);
+  return true;
+});
+router.afterEach(() => {
+  // The new page is in place underneath — lift the paper.
+  routeTransition.value.active = false;
+  noScroll(false);
+});
 const showOpenTransition = ref(false);
 /** Where the manuscript is floating — the page drop starts here. */
 const manuscriptDropY = ref(0);
@@ -925,6 +970,13 @@ onUnmounted(() => {
     </button>
   </div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
+  <!-- Paper wipe between routes: covers the old page, types the new
+       route's name, lifts on the new page. -->
+  <RouteTransition
+    :active="routeTransition.active"
+    :typed="routeTransition.typed"
+    :done="routeTransition.done"
+  />
   <main id="main-content">
   <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>
   <!-- The manuscript experience owns `/`; sub-pages render below it. -->

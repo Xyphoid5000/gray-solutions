@@ -378,6 +378,36 @@ a {
     opacity: 0;
   }
 }
+
+/* Route transition: a full-screen sheet of manuscript paper. The router
+   guard covers the old page, types the route name, then lifts the sheet
+   on the new page. Paper + ink match the manuscript surfaces. */
+.route-paper {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: #1c1712;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.route-paper.on {
+  opacity: 1;
+  pointer-events: all;
+}
+.route-paper-label {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.route-paper .type-cursor {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+}
 .hero-sub {
   max-width: 60ch;
   color: var(--muted);
