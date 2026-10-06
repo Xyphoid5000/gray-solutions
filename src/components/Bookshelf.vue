@@ -457,7 +457,8 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   transform: translateX(-50%);
   width: min(360px, 76vw);
   pointer-events: none;
-  z-index: 1;
+  /* Above the backdrop blur veil — the name has to read. */
+  z-index: 5;
 }
 .bs-banner-rod {
   position: relative;
