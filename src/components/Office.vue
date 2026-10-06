@@ -18,14 +18,30 @@ if (typeof MutationObserver !== 'undefined') {
   themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 }
 
-/** Background mural (3 versions):
+/** Reactive mobile flag — small screens get the short-candle mural
+    variants so the desk keeps its depth perception. */
+const isMobileBg = ref(
+  typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches,
+);
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'undefined') {
+  const mq = window.matchMedia('(max-width: 640px)');
+  const onMq = (e: MediaQueryListEvent) => { isMobileBg.value = e.matches; };
+  if (typeof mq.addEventListener !== 'undefined') mq.addEventListener('change', onMq);
+  else mq.addListener(onMq);
+}
+
+/** Background mural (3 versions + mobile short-candle variants):
     - Bonus off: day, no candle.
     - Bonus on, day: candle unlit.
     - Bonus on, night: candle lit (night only shows with candle). */
 const shelfBg = computed(() => {
   let file = 'office-wall-day.jpg';
   if (bonus.enabled && !bonus.candleGone) {
-    file = isDark.value ? 'office-wall-night-candle-lit.jpg' : 'office-wall-day-candle.jpg';
+    if (isMobileBg.value) {
+      file = isDark.value ? 'office-wall-night-candle-lit-mobile.jpg' : 'office-wall-day-candle-mobile.jpg';
+    } else {
+      file = isDark.value ? 'office-wall-night-candle-lit.jpg' : 'office-wall-day-candle.jpg';
+    }
   }
   return `url('/${file}') center / cover no-repeat`;
 });
