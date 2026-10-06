@@ -17,10 +17,8 @@ withDefaults(
     /** Pure scenery: dim, out-of-focus bookcase behind the home hero.
         No titles, no foreground, no interaction. */
     backdrop?: boolean;
-    /** Hang the Gray Solutions shop-sign banner above the case. */
-    showBanner?: boolean;
   }>(),
-  { interactive: false, showManuscript: true, backdrop: false, showBanner: false },
+  { interactive: false, showManuscript: true, backdrop: false },
 );
 
 const emit = defineEmits(['open-book']);
@@ -149,14 +147,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
     :aria-hidden="backdrop || undefined"
     aria-label="Bookshelf"
   >
-    <!-- Hanging shop sign high on the wall — landing page only. -->
-    <div v-if="showBanner" class="bs-banner" aria-hidden="true">
-      <span class="bs-banner-rod"></span>
-      <span class="bs-banner-cord left"></span>
-      <span class="bs-banner-cord right"></span>
-      <span class="bs-banner-cloth">{{ siteName }}</span>
-    </div>
-
     <div class="bs-case" aria-hidden="true">
       <div class="bs-cornice"></div>
       <div class="bs-shelf">
@@ -447,79 +437,6 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   background: linear-gradient(180deg, #54341b 0%, #33200f 70%, #211307 100%);
   border-radius: 4px 4px 0 0;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-}
-/* Hanging shop-sign banner high on the wall. Canvas cloth on cords
-   from a wood rod — catches the candlelight in dark mode. */
-.bs-banner {
-  position: absolute;
-  top: clamp(88px, 13vh, 132px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(360px, 76vw);
-  pointer-events: none;
-  /* Above the backdrop blur veil — the name has to read. */
-  z-index: 5;
-}
-.bs-banner-rod {
-  position: relative;
-  z-index: 2;
-  display: block;
-  height: 10px;
-  margin: 0 -12px;
-  border-radius: 5px;
-  background: linear-gradient(180deg, #5f3d1f 0%, #33200f 60%, #1e1107 100%);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
-}
-.bs-banner-rod::before,
-.bs-banner-rod::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #6f4525, #2b1a0e 75%);
-  transform: translateY(-50%);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-}
-.bs-banner-rod::before { left: -18px; }
-.bs-banner-rod::after { right: -18px; }
-.bs-banner-cord {
-  position: absolute;
-  top: 10px;
-  width: 2px;
-  height: 24px;
-  background: linear-gradient(180deg, rgba(70, 45, 22, 0.95), rgba(70, 45, 22, 0.5));
-}
-.bs-banner-cord.left { left: 11%; }
-.bs-banner-cord.right { right: 11%; }
-.bs-banner-cloth {
-  display: block;
-  margin-top: 24px;
-  padding: 0.8rem 1rem 0.9rem;
-  text-align: center;
-  font-family: var(--serif);
-  font-weight: 700;
-  font-size: clamp(1.05rem, 4.5vw, 1.45rem);
-  letter-spacing: 0.3em;
-  text-indent: 0.3em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #2c2013;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(120, 85, 40, 0.14)),
-    repeating-linear-gradient(45deg, rgba(120, 90, 50, 0.06) 0 2px, transparent 2px 4px),
-    linear-gradient(180deg, #eddfc3 0%, #dcc9a1 100%);
-  border: 1px solid rgba(90, 60, 30, 0.4);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-html[data-theme='dark'] .bs-banner-cloth {
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.5),
-    0 0 34px rgba(208, 138, 78, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 .bs-shelf {
   margin-top: 26px;
