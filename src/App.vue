@@ -159,6 +159,12 @@ const boundBookDrop = ref(0);
 function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
 }
+/** The home page is a fixed scene — its scrollbar is hidden, not needed. */
+watch(
+  isHome,
+  (home) => document.documentElement.classList.toggle('gs-no-scrollbar', home),
+  { immediate: true },
+);
 
 /** Tilt down: pages fall first, then the office carousel slides shelf→desk.
     With `instant`, it does the same thing minus the animation — used by
@@ -1140,6 +1146,13 @@ onUnmounted(() => {
 <style>
 .gs-no-scroll {
   overflow: hidden;
+}
+/* The home page never needs its scrollbar — hide it entirely there. */
+.gs-no-scrollbar {
+  scrollbar-width: none;
+}
+.gs-no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 /* Floating settings shortcut: bottom-right, only when the user has
    changed a setting and the book is closed. */

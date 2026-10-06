@@ -28,7 +28,7 @@ export const PROJECTS: Project[] = [
       'A local auto glass company stuck on a generic Squarespace template. I rebuilt it as a cinematic custom site — the same business, an entirely different first impression.',
     tech: ['Vue 3', 'Vite', 'GSAP', 'Design'],
     story:
-      'A cracked windshield is a bad day, so the site treats it like the start of an adventure instead of an errand. Scroll-driven storytelling carries the visitor from the damage to the fix — a cracked windshield feels like the opening scene, not a chore. And the whole thing was a trade: I rebuilt the site, my father-in-law replaced my windshield.',
+      'A cracked windshield is a bad day, so the site treats it like the start of an adventure instead of an errand. Scroll-driven storytelling carries the visitor from the damage to the fix — a cracked windshield feels like the opening scene, not a chore.',
   },
   {
     slug: 'gray-solutions',

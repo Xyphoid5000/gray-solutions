@@ -9,17 +9,22 @@ defineProps<{ project: Project }>();
 
 <template>
   <article class="project-showcase" :aria-label="project.name">
-    <div class="device" role="img" :aria-label="project.imageAlt">
-      <div class="device-bar" aria-hidden="true">
-        <span class="device-dot"></span>
-        <span class="device-dot"></span>
-        <span class="device-dot"></span>
-        <span class="device-url">{{ project.url.replace('https://', '') }}</span>
+    <div class="laptop" role="img" :aria-label="project.imageAlt">
+      <div class="laptop-screen">
+        <div class="device-bar" aria-hidden="true">
+          <span class="device-dot"></span>
+          <span class="device-dot"></span>
+          <span class="device-dot"></span>
+          <span class="device-url">{{ project.url.replace('https://', '') }}</span>
+        </div>
+        <div class="device-view">
+          <img :src="project.image" :alt="''" loading="lazy" />
+        </div>
       </div>
-      <div class="device-screen">
-        <img :src="project.image" :alt="''" loading="lazy" />
+      <div class="laptop-deck" aria-hidden="true">
+        <div class="laptop-keys"></div>
+        <div class="laptop-pad"></div>
       </div>
-      <div class="device-base" aria-hidden="true"></div>
     </div>
     <div class="project-body">
       <p class="ch-kicker">{{ project.kicker }}</p>
@@ -31,9 +36,6 @@ defineProps<{ project: Project }>();
       </ul>
       <h4 class="project-subhead">How the story was written</h4>
       <p class="project-story">{{ project.story }}</p>
-      <a class="btn btn-ghost project-visit" :href="project.url" target="_blank" rel="noopener">
-        Visit the site <span class="arrow" aria-hidden="true">&rarr;</span>
-      </a>
     </div>
   </article>
 </template>

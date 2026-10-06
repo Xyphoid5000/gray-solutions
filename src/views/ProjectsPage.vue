@@ -19,10 +19,11 @@ import { PROJECTS } from '../lib/projects';
         </p>
         <div class="projects-list">
           <ProjectShowcase
-            v-for="project in PROJECTS"
+            v-for="(project, i) in PROJECTS"
             :key="project.slug"
             v-reveal
             :project="project"
+            :class="{ flip: i % 2 === 1 }"
           />
         </div>
       </div>
