@@ -3387,6 +3387,32 @@ html[data-theme='dark'] .page-tab {
 .nav-dropdown-menu button:hover {
   background: rgba(208, 138, 78, 0.1);
 }
+/* Chapter-style menus: serif items under an ember kicker, echoing the
+   chapter headings. */
+.nav-menu-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ember);
+  padding: 0.9rem 1.2rem 0.25rem;
+  pointer-events: none;
+}
+.nav-menu-kicker::before {
+  content: '';
+  width: 1.6rem;
+  height: 1px;
+  background: var(--ember);
+  display: inline-block;
+}
+.nav-dropdown-menu button,
+.nav-mobile-menu button {
+  font-family: var(--serif);
+  font-size: 1.12rem;
+}
 .nav-mobile-menu {
   display: none;
   position: absolute;

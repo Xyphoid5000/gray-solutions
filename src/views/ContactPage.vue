@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ContactForm from '../components/ContactForm.vue';
+import ChapterHeading from '../components/ChapterHeading.vue';
 import { manuscriptBound } from '../lib/manuscript';
 </script>
 
@@ -7,10 +8,11 @@ import { manuscriptBound } from '../lib/manuscript';
   <div class="page">
     <section id="contact" class="cover-contact" aria-label="Contact">
       <div class="wrap">
-        <p v-reveal class="contact-kicker">Contact</p>
-        <h2 v-reveal class="contact-title">
-          Let&rsquo;s write <em>your story.</em>
-        </h2>
+        <ChapterHeading
+          index="C"
+          kicker="Contact"
+          title="Let&rsquo;s write <em>your story.</em>"
+        />
         <p v-reveal class="contact-sub">
           Tell me about your business, your goals, and where your website
           stands today. Everything below is wrapped into one email —

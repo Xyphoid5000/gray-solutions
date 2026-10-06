@@ -207,6 +207,7 @@ function retractCord(done: () => void) {
       <span></span><span></span><span></span>
     </button>
     <div v-if="desktopMenuOpen" class="nav-dropdown-menu">
+      <div class="nav-menu-kicker" aria-hidden="true">Pages</div>
       <button type="button" @click="goPath('/about')">About me</button>
       <button type="button" @click="goPath('/projects')">Projects</button>
     </div>
@@ -223,6 +224,7 @@ function retractCord(done: () => void) {
     </button>
     <!-- Mobile menu. -->
     <div v-if="menuOpen" class="nav-mobile-menu">
+      <div class="nav-menu-kicker" aria-hidden="true">Menu</div>
       <button type="button" @click="goHome">Home</button>
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>

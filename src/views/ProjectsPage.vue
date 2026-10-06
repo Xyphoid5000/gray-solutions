@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ChapterHeading from '../components/ChapterHeading.vue';
 // Stub — the route exists so routing can be proven before the page is
 // designed. Chris is laying out the real page next.
 </script>
@@ -7,8 +8,11 @@
   <div class="page">
     <section class="projects-section" aria-label="Projects">
       <div class="wrap">
-        <p v-reveal class="contact-kicker">Projects</p>
-        <h2 v-reveal class="contact-title">Coming soon.</h2>
+        <ChapterHeading
+          index="P"
+          kicker="Projects"
+          title="Coming <em>soon.</em>"
+        />
         <p v-reveal class="contact-sub">
           This page is still on the desk — check back.
         </p>
