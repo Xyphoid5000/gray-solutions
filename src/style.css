@@ -3342,14 +3342,15 @@ html[data-theme='dark'] .page-tab {
   transform: translateY(-7px) rotate(-45deg);
 }
 /* Desktop hamburger: About and Projects live here. Hidden on mobile,
-   where the full menu has them. */
-.nav-hamburger-desktop {
+   where the full menu has them. (Double class for specificity: the
+   max-width media query below also targets .nav-hamburger.) */
+.nav-hamburger.nav-hamburger-desktop {
   display: none;
   position: static;
   transform: none;
 }
 @media (min-width: 641px) {
-  .nav-hamburger-desktop {
+  .nav-hamburger.nav-hamburger-desktop {
     display: flex;
   }
 }
