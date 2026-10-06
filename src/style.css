@@ -335,6 +335,13 @@ a {
   border-color: var(--ember);
   color: #14100a;
 }
+/* Right-side action group: contact button + desktop hamburger. */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
 
 /* ---------- prologue / hero-sub / link-more ---------- */
 .prologue {

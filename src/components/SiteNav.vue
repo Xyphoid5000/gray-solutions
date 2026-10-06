@@ -192,20 +192,22 @@ function retractCord(done: () => void) {
           <PullCord ref="pullCord" />
         </span>
       </a>
-      <button class="nav-contact" @click="emit('contact')">
-        Contact me
-      </button>
-    <!-- Desktop hamburger: About and Projects live here. -->
-    <button
-      type="button"
-      class="nav-hamburger nav-hamburger-desktop"
-      :class="{ open: desktopMenuOpen }"
-      @click="desktopMenuOpen = !desktopMenuOpen"
-      :aria-label="desktopMenuOpen ? 'Close menu' : 'More pages'"
-      :aria-expanded="desktopMenuOpen"
-    >
-      <span></span><span></span><span></span>
-    </button>
+      <div class="nav-actions">
+        <button class="nav-contact" @click="emit('contact')">
+          Contact me
+        </button>
+        <!-- Desktop hamburger: About and Projects live here. -->
+        <button
+          type="button"
+          class="nav-hamburger nav-hamburger-desktop"
+          :class="{ open: desktopMenuOpen }"
+          @click="desktopMenuOpen = !desktopMenuOpen"
+          :aria-label="desktopMenuOpen ? 'Close menu' : 'More pages'"
+          :aria-expanded="desktopMenuOpen"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     <div v-if="desktopMenuOpen" class="nav-dropdown-menu">
       <div class="nav-menu-kicker" aria-hidden="true">Pages</div>
       <button type="button" @click="goPath('/about')">About me</button>
