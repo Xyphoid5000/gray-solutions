@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ChapterHeading from '../components/ChapterHeading.vue';
-// Stub — the route exists so routing can be proven before the page is
-// designed. Chris is laying out the real page next.
+import ProjectShowcase from '../components/ProjectShowcase.vue';
+import { PROJECTS } from '../lib/projects';
 </script>
 
 <template>
@@ -11,11 +11,20 @@ import ChapterHeading from '../components/ChapterHeading.vue';
         <ChapterHeading
           index="P"
           kicker="Projects"
-          title="Coming <em>soon.</em>"
+          title="Selected <em>work.</em>"
         />
-        <p v-reveal class="contact-sub">
-          This page is still on the desk — check back.
+        <p v-reveal class="contact-sub projects-lede">
+          Every project below is a story with a plot — the business, the
+          build, and how the story got written.
         </p>
+        <div class="projects-list">
+          <ProjectShowcase
+            v-for="project in PROJECTS"
+            :key="project.slug"
+            v-reveal
+            :project="project"
+          />
+        </div>
       </div>
     </section>
   </div>

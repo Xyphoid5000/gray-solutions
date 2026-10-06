@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import ChapterHeading from './ChapterHeading.vue';
+import ProjectModal from './ProjectModal.vue';
+import { getProject, type Project } from '../lib/projects';
 
 const props = defineProps<{ active?: boolean }>();
 
@@ -9,6 +11,13 @@ const emit = defineEmits<{
 }>();
 
 const stripRef = ref<HTMLElement | null>(null);
+
+/** The project modal: one exhibit's full story on a paper sheet. */
+const activeProject = ref<Project | null>(null);
+function openProject(slug: string) {
+  const p = getProject(slug);
+  if (p) activeProject.value = p;
+}
 
 /** Desktop pagination: one exhibit per view with prev/next stepping.
     Mobile keeps the swipe strip (its panels paginate as plain blocks). */
@@ -32,7 +41,7 @@ function onKey(e: KeyboardEvent) {
   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
   const t = e.target as HTMLElement | null;
   if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
-  if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal'))
+  if (document.querySelector('.phone-modal, .draft-modal, .chapter-modal, .project-modal-backdrop'))
     return;
   // The strip lives on its own paginated page — a hidden page reports a
   // zero rect, so this is false everywhere but the projects page.
@@ -83,6 +92,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
               <li>Vue 3</li>
               <li>GSAP</li>
             </ul>
+            <button class="btn btn-ghost proof-details" @click="openProject('burning-river')">
+              View details <span class="arrow" aria-hidden="true">&rarr;</span>
+            </button>
           </div>
         </article>
         <article class="proof-panel" :class="{ 'is-current': panelIndex === 1 }">
@@ -100,6 +112,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
               <li>TypeScript</li>
               <li>GSAP</li>
             </ul>
+            <button class="btn btn-ghost proof-details" @click="openProject('gray-solutions')">
+              View details <span class="arrow" aria-hidden="true">&rarr;</span>
+            </button>
           </div>
         </article>
         <article class="proof-panel cta-panel" :class="{ 'is-current': panelIndex === 2 }">
@@ -144,5 +159,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
         <span>Swipe</span><span>&rarr;</span>
       </p>
     </div>
+    <!-- Teleported: the book pages live under 3D transforms, which would
+         break a fixed overlay's containing block. -->
+    <Teleport to="body">
+      <ProjectModal
+        v-if="activeProject"
+        :project="activeProject"
+        @close="activeProject = null"
+      />
+    </Teleport>
   </section>
 </template>
