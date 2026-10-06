@@ -74,6 +74,9 @@ const routeTransition = ref({
 });
 let transitionGen = 0;
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+/** Set before a navigation that should skip the paper transition (the
+    binding cinematic hands off to contact with its own ending). */
+let skipTransitionOnce = false;
 
 function routeLabel(name: unknown): string {
   switch (name) {
@@ -85,6 +88,10 @@ function routeLabel(name: unknown): string {
 }
 
 router.beforeEach(async (to, from) => {
+  if (skipTransitionOnce) {
+    skipTransitionOnce = false;
+    return true;
+  }
   if (from === START_LOCATION || to.path === from.path) return true;
   const gen = ++transitionGen;
   const calm = reducedMotion();
@@ -342,6 +349,8 @@ function onBindDone() {
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
   closeBook();
+  // The cinematic has its own ending — no paper transition on this hop.
+  skipTransitionOnce = true;
   goContactRoad();
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
