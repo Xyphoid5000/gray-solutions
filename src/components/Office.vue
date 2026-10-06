@@ -67,6 +67,7 @@ const trackClass = computed(() => ({
           :backdrop="!office.manuscriptBound"
           :interactive="true"
           :show-manuscript="!office.manuscriptBound"
+          :show-banner="true"
           @open-book="$emit('open-book')"
         />
         <!-- Cover manuscript overlay (home page hero) when not bound. -->
