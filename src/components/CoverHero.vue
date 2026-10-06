@@ -652,7 +652,6 @@ onUnmounted(() => {
           {{ isBound ? 'Open the book' : 'Read the manuscript' }} <span class="arrow" aria-hidden="true">&rarr;</span>
         </button>
       </div>
-      <p class="cover-hint">Five chapters &middot; best read front to back</p>
     </div>
   </div>
 </section>

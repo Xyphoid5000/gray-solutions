@@ -1782,9 +1782,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .cover-ui.is-overlay .cover-cta {
   pointer-events: auto;
 }
-.cover-ui.is-overlay .cover-hint {
-  display: none;
-}
 .cover-cta .btn {
   font-size: 1.02rem;
   padding: 1.05rem 2.2rem;
@@ -1794,22 +1791,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
   50% { box-shadow: 0 10px 42px rgba(208, 138, 78, 0.35); }
 }
-.cover-hint {
-  margin: 1.4rem 0 0;
-  color: var(--faint);
-  font-size: 0.8rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-/* Light mode: the hint sits over the warm wood desk — bronze went muddy
-   there. Deep umber with a light halo so it lifts off the wood. */
-html[data-theme='light'] .cover-hint {
-  color: #3a2c1a;
-  text-shadow:
-    0 1px 3px rgba(250, 246, 236, 0.9),
-    0 0 14px rgba(250, 246, 236, 0.85);
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;
