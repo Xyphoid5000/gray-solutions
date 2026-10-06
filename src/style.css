@@ -1801,9 +1801,13 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   letter-spacing: 0.2em;
   text-transform: uppercase;
 }
-/* Light mode: the day mural washes out the faint gray — go deep bronze. */
+/* Light mode: the hint sits over the warm wood desk — bronze went muddy
+   there. Deep umber with a light halo so it lifts off the wood. */
 html[data-theme='light'] .cover-hint {
-  color: #7a4d1c;
+  color: #3a2c1a;
+  text-shadow:
+    0 1px 3px rgba(250, 246, 236, 0.9),
+    0 0 14px rgba(250, 246, 236, 0.85);
 }
 
 .fade-enter-active,
