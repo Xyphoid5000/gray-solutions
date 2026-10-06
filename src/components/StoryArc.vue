@@ -7,7 +7,7 @@ import { motionReduced } from '../utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const props = defineProps<{ active?: boolean }>();
+const props = defineProps<{ active?: boolean; scrollDriven?: boolean }>();
 
 const stageRef = ref<HTMLElement | null>(null);
 
@@ -122,6 +122,8 @@ function replayArc() {
 /** Jump the pen to an act: the curve draws (or undraws) to that act's
     checkpoint and the act lights. Arrow keys and clicks land here. */
 function goToAct(i: number) {
+  // On the routed chapter page the scroll drives the pen — clicks stay out.
+  if (props.scrollDriven) return;
   const idx = Math.max(0, Math.min(acts.length - 1, i));
   if (reduced || !arcPath) {
     litCount.value = idx + 1;
@@ -231,6 +233,27 @@ onMounted(() => {
   gsap.set(arcPen, { opacity: 1 });
   placePen(0);
 
+  if (props.scrollDriven) {
+    // Routed chapter page: the original scroll-driven design. The page
+    // scrolls, so the pen draws the curve with the reader — every scroll
+    // position maps to a draw progress via setProgress.
+    const scrub = ScrollTrigger.create({
+      trigger: '.arc-stage',
+      start: 'top 72%',
+      end: 'bottom 62%',
+      onUpdate: (self) => {
+        spineProgress.value = self.progress;
+        setProgress(self.progress);
+      },
+    });
+    spineTriggers.push(scrub);
+    return;
+  }
+
+  // Book: page scroll is locked on desktop, so the reader steps the pen
+  // through the acts with arrows or clicks — it eases between bullets
+  // and holds on the finished curve. The arc always starts at the first
+  // bullet.
   arcTl = gsap.timeline({ paused: true });
   // Checkpoints chosen so each one lights the next act.
   for (const cp of ACT_CHECKS) {
@@ -343,7 +366,7 @@ onUnmounted(() => {
           </div>
         </div>
         <button
-          v-if="isDesktop && !reduced"
+          v-if="isDesktop && !reduced && !scrollDriven"
           type="button"
           class="arc-replay"
           @click="replayArc"

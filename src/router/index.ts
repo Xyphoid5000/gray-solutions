@@ -3,6 +3,9 @@ import { createRouter, createWebHistory } from 'vue-router';
 import ContactPage from '../views/ContactPage.vue';
 import AboutPage from '../views/AboutPage.vue';
 import ProjectsPage from '../views/ProjectsPage.vue';
+import PremisePage from '../views/PremisePage.vue';
+import CraftPage from '../views/CraftPage.vue';
+import ArcPage from '../views/ArcPage.vue';
 
 /** Home (/) is rendered directly by App.vue — the manuscript experience
     owns the root. This placeholder satisfies the route record; it never
@@ -21,6 +24,10 @@ const router = createRouter({
     { path: '/contact', name: 'contact', component: ContactPage },
     { path: '/about', name: 'about', component: AboutPage },
     { path: '/projects', name: 'projects', component: ProjectsPage },
+    // The book's chapters as regular pages — for readers who skip the book.
+    { path: '/premise', name: 'premise', component: PremisePage },
+    { path: '/craft', name: 'craft', component: CraftPage },
+    { path: '/arc', name: 'arc', component: ArcPage },
     // Unknown paths fall back to the manuscript, not a dead end.
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

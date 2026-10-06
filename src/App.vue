@@ -78,12 +78,17 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
     binding cinematic hands off to contact with its own ending). */
 let skipTransitionOnce = false;
 
-function routeLabel(name: unknown): string {
+/** Chapter pages get their chapter number as the lead character; other
+    routes get their initial. */
+function routeTitle(name: unknown): { label: string; letter: string } {
   switch (name) {
-    case 'contact': return 'Contact';
-    case 'about': return 'About';
-    case 'projects': return 'Projects';
-    default: return 'Home';
+    case 'contact': return { label: 'Contact', letter: 'C' };
+    case 'about': return { label: 'About', letter: 'A' };
+    case 'projects': return { label: 'The Proof', letter: '3' };
+    case 'premise': return { label: 'The Premise', letter: '1' };
+    case 'craft': return { label: 'The Craft', letter: '2' };
+    case 'arc': return { label: 'The Arc', letter: '4' };
+    default: return { label: 'Home', letter: 'H' };
   }
 }
 
@@ -95,14 +100,14 @@ router.beforeEach(async (to, from) => {
   if (from === START_LOCATION || to.path === from.path) return true;
   const gen = ++transitionGen;
   const calm = reducedMotion();
-  const label = routeLabel(to.name);
+  const { label, letter } = routeTitle(to.name);
   noScroll(true);
   routeTransition.value = {
     active: true,
     lifting: false,
     typed: '',
     done: false,
-    letter: label.charAt(0),
+    letter,
     kicker: 'Turning the page',
   };
   // Let the sheet lay down before the first keystroke.
