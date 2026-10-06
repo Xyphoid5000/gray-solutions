@@ -24,7 +24,7 @@ const menuOpen = ref(false);
 const desktopMenuOpen = ref(false);
 function closeMenu() { menuOpen.value = false; }
 function goContact() { closeMenu(); emit('contact'); }
-function goHome() { closeMenu(); emit('home'); }
+function goHome() { closeMenu(); desktopMenuOpen.value = false; emit('home'); }
 /** About/Projects are plain routes — no binding logic, just go. */
 function goPath(path: string) {
   menuOpen.value = false;
@@ -210,6 +210,7 @@ function retractCord(done: () => void) {
       </div>
     <div v-if="desktopMenuOpen" class="nav-dropdown-menu">
       <div class="nav-menu-kicker" aria-hidden="true">Pages</div>
+      <button type="button" @click="goHome">Home</button>
       <button type="button" @click="goPath('/about')">About me</button>
       <button type="button" @click="goPath('/projects')">Projects</button>
     </div>
