@@ -247,6 +247,18 @@ onMounted(() => {
       },
     });
     spineTriggers.push(scrub);
+    // The scrub's end position can sit below max scroll on a short page —
+    // guarantee the finale lands when the last act arrives. Scrolling back
+    // up hands control to the scrub's onUpdate again.
+    const ender = ScrollTrigger.create({
+      trigger: '.arc-stage .arc-act:last-child',
+      start: 'top 85%',
+      onEnter: () => {
+        spineProgress.value = 1;
+        setProgress(1);
+      },
+    });
+    spineTriggers.push(ender);
     return;
   }
 
