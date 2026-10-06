@@ -61,8 +61,9 @@ function goContactRoad() {
 }
 
 /** Route transition: a sheet of manuscript paper lays down in 3D and
-    types out the incoming route's name as a chapter title before the
-    swap. Skipped on first load and on same-page hash scrolls. */
+    types out the incoming route's name as a chapter title; the route
+    swaps underneath the sheet, which then lifts off on the new page.
+    Skipped on first load and on same-page hash scrolls. */
 const routeTransition = ref({
   active: false,
   lifting: false,
@@ -111,15 +112,19 @@ router.beforeEach(async (to, from) => {
   }
   if (gen !== transitionGen) return true;
   routeTransition.value.done = true;
-  await wait(calm ? 120 : 450);
-  if (gen !== transitionGen) return true;
-  // Lift the sheet off the page, then let the new page through.
-  routeTransition.value.lifting = true;
-  await wait(calm ? 60 : 620);
+  // The sheet is down and the name is typed — let the route change
+  // underneath it. The lift-off happens in afterEach, on the new page.
   return true;
 });
-router.afterEach(() => {
-  // The new page is in place underneath — the sheet is gone.
+router.afterEach(async () => {
+  const gen = transitionGen;
+  const calm = reducedMotion();
+  // A beat on the new page beneath the sheet, then lift it off.
+  await wait(calm ? 60 : 400);
+  if (gen !== transitionGen) return;
+  routeTransition.value.lifting = true;
+  await wait(calm ? 60 : 620);
+  if (gen !== transitionGen) return;
   routeTransition.value.active = false;
   noScroll(false);
 });
