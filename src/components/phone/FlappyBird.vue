@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useHighScore } from './useHighScore';
+import { useDeviceStore } from '../../stores/device';
 
 /** Flappy Bird on the desk phone: tap to flap through the pipes. */
 const emit = defineEmits<{ back: [] }>();
+
+const device = useDeviceStore();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
@@ -187,7 +190,7 @@ onUnmounted(() => {
       @pointerdown="flap"
     ></canvas>
     <div v-if="state !== 'playing'" class="game-overlay">
-      <p v-if="state === 'ready'">Tap to flap</p>
+      <p v-if="state === 'ready'">{{ device.isDesktop ? 'Space or click to flap' : 'Tap to flap' }}</p>
       <p v-else>Game over! Score {{ score }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
       <div class="overlay-btns">
@@ -199,7 +202,7 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-    <p class="game-hint">Tap to flap · Space on desktop</p>
+    <p class="game-hint">{{ device.isDesktop ? 'Space or click to flap' : 'Tap to flap' }}</p>
   </div>
 </template>
 

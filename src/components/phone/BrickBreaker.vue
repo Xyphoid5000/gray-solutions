@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useHighScore } from './useHighScore';
+import { useDeviceStore } from '../../stores/device';
 
 /** Brick Breaker on the desk phone: drag the paddle, break all bricks.
     Clearing a level generates a fresh random layout; broken bricks
     sometimes drop powerups (multi-ball, wide paddle, slow-mo, extra life). */
 const emit = defineEmits<{ back: [] }>();
+
+const device = useDeviceStore();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
@@ -422,7 +425,7 @@ onUnmounted(() => {
     ></canvas>
     <div v-if="levelBanner" class="level-banner">{{ levelBanner }}</div>
     <div v-if="state !== 'playing'" class="game-overlay">
-      <p v-if="state === 'ready'">Drag to move the paddle</p>
+      <p v-if="state === 'ready'">{{ device.isDesktop ? 'Arrow keys or mouse to move' : 'Drag to move the paddle' }}</p>
       <p v-else-if="state === 'over'">Game over! Reached level {{ level }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
       <div class="overlay-btns">
@@ -434,7 +437,7 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-    <p class="game-hint">Catch powerups — red ones are traps · Arrow keys on desktop</p>
+    <p class="game-hint">{{ device.isDesktop ? 'Arrow keys or mouse · red powerups are traps' : 'Drag to move · red powerups are traps' }}</p>
   </div>
 </template>
 

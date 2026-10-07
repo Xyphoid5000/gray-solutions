@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useHighScore } from './useHighScore';
+import { useDeviceStore } from '../../stores/device';
 
 /** Pong on the desk phone: drag your paddle, outlast the AI.
     Endless rally — the AI gets faster and smarter as you score.
     Powerups drift through the middle: wide paddle, slow-mo. */
 const emit = defineEmits<{ back: [] }>();
+
+const device = useDeviceStore();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
@@ -300,7 +303,7 @@ onUnmounted(() => {
       @pointermove="onPointerMove"
     ></canvas>
     <div v-if="state !== 'playing'" class="game-overlay">
-      <p v-if="state === 'ready'">Drag to move your paddle</p>
+      <p v-if="state === 'ready'">{{ device.isDesktop ? 'Arrow keys or mouse to move' : 'Drag to move your paddle' }}</p>
       <p v-else>Game over! You scored {{ score }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
       <div class="overlay-btns">
@@ -312,7 +315,7 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-    <p class="game-hint">Hit powerups with the ball · Arrow keys on desktop</p>
+    <p class="game-hint">{{ device.isDesktop ? 'Arrow keys or mouse · hit powerups with the ball' : 'Drag to move · hit powerups with the ball' }}</p>
   </div>
 </template>
 

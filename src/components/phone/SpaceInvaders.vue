@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useHighScore } from './useHighScore';
+import { useDeviceStore } from '../../stores/device';
 
 /** Space Invaders on the desk phone: drag to move, tap to shoot.
     Endless waves — each cleared wave spawns a tougher one. Killed
     invaders sometimes drop powerups (rapid fire, triple shot, shield). */
 const emit = defineEmits<{ back: [] }>();
+
+const device = useDeviceStore();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
@@ -375,7 +378,7 @@ onUnmounted(() => {
     ></canvas>
     <div v-if="waveBanner" class="wave-banner">{{ waveBanner }}</div>
     <div v-if="state !== 'playing'" class="game-overlay">
-      <p v-if="state === 'ready'">Drag to move · tap to shoot</p>
+      <p v-if="state === 'ready'">{{ device.isDesktop ? 'Arrows to move · Space to shoot' : 'Drag to move · tap to shoot' }}</p>
       <p v-else>Game over! Reached wave {{ wave }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
       <div class="overlay-btns">
@@ -387,7 +390,7 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-    <p class="game-hint">Catch falling powerups · Arrows + Space on desktop</p>
+    <p class="game-hint">{{ device.isDesktop ? 'Arrows to move · Space to shoot' : 'Drag to move · tap to shoot' }}</p>
   </div>
 </template>
 

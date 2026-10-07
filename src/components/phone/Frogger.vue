@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useHighScore } from './useHighScore';
+import { useDeviceStore } from '../../stores/device';
 
 /** Frogger on the desk phone: hop across traffic and ride the logs.
     Endless — each crossing gets faster. Swipe to hop, arrows on desktop. */
 const emit = defineEmits<{ back: [] }>();
+
+const device = useDeviceStore();
 
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
@@ -293,7 +296,7 @@ onUnmounted(() => {
     ></canvas>
     <div v-if="levelBanner" class="level-banner">{{ levelBanner }}</div>
     <div v-if="state !== 'playing'" class="game-overlay">
-      <p v-if="state === 'ready'">Swipe to hop across</p>
+      <p v-if="state === 'ready'">{{ device.isDesktop ? 'Arrow keys to hop across' : 'Swipe to hop across' }}</p>
       <p v-else>Game over! Reached level {{ level }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
       <div class="overlay-btns">
@@ -305,7 +308,7 @@ onUnmounted(() => {
         </button>
       </div>
     </div>
-    <p class="game-hint">Ride the logs · don't get hit · Arrow keys on desktop</p>
+    <p class="game-hint">{{ device.isDesktop ? 'Arrow keys to hop · ride the logs' : 'Swipe to hop · ride the logs' }}</p>
   </div>
 </template>
 

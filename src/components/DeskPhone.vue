@@ -450,10 +450,24 @@ function openSettingsDirect() {
   screen.value = 'settings';
   siteNameDraft.value = settings.siteName;
 }
+function onPinKey(e: KeyboardEvent) {
+  if (screen.value !== 'pin') return;
+  if (/^[0-9]$/.test(e.key)) {
+    pressDigit(e.key);
+  } else if (e.key === 'Backspace') {
+    pinEntry.value = pinEntry.value.slice(0, -1);
+    pinError.value = false;
+  }
+}
+
 onMounted(() => {
   if (props.shortcut) window.addEventListener('gs:open-phone-settings', openSettingsDirect);
+  window.addEventListener('keydown', onPinKey);
 });
-onUnmounted(() => window.removeEventListener('gs:open-phone-settings', openSettingsDirect));
+onUnmounted(() => {
+  window.removeEventListener('gs:open-phone-settings', openSettingsDirect);
+  window.removeEventListener('keydown', onPinKey);
+});
 
 onUnmounted(() => {
   stopSnake();
