@@ -14,11 +14,11 @@ export interface GraydioTrack {
 
 // Royalty-free tunes (Kevin MacLeod, CC-BY). Swap URLs to change the lineup.
 const TRACKS: GraydioTrack[] = [
-  { title: 'Monkeys Spinning Monkeys', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Monkeys%20Spinning%20Monkeys.mp3' },
-  { title: 'Sneaky Snitch', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Sneaky%20Snitch.mp3' },
-  { title: 'Carefree', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Carefree.mp3' },
-  { title: 'Smooth Lovin', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Smooth%20Lovin.mp3' },
-  { title: 'Local Forecast', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Local%20Forecast.mp3' },
+  { title: 'Mesmerizing Galaxy', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Mesmerizing%20Galaxy%20Loop.mp3' },
+  { title: 'Galactic Rap', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Galactic%20Rap.mp3' },
+  { title: 'Equatorial Complex', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Equatorial%20Complex.mp3' },
+  { title: 'Cloud Dancer', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cloud%20Dancer.mp3' },
+  { title: 'Brain Dance', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Brain%20Dance.mp3' },
 ];
 
 export const useMusicStore = defineStore('music', () => {
