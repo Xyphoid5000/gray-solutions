@@ -14,6 +14,12 @@ textarea {
   -webkit-user-select: text;
   user-select: text;
 }
+/* The mobile page must never pan sideways — clip any horizontal overflow
+   at the root (clip, not hidden, so sticky positioning keeps working). */
+html,
+body {
+  overflow-x: clip;
+}
 
 /* ============================================================
    GRAY SOLUTIONS — "Websites that tell stories"

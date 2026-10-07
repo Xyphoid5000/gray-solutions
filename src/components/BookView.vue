@@ -787,7 +787,7 @@ function onTouchEnd(e: TouchEvent) {
         <!-- Sandwich mode: the manuscript cover is the top bun. -->
         <SandwichIngredient v-if="sandwich" kind="bun-top" compact />
         <template v-else>
-          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
+          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Gray Solutions</span>
           <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
         </template>
       </button>
@@ -820,7 +820,7 @@ function onTouchEnd(e: TouchEvent) {
           <!-- Sandwich mode: the manuscript cover is the top bun. -->
           <SandwichIngredient v-if="sandwich" kind="bun-top" compact />
           <template v-else>
-            <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Manuscript</span>
+            <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Gray Solutions</span>
             <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
           </template>
           <span class="pile-grid-label" aria-hidden="true">{{ manuscriptBound ? 'Book cover' : 'Manuscript cover' }}</span>
