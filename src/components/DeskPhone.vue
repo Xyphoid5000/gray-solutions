@@ -125,7 +125,7 @@ function checkPin() {
 
 /* ---------------- Snake ---------------- */
 const SNAKE_COLS = 12;
-const SNAKE_ROWS = 16;
+const SNAKE_ROWS = 22;
 const CELL = 20;
 const snakeScore = ref(0);
 const snakeState = ref<'ready' | 'playing' | 'over'>('ready');
@@ -1093,7 +1093,7 @@ html[data-blacklight='on'] .desk-phone-btn {
 .snake-wrap canvas {
   display: block;
   width: 240px;
-  height: 320px;
+  height: 440px;
 }
 .snake-hint {
   font-size: 0.75rem;

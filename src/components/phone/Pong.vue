@@ -16,7 +16,7 @@ const { high: best, maybeSave } = useHighScore('pong');
 const newBest = ref(false);
 
 const W = 300;
-const H = 400;
+const H = 540;
 const PADDLE_H = 10;
 const BASE_PADDLE_W = 70;
 const BALL_R = 7;
@@ -32,6 +32,7 @@ let powerups: PowerUp[] = [];
 let wideUntil = 0;
 let slowUntil = 0;
 let powerTimer = 0;
+let aiAimError = 0;
 let raf = 0;
 let running = false;
 
@@ -139,6 +140,8 @@ function update() {
     ball.dy = -Math.sqrt(Math.max(speed * speed - ball.dx * ball.dx, 4));
     ball.y = playerY - BALL_R;
     score.value++;
+    // AI picks its aim error once per rally — no more twitching
+    aiAimError = (Math.random() - 0.5) * aiError();
   }
 
   // AI paddle
@@ -156,10 +159,16 @@ function update() {
     ball.y = aiY + PADDLE_H + BALL_R;
   }
 
-  // AI movement (tracks ball with error)
-  const aiTarget = ball.x - BASE_PADDLE_W / 2 + (Math.random() - 0.5) * aiError();
-  const aiDx = Math.max(-aiSpeed(), Math.min(aiSpeed(), aiTarget - aiX));
-  aiX = Math.max(0, Math.min(W - BASE_PADDLE_W, aiX + aiDx));
+  // AI movement — glides toward its aim point, drifts center otherwise
+  if (ball.dy < 0) {
+    const target = ball.x - BASE_PADDLE_W / 2 + aiAimError;
+    const dx = target - aiX;
+    aiX += Math.max(-aiSpeed(), Math.min(aiSpeed(), dx));
+  } else {
+    const dx = W / 2 - BASE_PADDLE_W / 2 - aiX;
+    aiX += Math.max(-1.2, Math.min(1.2, dx));
+  }
+  aiX = Math.max(0, Math.min(W - BASE_PADDLE_W, aiX));
 
   // Scoring
   if (ball.y - BALL_R > H) {
@@ -294,9 +303,14 @@ onUnmounted(() => {
       <p v-if="state === 'ready'">Drag to move your paddle</p>
       <p v-else>Game over! You scored {{ score }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
-      <button type="button" class="game-btn" @click="start">
-        {{ state === 'ready' ? 'Start' : 'Play again' }}
-      </button>
+      <div class="overlay-btns">
+        <button type="button" class="game-btn" @click="start">
+          {{ state === 'ready' ? 'Start' : 'Play again' }}
+        </button>
+        <button type="button" class="game-btn game-btn-ghost" @click="emit('back')">
+          Back
+        </button>
+      </div>
     </div>
     <p class="game-hint">Hit powerups with the ball · Arrow keys on desktop</p>
   </div>
@@ -349,10 +363,7 @@ onUnmounted(() => {
 }
 .game-overlay {
   position: absolute;
-  top: 3.2rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -360,6 +371,10 @@ onUnmounted(() => {
   gap: 1rem;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
+}
+.overlay-btns {
+  display: flex;
+  gap: 0.8rem;
 }
 .game-btn {
   padding: 0.7rem 1.8rem;
@@ -370,6 +385,11 @@ onUnmounted(() => {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+.game-btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .game-hint {
   text-align: center;

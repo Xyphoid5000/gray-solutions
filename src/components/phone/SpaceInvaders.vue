@@ -17,7 +17,7 @@ const { high: best, maybeSave } = useHighScore('invaders');
 const newBest = ref(false);
 
 const W = 300;
-const H = 400;
+const H = 540;
 const SHIP_W = 36;
 const SHIP_H = 18;
 const SHIP_Y = H - 36;
@@ -378,9 +378,14 @@ onUnmounted(() => {
       <p v-if="state === 'ready'">Drag to move · tap to shoot</p>
       <p v-else>Game over! Reached wave {{ wave }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
-      <button type="button" class="game-btn" @click="start">
-        {{ state === 'ready' ? 'Start' : 'Play again' }}
-      </button>
+      <div class="overlay-btns">
+        <button type="button" class="game-btn" @click="start">
+          {{ state === 'ready' ? 'Start' : 'Play again' }}
+        </button>
+        <button type="button" class="game-btn game-btn-ghost" @click="emit('back')">
+          Back
+        </button>
+      </div>
     </div>
     <p class="game-hint">Catch falling powerups · Arrows + Space on desktop</p>
   </div>
@@ -444,10 +449,7 @@ onUnmounted(() => {
 }
 .game-overlay {
   position: absolute;
-  top: 3.2rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -455,6 +457,10 @@ onUnmounted(() => {
   gap: 1rem;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
+}
+.overlay-btns {
+  display: flex;
+  gap: 0.8rem;
 }
 .game-btn {
   padding: 0.7rem 1.8rem;
@@ -465,6 +471,11 @@ onUnmounted(() => {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+.game-btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .game-hint {
   text-align: center;

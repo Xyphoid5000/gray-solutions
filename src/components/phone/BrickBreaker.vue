@@ -17,7 +17,7 @@ const { high: best, maybeSave } = useHighScore('brick');
 const newBest = ref(false);
 
 const W = 300;
-const H = 400;
+const H = 540;
 const PADDLE_H = 10;
 const BALL_R = 6;
 const BASE_PADDLE_W = 70;
@@ -425,9 +425,14 @@ onUnmounted(() => {
       <p v-if="state === 'ready'">Drag to move the paddle</p>
       <p v-else-if="state === 'over'">Game over! Reached level {{ level }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
-      <button type="button" class="game-btn" @click="start">
-        {{ state === 'ready' ? 'Start' : 'Play again' }}
-      </button>
+      <div class="overlay-btns">
+        <button type="button" class="game-btn" @click="start">
+          {{ state === 'ready' ? 'Start' : 'Play again' }}
+        </button>
+        <button type="button" class="game-btn game-btn-ghost" @click="emit('back')">
+          Back
+        </button>
+      </div>
     </div>
     <p class="game-hint">Catch powerups — red ones are traps · Arrow keys on desktop</p>
   </div>
@@ -492,10 +497,7 @@ onUnmounted(() => {
 }
 .game-overlay {
   position: absolute;
-  top: 3.2rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -503,6 +505,10 @@ onUnmounted(() => {
   gap: 1rem;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
+}
+.overlay-btns {
+  display: flex;
+  gap: 0.8rem;
 }
 .game-btn {
   padding: 0.7rem 1.8rem;
@@ -513,6 +519,11 @@ onUnmounted(() => {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+.game-btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .game-hint {
   text-align: center;

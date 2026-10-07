@@ -16,18 +16,18 @@ const { high: best, maybeSave } = useHighScore('frogger');
 const newBest = ref(false);
 
 const COLS = 10;
-const ROWS = 13;
+const ROWS = 15;
 const CELL = 30;
 const W = COLS * CELL;
 const H = ROWS * CELL;
 
-// Row types: 0=goal, 1-3=road, 4=safe, 5-7=river, 8=safe, 9-11=road, 12=start
-const ROAD_ROWS = [1, 2, 3, 9, 10, 11];
+// Row types: 0=goal, 1-3=road, 4=safe, 5-7=river, 8=safe, 9-12=road, 13=safe, 14=start
+const ROAD_ROWS = [1, 2, 3, 9, 10, 11, 12];
 const RIVER_ROWS = [5, 6, 7];
 
 interface Mover { row: number; x: number; w: number; speed: number }
 
-let frog = { col: 4, row: 12 };
+let frog = { col: 4, row: 12, px: 4 * CELL + CELL / 2 };
 let cars: Mover[] = [];
 let logs: Mover[] = [];
 let raf = 0;
@@ -68,7 +68,7 @@ function buildLevel() {
 }
 
 function resetFrog() {
-  frog = { col: 4, row: 12 };
+  frog = { col: 4, row: 14, px: 4 * CELL + CELL / 2 };
 }
 
 function start() {
@@ -107,6 +107,7 @@ function hop(dcol: number, drow: number) {
   if (state.value !== 'playing') return;
   frog.col = Math.max(0, Math.min(COLS - 1, frog.col + dcol));
   frog.row = Math.max(0, Math.min(ROWS - 1, frog.row + drow));
+  frog.px = frog.col * CELL + CELL / 2; // snap to grid on hop
   if (frog.row === 0) {
     nextLevel();
   } else {
@@ -128,24 +129,23 @@ function update() {
     if (c.speed > 0 && c.x > W) c.x = -c.w;
     if (c.speed < 0 && c.x + c.w < 0) c.x = W;
   }
-  // Move logs; frog rides the log it's on
-  const frogX = frog.col * CELL + CELL / 2;
+  // Move logs; frog rides smoothly with the log it's on
   for (const l of logs) {
-    const wasOn = frog.row === l.row && frogX >= l.x && frogX <= l.x + l.w;
+    const wasOn = frog.row === l.row && frog.px >= l.x && frog.px <= l.x + l.w;
     l.x += l.speed;
     if (l.speed > 0 && l.x > W) l.x = -l.w;
     if (l.speed < 0 && l.x + l.w < 0) l.x = W;
     if (wasOn) {
-      const newX = frogX + l.speed;
-      frog.col = Math.round((newX - CELL / 2) / CELL);
-      if (frog.col < 0 || frog.col >= COLS) {
+      frog.px += l.speed;
+      frog.col = Math.max(0, Math.min(COLS - 1, Math.floor(frog.px / CELL)));
+      if (frog.px < 0 || frog.px > W) {
         die(); // carried off screen
         return;
       }
     }
   }
 
-  const fx = frog.col * CELL + CELL / 2;
+  const fx = frog.px;
 
   // Car collision
   if (ROAD_ROWS.includes(frog.row)) {
@@ -218,7 +218,7 @@ function draw() {
   }
 
   // Frog
-  const fx = frog.col * CELL + CELL / 2;
+  const fx = frog.px;
   const fy = frog.row * CELL + CELL / 2;
   ctx.fillStyle = '#2ecc71';
   ctx.beginPath();
@@ -296,9 +296,14 @@ onUnmounted(() => {
       <p v-if="state === 'ready'">Swipe to hop across</p>
       <p v-else>Game over! Reached level {{ level }}</p>
       <p v-if="newBest" class="new-best">★ New best! ★</p>
-      <button type="button" class="game-btn" @click="start">
-        {{ state === 'ready' ? 'Start' : 'Play again' }}
-      </button>
+      <div class="overlay-btns">
+        <button type="button" class="game-btn" @click="start">
+          {{ state === 'ready' ? 'Start' : 'Play again' }}
+        </button>
+        <button type="button" class="game-btn game-btn-ghost" @click="emit('back')">
+          Back
+        </button>
+      </div>
     </div>
     <p class="game-hint">Ride the logs · don't get hit · Arrow keys on desktop</p>
   </div>
@@ -362,10 +367,7 @@ onUnmounted(() => {
 }
 .game-overlay {
   position: absolute;
-  top: 3.2rem;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -373,6 +375,10 @@ onUnmounted(() => {
   gap: 1rem;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
+}
+.overlay-btns {
+  display: flex;
+  gap: 0.8rem;
 }
 .game-btn {
   padding: 0.7rem 1.8rem;
@@ -383,6 +389,11 @@ onUnmounted(() => {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+.game-btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 .game-hint {
   text-align: center;
