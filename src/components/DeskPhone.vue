@@ -16,6 +16,7 @@ import GamesMenu from './phone/GamesMenu.vue';
 import BrickBreaker from './phone/BrickBreaker.vue';
 import FlappyBird from './phone/FlappyBird.vue';
 import SpaceInvaders from './phone/SpaceInvaders.vue';
+import MusicPlayer from './phone/MusicPlayer.vue';
 
 /** `shortcut`: this is the desk phone — it answers the floating
     settings shortcut. Other instances (e.g. the binding cinematic's)
@@ -51,7 +52,7 @@ function onLedColor(e: Event) {
 }
 
 const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders'>('pin');
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'music'>('pin');
 const settings = useSettingsStore();
 const bonus = useBonusStore();
 const siteNameDraft = ref(settings.siteName);
@@ -477,6 +478,10 @@ onUnmounted(() => {
               <span class="app-glyph app-games" aria-hidden="true">🎮</span>
               Games
             </button>
+            <button type="button" class="app-icon" @click="screen = 'music'">
+              <span class="app-glyph app-music" aria-hidden="true">🎵</span>
+              Graydio
+            </button>
             <button type="button" class="app-icon" @click="openContacts">
               <span class="app-glyph app-contacts" aria-hidden="true"></span>
               Contacts
@@ -528,6 +533,11 @@ onUnmounted(() => {
         <!-- Space Invaders -->
         <div v-else-if="screen === 'invaders'" class="scr scr-game">
           <SpaceInvaders @back="screen = 'games'" />
+        </div>
+
+        <!-- Graydio -->
+        <div v-else-if="screen === 'music'" class="scr scr-game">
+          <MusicPlayer @back="screen = 'home'" />
         </div>
 
         <!-- Contacts -->
