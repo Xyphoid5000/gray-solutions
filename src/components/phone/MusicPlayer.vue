@@ -26,6 +26,21 @@ const music = useMusicStore();
       <button type="button" class="ctrl" @click="music.next()" aria-label="Next">⏭</button>
     </div>
 
+    <div class="volume-row">
+      <span aria-hidden="true">🔈</span>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        :value="music.volume"
+        @input="music.setVolume(parseFloat(($event.target as HTMLInputElement).value))"
+        aria-label="Volume"
+        class="volume-slider"
+      />
+      <span aria-hidden="true">🔊</span>
+    </div>
+
     <div class="track-list">
       <button
         v-for="(t, i) in music.tracks"
@@ -112,6 +127,17 @@ const music = useMusicStore();
 }
 .ctrl-play {
   font-size: 2.2rem;
+}
+.volume-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.2rem 1.2rem 0.6rem;
+}
+.volume-slider {
+  flex: 1;
+  accent-color: #f2ecdf;
+  cursor: pointer;
 }
 .track-list {
   flex: 1;

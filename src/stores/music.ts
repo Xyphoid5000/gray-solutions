@@ -25,6 +25,7 @@ export const useMusicStore = defineStore('music', () => {
   const tracks = ref<GraydioTrack[]>(TRACKS);
   const currentIndex = ref(0);
   const isPlaying = ref(false);
+  const volume = ref(0.8);
 
   let audio: HTMLAudioElement | null = null;
 
@@ -33,11 +34,17 @@ export const useMusicStore = defineStore('music', () => {
     if (audio) return audio;
     audio = new Audio();
     audio.preload = 'auto';
+    audio.volume = volume.value;
     audio.addEventListener('ended', () => next());
     audio.addEventListener('play', () => { isPlaying.value = true; });
     audio.addEventListener('pause', () => { isPlaying.value = false; });
     audio.src = tracks.value[currentIndex.value].url;
     return audio;
+  }
+
+  function setVolume(v: number) {
+    volume.value = Math.max(0, Math.min(1, v));
+    if (audio) audio.volume = volume.value;
   }
 
   async function playIndex(i: number) {
@@ -77,6 +84,8 @@ export const useMusicStore = defineStore('music', () => {
     currentIndex,
     currentTrack,
     isPlaying,
+    volume,
+    setVolume,
     play,
     pause,
     toggle,

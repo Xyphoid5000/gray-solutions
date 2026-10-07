@@ -56,6 +56,9 @@ function onLedColor(e: Event) {
 
 const held = ref(false);
 const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger' | 'music'>('pin');
+/** Once the PIN is entered, the phone stays unlocked — picking it up
+    returns to where you left off, no re-entering the code. */
+const unlocked = ref(false);
 const settings = useSettingsStore();
 const bonus = useBonusStore();
 const siteNameDraft = ref(settings.siteName);
@@ -77,7 +80,9 @@ function pickUp() {
   held.value = true;
   pinEntry.value = '';
   pinError.value = false;
-  if (screen.value !== 'locked' && screen.value !== 'home') screen.value = 'pin';
+  if (!unlocked.value && screen.value !== 'locked' && screen.value !== 'home') {
+    screen.value = 'pin';
+  }
 }
 function putDown() {
   held.value = false;
@@ -105,6 +110,7 @@ function clearPin() {
 }
 function checkPin() {
   if (pinEntry.value === PIN) {
+    unlocked.value = true;
     screen.value = 'home';
     pinEntry.value = '';
     return;
