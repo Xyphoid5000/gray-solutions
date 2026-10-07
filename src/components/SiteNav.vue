@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { gsap } from 'gsap';
 import PullCord from './PullCord.vue';
 import { a11yModeOn, setA11yMode, initA11yMode, motionReduced } from '../utils/a11y';
@@ -14,11 +15,23 @@ const emit = defineEmits<{
   home: [];
 }>();
 
+const router = useRouter();
+const route = useRoute();
+
 /** Mobile menu open state. */
 const menuOpen = ref(false);
+/** Desktop "more pages" menu open state. */
+const desktopMenuOpen = ref(false);
 function closeMenu() { menuOpen.value = false; }
-function goContact() { closeMenu(); emit('contact'); }
-function goHome() { closeMenu(); emit('home'); }
+function goContact() { closeMenu(); desktopMenuOpen.value = false; emit('contact'); }
+function goHome() { closeMenu(); desktopMenuOpen.value = false; emit('home'); }
+/** Chapter pages and About are plain routes — no binding logic, just go. */
+function goPath(path: string) {
+  menuOpen.value = false;
+  desktopMenuOpen.value = false;
+  if (route.path !== path) router.push(path);
+  else window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 /** The cord lives here but only while bonus content is on. It mounts
     with everything hidden inside the G. emblem (the G is its housing —
@@ -179,23 +192,55 @@ function retractCord(done: () => void) {
           <PullCord ref="pullCord" />
         </span>
       </a>
-      <button class="nav-contact" @click="emit('contact')">
-        Contact me
-      </button>
+      <div class="nav-actions">
+        <button class="nav-contact" @click="emit('contact')">
+          Contact me
+        </button>
+        <!-- Desktop hamburger: About and Projects live here. -->
+        <button
+          type="button"
+          class="nav-hamburger nav-hamburger-desktop"
+          :class="{ open: desktopMenuOpen }"
+          @click="desktopMenuOpen = !desktopMenuOpen"
+          :aria-label="desktopMenuOpen ? 'Close menu' : 'More pages'"
+          :aria-expanded="desktopMenuOpen"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    <div v-if="desktopMenuOpen" class="nav-dropdown-menu">
+      <div class="nav-menu-kicker" aria-hidden="true">Pages</div>
+      <button type="button" @click="goHome">Home</button>
+      <button type="button" @click="goPath('/premise')">The Premise</button>
+      <button type="button" @click="goPath('/craft')">The Craft</button>
+      <button type="button" @click="goPath('/projects')">The Proof</button>
+      <button type="button" @click="goPath('/arc')">The Arc</button>
+      <button type="button" @click="goPath('/pricing')">Pricing</button>
+      <button type="button" @click="goContact">Contact me</button>
+      <button type="button" @click="goPath('/about')">About me</button>
+    </div>
     <!-- Mobile hamburger. -->
     <button
       type="button"
       class="nav-hamburger"
+      :class="{ open: menuOpen }"
       @click="menuOpen = !menuOpen"
-      aria-label="Menu"
+      :aria-label="menuOpen ? 'Close menu' : 'Menu'"
       :aria-expanded="menuOpen"
     >
       <span></span><span></span><span></span>
     </button>
     <!-- Mobile menu. -->
     <div v-if="menuOpen" class="nav-mobile-menu">
+      <div class="nav-menu-kicker" aria-hidden="true">Menu</div>
       <button type="button" @click="goHome">Home</button>
+      <button type="button" @click="goPath('/premise')">The Premise</button>
+      <button type="button" @click="goPath('/craft')">The Craft</button>
+      <button type="button" @click="goPath('/projects')">The Proof</button>
+      <button type="button" @click="goPath('/arc')">The Arc</button>
+      <button type="button" @click="goPath('/pricing')">Pricing</button>
       <button type="button" @click="goContact">Contact me</button>
+      <button type="button" @click="goPath('/about')">About me</button>
     </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
       <label class="a11y-toggle">

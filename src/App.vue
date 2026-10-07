@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
+import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
+import { START_LOCATION, useRoute, useRouter } from 'vue-router';
 import Lenis from 'lenis';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import SiteNav from './components/SiteNav.vue';
+import RouteTransition from './components/RouteTransition.vue';
 import Cover from './components/Cover.vue';
 import CoverHero from './components/CoverHero.vue';
 import Office from './components/Office.vue';
@@ -26,7 +28,7 @@ import { useSettingsStore } from './stores/settings';
 import { useInteractionsStore } from './stores/interactions';
 import { useDeviceStore } from './stores/device';
 import { manuscriptBound, markManuscriptBound, bookIntroSeen, markBookIntroSeen } from './lib/manuscript';
-import { contactTarget } from './lib/contact';
+import { contactSubmitted } from './lib/contact';
 import { motionReduced } from './utils/a11y';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -40,8 +42,105 @@ const interactions = useInteractionsStore();
 // behavior. Changes nothing on its own.
 const device = useDeviceStore();
 
-/** The book is a SPA now — no router. The Office carousel handles
-    shelf vs desk; `office.view` is the single source of truth. */
+/** The manuscript experience owns `/` — the Office carousel handles
+    shelf vs desk; `office.view` is the single source of truth. Sub-pages
+    (/contact, /about, /projects) render in the RouterView instead. */
+const route = useRoute();
+const router = useRouter();
+const isHome = computed(() => route.path === '/');
+
+/** A "contact me" road: the form while it exists, the socials (on the
+    About page) once it's been submitted and retired. */
+function goContactRoad() {
+  if (contactSubmitted.value) {
+    router.push({ path: '/about', hash: '#socials' });
+    return;
+  }
+  if (route.path !== '/contact') router.push('/contact');
+  else window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** Route transition: a sheet of manuscript paper lays down in 3D and
+    types out the incoming route's name as a chapter title; the route
+    swaps underneath the sheet, which then lifts off on the new page.
+    Skipped on first load and on same-page hash scrolls. */
+const routeTransition = ref({
+  active: false,
+  lifting: false,
+  typed: '',
+  done: false,
+  letter: '',
+  kicker: '',
+});
+let transitionGen = 0;
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+/** Set before a navigation that should skip the paper transition (the
+    binding cinematic hands off to contact with its own ending). */
+let skipTransitionOnce = false;
+
+/** Chapter pages get their chapter number as the lead character; other
+    routes get their initial. */
+function routeTitle(name: unknown): { label: string; letter: string } {
+  switch (name) {
+    case 'contact': return { label: 'Contact', letter: 'C' };
+    case 'about': return { label: 'About', letter: 'A' };
+    case 'projects': return { label: 'The Proof', letter: '3' };
+    case 'premise': return { label: 'The Premise', letter: '1' };
+    case 'craft': return { label: 'The Craft', letter: '2' };
+    case 'arc': return { label: 'The Arc', letter: '4' };
+    case 'pricing': return { label: 'Pricing', letter: '$' };
+    default: return { label: 'Home', letter: 'H' };
+  }
+}
+
+router.beforeEach(async (to, from) => {
+  if (skipTransitionOnce) {
+    skipTransitionOnce = false;
+    return true;
+  }
+  if (from === START_LOCATION || to.path === from.path) return true;
+  const gen = ++transitionGen;
+  const calm = reducedMotion();
+  const { label, letter } = routeTitle(to.name);
+  noScroll(true);
+  routeTransition.value = {
+    active: true,
+    lifting: false,
+    typed: '',
+    done: false,
+    letter,
+    kicker: 'Turning the page',
+  };
+  // Let the sheet lay down before the first keystroke.
+  await wait(calm ? 60 : 700);
+  if (calm) {
+    routeTransition.value.typed = label;
+  } else {
+    // Finale-style typewriter: character by character, breath on spaces.
+    for (const ch of label) {
+      if (gen !== transitionGen) return true; // superseded — let it go
+      routeTransition.value.typed += ch;
+      await wait((ch === ' ' ? 65 : 40) + Math.random() * 28);
+    }
+  }
+  if (gen !== transitionGen) return true;
+  routeTransition.value.done = true;
+  // The sheet is down and the name is typed — let the route change
+  // underneath it. The lift-off happens in afterEach, on the new page.
+  return true;
+});
+router.afterEach(async () => {
+  const gen = transitionGen;
+  const calm = reducedMotion();
+  // A beat on the new page beneath the sheet, then lift it off.
+  await wait(calm ? 60 : 400);
+  if (gen !== transitionGen) return;
+  routeTransition.value.lifting = true;
+  await wait(calm ? 60 : 620);
+  if (gen !== transitionGen) return;
+  routeTransition.value.active = false;
+  noScroll(false);
+});
 const showOpenTransition = ref(false);
 /** Where the manuscript is floating — the page drop starts here. */
 const manuscriptDropY = ref(0);
@@ -73,6 +172,12 @@ const boundBookDrop = ref(0);
 function noScroll(on: boolean) {
   document.documentElement.classList.toggle('gs-no-scroll', on);
 }
+/** The home page is a fixed scene — its scrollbar is hidden, not needed. */
+watch(
+  isHome,
+  (home) => document.documentElement.classList.toggle('gs-no-scrollbar', home),
+  { immediate: true },
+);
 
 /** Tilt down: pages fall first, then the office carousel slides shelf→desk.
     With `instant`, it does the same thing minus the animation — used by
@@ -180,15 +285,13 @@ function closeBook() {
 async function closeBookToSection(section: 'about' | 'contact', after = 100) {
   if ((office.view === 'desk')) await tiltUp();
   else closeBook();
-  // "Contact me" roads land on the contact form — unless it's been
-  // submitted and retired, in which case they land on the socials.
-  const target = section === 'contact' ? contactTarget() : section;
-  // After the shelf is back, scroll to the section.
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' });
-    }, after);
-  });
+  // After the shelf is back, go to the page. "Contact me" roads land on
+  // the contact form — unless it's been submitted and retired, in which
+  // case they land on the socials (About page).
+  setTimeout(() => {
+    if (section === 'contact') goContactRoad();
+    else router.push('/about');
+  }, after);
 }
 /** Any road to Contact runs through the binding — once per visit.
     "Start your story" on the Finale binds the manuscript before the
@@ -241,9 +344,9 @@ function onFinaleContact() {
   closeBookToSection('contact');
 }
 function onBindDone() {
-  // The book is bound — skip the trip back to the top entirely and
-  // glide straight to the contact form (or the socials, if the form
-  // has already been submitted and retired this visit).
+  // The book is bound — skip the trip back to the top entirely and land
+  // on the contact form (or the socials, if the form has already been
+  // submitted and retired this visit).
   bindingActive.value = false;
   // The how-to-read modal is one-time: never let it pop back up after
   // the binding.
@@ -251,12 +354,10 @@ function onBindDone() {
   markBookIntroSeen();
   if (!manuscriptBound.value) markManuscriptBound();
   boundBookDrop.value++;
-  // Switch views and scroll in the same frame — the shelf lands and we
-  // glide to contact without an intermediate scroll-to-top.
   closeBook();
-  requestAnimationFrame(() => {
-    document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
-  });
+  // The cinematic has its own ending — no paper transition on this hop.
+  skipTransitionOnce = true;
+  goContactRoad();
 }
 /** The binding's fade-to-black: swap in the finished book behind it so
     the fade back in lands on the home page with the bound book. */
@@ -277,6 +378,11 @@ function onBindShelf() {
 /** Header nav: CONTACT ME lands on the contact form (or the socials once
     the form has been submitted and retired); the brand goes home. */
 function onNavContact() {
+  // Off the home page the book isn't mounted — plain navigation.
+  if (!isHome.value) {
+    goContactRoad();
+    return;
+  }
   if ((office.view === 'desk')) {
     if (!manuscriptBound.value && bindCinematic.value) {
       runBinding();
@@ -284,10 +390,15 @@ function onNavContact() {
     }
     closeBookToSection('contact');
   } else {
-    document.getElementById(contactTarget())?.scrollIntoView({ behavior: 'smooth' });
+    goContactRoad();
   }
 }
 function onNavHome() {
+  // Off the home page, the brand just goes home.
+  if (!isHome.value) {
+    router.push('/');
+    return;
+  }
   if ((office.view === 'desk')) {
     tiltUp();
   } else {
@@ -905,9 +1016,22 @@ onUnmounted(() => {
     </button>
   </div>
   <SiteNav v-show="!bindingActive" :bonus-content="bonus.enabled" @contact="onNavContact" @home="onNavHome" />
+  <!-- Paper wipe between routes: the sheet lays down in 3D, types the
+       new route's name as a chapter title, then lifts off. -->
+  <RouteTransition
+    :active="routeTransition.active"
+    :lifting="routeTransition.lifting"
+    :typed="routeTransition.typed"
+    :done="routeTransition.done"
+    :letter="routeTransition.letter"
+    :kicker="routeTransition.kicker"
+  />
   <main id="main-content">
   <h1 class="sr-only">{{ settings.siteName }} — websites that tell stories</h1>
+  <!-- The manuscript experience owns `/`; sub-pages render below it. -->
+  <RouterView v-if="!isHome" />
   <Office
+    v-else
     ref="officeRef"
     @open-book="openBook"
     @back-to-cover="tiltUp"
@@ -949,8 +1073,8 @@ onUnmounted(() => {
     </template>
   </Office>
   </main>
-  <!-- Contact/about sections (below the Office carousel, shelf view only). -->
-  <div v-if="office.view === 'shelf'" class="home-sections">
+  <!-- Below the Office carousel, shelf view only (home page). -->
+  <div v-if="isHome && office.view === 'shelf'" class="home-sections">
     <Cover :is-bound="manuscriptBound" @open-book-instant="openBook(true)" />
   </div>
   <BindCinematic
@@ -965,7 +1089,7 @@ onUnmounted(() => {
        has changed something, and only while the book is closed. Taps
        open the desk phone's Settings app. -->
   <button
-    v-if="settings.isModified && office.view !== 'desk' && !bindingActive"
+    v-if="isHome && settings.isModified && office.view !== 'desk' && !bindingActive"
     type="button"
     class="settings-fab"
     aria-label="Open phone settings"
@@ -1037,6 +1161,13 @@ onUnmounted(() => {
 <style>
 .gs-no-scroll {
   overflow: hidden;
+}
+/* The home page never needs its scrollbar — hide it entirely there. */
+.gs-no-scrollbar {
+  scrollbar-width: none;
+}
+.gs-no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 /* Floating settings shortcut: bottom-right, only when the user has
    changed a setting and the book is closed. */

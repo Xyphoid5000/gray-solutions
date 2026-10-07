@@ -1,3 +1,26 @@
+/* Kill the mobile tap-highlight flash everywhere — the per-element rules
+   below stay as documentation, but this covers every tappable thing. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+/* No text selection anywhere on the site (kills Android's long-press
+   select/copy toolbar) — form fields stay editable/selectable. */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* The mobile page must never pan sideways — clip any horizontal overflow
+   at the root (clip, not hidden, so sticky positioning keeps working). */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* ============================================================
    GRAY SOLUTIONS — "Websites that tell stories"
    Design system: dark editorial, cinematic, warm paper on
@@ -257,6 +280,17 @@ a {
 .btn:hover .arrow {
   transform: translateX(4px);
 }
+.btn-ghost {
+  border-color: var(--line);
+  color: var(--ink);
+  background: transparent;
+  padding: 0.8rem 1.5rem;
+}
+.btn-ghost:hover {
+  border-color: var(--ember);
+  color: var(--ember);
+  transform: translateY(-2px);
+}
 
 /* ---------- nav ---------- */
 .site-nav {
@@ -335,6 +369,13 @@ a {
   border-color: var(--ember);
   color: #14100a;
 }
+/* Right-side action group: contact button + desktop hamburger. */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
 
 /* ---------- prologue / hero-sub / link-more ---------- */
 .prologue {
@@ -370,6 +411,226 @@ a {
   100% {
     opacity: 0;
   }
+}
+
+/* Route transition: a full-screen sheet of manuscript paper that lays
+   down in 3D, types the route name as a chapter title, then lifts off.
+   Paper + ink match the manuscript surfaces; the outlined lead letter
+   gets a dark stroke so it reads on the sheet. */
+.route-paper-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  perspective: 1400px;
+  pointer-events: all;
+}
+.route-paper {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--paper);
+  color: #1c1712;
+  transform-origin: 50% 100%;
+  animation: paper-lay-down 0.65s var(--ease-out) forwards;
+}
+.route-paper.lift {
+  animation: paper-lift-off 0.6s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+}
+@keyframes paper-lay-down {
+  from {
+    opacity: 0;
+    transform: rotateX(26deg) translateY(-6%) scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: rotateX(0deg) translateY(0) scale(1);
+  }
+}
+@keyframes paper-lift-off {
+  from {
+    opacity: 1;
+    transform: rotateX(0deg) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: rotateX(-22deg) translateY(-10%) scale(1.06);
+  }
+}
+.route-paper .ch-num {
+  -webkit-text-stroke: 1px rgba(28, 23, 18, 0.32);
+}
+.route-ch {
+  width: min(720px, 100% - 3rem);
+  margin-bottom: 0;
+}
+
+/* ---------- project showcase ---------- */
+/* One project, fully told. Ink/muted/line ride variables so the same
+   component reads on the dark site and on the paper modal sheet. */
+.project-showcase {
+  --ps-ink: var(--ink);
+  --ps-muted: var(--muted);
+  --ps-line: var(--line);
+  --ps-faint: var(--faint);
+  color: var(--ps-ink);
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: start;
+}
+/* The laptop: Chris's photo frame with the site screenshot laid into
+   the screen area (measured at 12.4% / 14.9% / 75.2% x 42.6%). */
+.laptop-photo {
+  position: relative;
+  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.45));
+}
+/* Dark mode: the black laptop melts into the near-black background, so
+   tighten the shadow and add a faint rim light that follows the frame's
+   silhouette — this is what crisps the edges. */
+html[data-theme='dark'] .laptop-photo {
+  filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 1px rgba(235, 230, 215, 0.5));
+}
+.laptop-photo-frame {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.laptop-photo-shot {
+  position: absolute;
+  left: 12.4%;
+  top: 14.9%;
+  width: 75.2%;
+  height: 42.6%;
+  object-fit: cover;
+  object-position: top center;
+}
+.project-body .ch-kicker {
+  margin-bottom: 0.8rem;
+}
+.project-name {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: clamp(1.6rem, 3.4vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 0 0 1rem;
+}
+.project-desc {
+  font-size: 1.02rem;
+  line-height: 1.6;
+  color: var(--ps-ink);
+  margin: 0 0 0.4rem;
+  max-width: 46ch;
+}
+.project-subhead {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ps-muted);
+  margin: 1.8rem 0 0.2rem;
+}
+.project-showcase .proof-tags {
+  margin-top: 0.9rem;
+}
+.project-showcase .proof-tags li {
+  color: var(--ps-muted);
+  border-color: var(--ps-line);
+}
+.project-story {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--ps-muted);
+  margin: 0.9rem 0 0;
+  max-width: 48ch;
+}
+.proof-details {
+  margin-top: 1.4rem;
+}
+/* ---------- projects page ---------- */
+.projects-lede {
+  margin-bottom: 3.5rem;
+}
+.projects-list {
+  display: grid;
+  gap: clamp(4rem, 8vw, 7rem);
+  padding-bottom: 5rem;
+}
+/* Every other showcase swaps sides — the page zigzags down. */
+.projects-list .project-showcase.flip {
+  direction: rtl;
+}
+.projects-list .project-showcase.flip > * {
+  direction: ltr;
+}
+@media (max-width: 860px) {
+  .project-showcase {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- project modal ---------- */
+/* Near-full-screen paper sheet over the book. Same backdrop language as
+   the chapter modal; the sheet flips the showcase vars to paper ink. */
+.project-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  background: rgba(9, 7, 4, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 3vw, 2.5rem);
+  overflow-y: auto;
+}
+.project-modal-sheet {
+  --ps-ink: #1c1712;
+  --ps-muted: #6d6455;
+  --ps-line: rgba(28, 23, 18, 0.16);
+  --ps-faint: #a39c8a;
+  --ink: #1c1712;
+  --line: rgba(28, 23, 18, 0.16);
+  --muted: #6d6455;
+  position: relative;
+  width: min(1080px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--paper);
+  color: var(--ps-ink);
+  border-radius: 6px;
+  padding: clamp(1.75rem, 4vw, 3.5rem);
+  box-shadow: 0 40px 120px -20px rgba(0, 0, 0, 0.7);
+}
+.project-modal-sheet .ch-kicker {
+  color: #b06a2a;
+}
+.project-modal-sheet .ch-kicker::before {
+  background: #b06a2a;
+}
+.project-modal-close {
+  position: absolute;
+  top: 0.9rem;
+  right: 1.1rem;
+  z-index: 5;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--ps-line);
+  background: var(--paper);
+  color: var(--ps-ink);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+.project-modal-close:hover {
+  transform: rotate(90deg);
+  background: rgba(28, 23, 18, 0.06);
 }
 .hero-sub {
   max-width: 60ch;
@@ -1369,9 +1630,10 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 }
 .b-stamp {
   font-family: var(--serif);
-  font-size: clamp(1.1rem, 5.5vw, 1.5rem);
-  letter-spacing: 0.18em;
+  font-size: clamp(0.95rem, 4.6vw, 1.25rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: rgba(120, 70, 40, 0.82);
   margin: 0;
   transform: rotate(-4deg);
@@ -1551,9 +1813,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .cover-ui.is-overlay .cover-cta {
   pointer-events: auto;
 }
-.cover-ui.is-overlay .cover-hint {
-  display: none;
-}
 .cover-cta .btn {
   font-size: 1.02rem;
   padding: 1.05rem 2.2rem;
@@ -1563,14 +1822,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   0%, 100% { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
   50% { box-shadow: 0 10px 42px rgba(208, 138, 78, 0.35); }
 }
-.cover-hint {
-  margin: 1.4rem 0 0;
-  color: var(--faint);
-  font-size: 0.8rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.4s ease;
@@ -1856,6 +2107,17 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .cover-page .wrap {
   padding-left: 1.25rem;
 }
+/* ---------- sub-pages: /contact, /about, /projects ---------- */
+/* Routed pages sit under the fixed header — same offset the cover uses. */
+.page {
+  padding-top: calc(var(--nav-h) + 1rem);
+}
+/* The arc's deep bottom padding is pagination breathing room for the
+   book — the routed page doesn't need it. */
+.page #arc {
+  padding-bottom: 0;
+}
+
 .cover-contact {
   position: relative;
   padding: 5rem 0 7rem;
@@ -3329,6 +3591,83 @@ html[data-theme='dark'] .page-tab {
   height: 2px;
   background: var(--ember);
   border-radius: 1px;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+/* The hamburger morphs into an X while its menu is open. */
+.nav-hamburger.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.nav-hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+.nav-hamburger.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+/* Desktop hamburger: About and Projects live here. Hidden on mobile,
+   where the full menu has them. (Double class for specificity: the
+   max-width media query below also targets .nav-hamburger.) */
+.nav-hamburger.nav-hamburger-desktop {
+  display: none;
+  position: static;
+  transform: none;
+}
+@media (min-width: 641px) {
+  .nav-hamburger.nav-hamburger-desktop {
+    display: flex;
+  }
+}
+/* Desktop dropdown for the About/Projects pages. */
+.nav-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 1rem;
+  min-width: 12rem;
+  background: var(--bg, #14100a);
+  border: 1px solid rgba(208, 138, 78, 0.2);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  z-index: 1001;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.nav-dropdown-menu button {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0.9rem 1.2rem;
+  text-align: left;
+  cursor: pointer;
+}
+.nav-dropdown-menu button:hover {
+  background: rgba(208, 138, 78, 0.1);
+}
+/* Chapter-style menus: serif items under an ember kicker, echoing the
+   chapter headings. */
+.nav-menu-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ember);
+  padding: 0.9rem 1.2rem 0.25rem;
+  pointer-events: none;
+}
+.nav-menu-kicker::before {
+  content: '';
+  width: 1.6rem;
+  height: 1px;
+  background: var(--ember);
+  display: inline-block;
+}
+.nav-dropdown-menu button,
+.nav-mobile-menu button {
+  font-family: var(--serif);
+  font-size: 1.12rem;
 }
 .nav-mobile-menu {
   display: none;
