@@ -30,18 +30,23 @@ if (typeof window !== 'undefined' && typeof window.matchMedia !== 'undefined') {
   else mq.addListener(onMq);
 }
 
-/** Background mural (3 versions + mobile short-candle variants):
-    - Bonus off: day, no candle.
-    - Bonus on, day: candle unlit.
-    - Bonus on, night: candle lit (night only shows with candle). */
+/** Background mural:
+    - Bonus on: candle variants (unlit by day, lit by night).
+    - Bonus off: theme-matched wall, never a candle. */
 const shelfBg = computed(() => {
-  let file = 'office-wall-day.jpg';
+  const dark = isDark.value;
+  const mobile = isMobileBg.value;
+  let file: string;
   if (bonus.enabled && !bonus.candleGone) {
-    if (isMobileBg.value) {
-      file = isDark.value ? 'office-wall-night-candle-lit-mobile.jpg' : 'office-wall-day-candle-mobile.jpg';
+    if (mobile) {
+      file = dark ? 'office-wall-night-candle-lit-mobile.jpg' : 'office-wall-day-candle-mobile.jpg';
     } else {
-      file = isDark.value ? 'office-wall-night-candle-lit.jpg' : 'office-wall-day-candle.jpg';
+      file = dark ? 'office-wall-night-candle-lit.jpg' : 'office-wall-day-candle.jpg';
     }
+  } else if (mobile && dark) {
+    file = 'office-wall-night-mobile.jpg';
+  } else {
+    file = dark ? 'office-wall-night.jpg' : 'office-wall-day.jpg';
   }
   return `url('/${file}') center / cover no-repeat`;
 });
