@@ -16,7 +16,6 @@ const music = useMusicStore();
     <div class="now-playing">
       <div class="np-disc" :class="{ spinning: music.isPlaying }" aria-hidden="true">💿</div>
       <p class="np-title">{{ music.currentTrack().title }}</p>
-      <p class="np-artist">{{ music.currentTrack().artist ?? 'Xyphoid' }}</p>
     </div>
 
     <div class="controls">
