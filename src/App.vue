@@ -971,10 +971,31 @@ onUnmounted(() => {
       <DeskPencil />
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
-      <DeskPhone v-if="bonus.enabled" shortcut />
+      <!-- Anchor for the desk phone button (teleported from App root). -->
+      <div id="desk-phone-slot" v-if="bonus.enabled"></div>
     </template>
   </Office>
   </main>
+  <!-- Desk phone: lives at App root so it survives view changes. The desk
+       button teleports to the desk; the corner button appears off-desk
+       once unlocked. Hidden while the book is open. -->
+  <DeskPhone
+    v-if="bonus.enabled"
+    shortcut
+    :docked="office.view === 'desk'"
+  />
+  <button
+    v-if="bonus.enabled && bonus.phoneUnlocked && office.view !== 'desk'"
+    type="button"
+    class="phone-corner-btn"
+    aria-label="Open the phone"
+    @click="bonus.phoneHeld = true"
+  >
+    <svg viewBox="0 0 60 112" aria-hidden="true">
+      <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
+      <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
+    </svg>
+  </button>
   <!-- Below the Office carousel, shelf view only (home page). -->
   <div v-if="isHome && office.view === 'shelf'" class="home-sections">
     <Cover :is-bound="manuscriptBound" @open-book-instant="openBook(true)" />
@@ -1116,5 +1137,29 @@ onUnmounted(() => {
 }
 .camera-moving .view-book {
   z-index: 2;
+}
+/* Phone corner button: appears off-desk once unlocked. */
+.phone-corner-btn {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 900;
+  width: 56px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.phone-corner-btn:hover {
+  transform: scale(1.08);
+  opacity: 1;
+}
+.phone-corner-btn svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
 }
 </style>

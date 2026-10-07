@@ -24,7 +24,7 @@ import MusicPlayer from './phone/MusicPlayer.vue';
 /** `shortcut`: this is the desk phone — it answers the floating
     settings shortcut. Other instances (e.g. the binding cinematic's)
     ignore it. */
-const props = defineProps<{ shortcut?: boolean }>();
+const props = defineProps<{ shortcut?: boolean; docked?: boolean }>();
 
 const device = useDeviceStore();
 /** Desktop (fine pointer / wide viewport): snake starts with the space
@@ -54,13 +54,19 @@ function onLedColor(e: Event) {
   lights.refresh();
 }
 
-const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger' | 'music'>('pin');
-/** Once the PIN is entered, the phone stays unlocked — picking it up
-    returns to where you left off, no re-entering the code. */
-const unlocked = ref(false);
 const settings = useSettingsStore();
 const bonus = useBonusStore();
+/** Phone UI state lives in the bonus store so it survives view changes —
+    the desk button, corner button, and held phone all share it. */
+const held = computed({
+  get: () => bonus.phoneHeld,
+  set: (v: boolean) => { bonus.phoneHeld = v; },
+});
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger' | 'music'>('pin');
+const unlocked = computed({
+  get: () => bonus.phoneUnlocked,
+  set: (v: boolean) => { bonus.phoneUnlocked = v; },
+});
 const siteNameDraft = ref(settings.siteName);
 
 /** What the theme is actually showing for a variable right now — the
@@ -482,13 +488,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- The phone on the desk — tappable now. -->
-  <button
-    class="desk-phone-btn"
-    type="button"
-    aria-label="Pick up the phone"
-    @click="pickUp"
-  >
+  <!-- The phone on the desk — teleported to the desk slot. Hidden when
+       undocked (the corner button in App.vue takes over off the desk). -->
+  <Teleport to="#desk-phone-slot" :disabled="!docked">
+    <button
+      v-if="docked"
+      class="desk-phone-btn"
+      type="button"
+      aria-label="Pick up the phone"
+      @click="pickUp"
+    >
     <svg viewBox="0 0 60 112">
       <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
       <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
@@ -498,7 +507,8 @@ onUnmounted(() => {
       <rect x="58" y="30" width="3" height="14" rx="1.5" class="phone-button" />
       <circle cx="47" cy="24" r="3.2" class="phone-notif" />
     </svg>
-  </button>
+    </button>
+  </Teleport>
 
   <!-- Picked up: the phone in hand. Teleported to <body> so it can
        open from the main screen too — there the desk slide (and this

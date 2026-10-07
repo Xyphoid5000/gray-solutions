@@ -147,6 +147,9 @@ const onPointerUp = () => {
 // the full yank treatment instead. (e.detail === 0 means keyboard;
 // mouse clicks already toggled via the pointer handlers above.)
 const onClick = (e: MouseEvent) => {
+  // The cord lives inside the header brand link — stop the click from
+  // bubbling up and navigating home.
+  e.stopPropagation();
   if (e.detail !== 0) return;
   if (releaseTimer) {
     clearTimeout(releaseTimer);
