@@ -1624,9 +1624,10 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 }
 .b-stamp {
   font-family: var(--serif);
-  font-size: clamp(1.1rem, 5.5vw, 1.5rem);
-  letter-spacing: 0.18em;
+  font-size: clamp(0.95rem, 4.6vw, 1.25rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  white-space: nowrap;
   color: rgba(120, 70, 40, 0.82);
   margin: 0;
   transform: rotate(-4deg);
