@@ -12,6 +12,10 @@ import { useModalA11y } from '../composables/useModalA11y';
 import { useSettingsStore } from '../stores/settings';
 import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
+import GamesMenu from './phone/GamesMenu.vue';
+import BrickBreaker from './phone/BrickBreaker.vue';
+import FlappyBird from './phone/FlappyBird.vue';
+import SpaceInvaders from './phone/SpaceInvaders.vue';
 
 /** `shortcut`: this is the desk phone — it answers the floating
     settings shortcut. Other instances (e.g. the binding cinematic's)
@@ -47,7 +51,7 @@ function onLedColor(e: Event) {
 }
 
 const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings'>('pin');
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders'>('pin');
 const settings = useSettingsStore();
 const bonus = useBonusStore();
 const siteNameDraft = ref(settings.siteName);
@@ -469,6 +473,10 @@ onUnmounted(() => {
               <span class="app-glyph app-snake" aria-hidden="true"></span>
               Snake
             </button>
+            <button type="button" class="app-icon" @click="screen = 'games'">
+              <span class="app-glyph app-games" aria-hidden="true">🎮</span>
+              Games
+            </button>
             <button type="button" class="app-icon" @click="openContacts">
               <span class="app-glyph app-contacts" aria-hidden="true"></span>
               Contacts
@@ -500,6 +508,26 @@ onUnmounted(() => {
             ></canvas>
           </div>
           <p class="snake-hint">{{ isDesktop ? 'Arrow keys to steer' : 'Swipe to steer' }}</p>
+        </div>
+
+        <!-- Games menu -->
+        <div v-else-if="screen === 'games'" class="scr scr-games">
+          <GamesMenu @play="screen = $event" @back="screen = 'home'" />
+        </div>
+
+        <!-- Brick Breaker -->
+        <div v-else-if="screen === 'brick'" class="scr scr-game">
+          <BrickBreaker @back="screen = 'games'" />
+        </div>
+
+        <!-- Flappy Bird -->
+        <div v-else-if="screen === 'flappy'" class="scr scr-game">
+          <FlappyBird @back="screen = 'games'" />
+        </div>
+
+        <!-- Space Invaders -->
+        <div v-else-if="screen === 'invaders'" class="scr scr-game">
+          <SpaceInvaders @back="screen = 'games'" />
         </div>
 
         <!-- Contacts -->
@@ -932,6 +960,18 @@ html[data-blacklight='on'] .desk-phone-btn {
 /* Snake */
 .scr-snake {
   padding-top: 3rem;
+}
+/* Games */
+.scr-games,
+.scr-game {
+  padding-top: 3rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.scr-game > * {
+  flex: 1;
+  min-height: 0;
 }
 .snake-head {
   display: flex;
