@@ -49,7 +49,7 @@ onMounted(() => {
         kicker="Chapter Two &mdash; The Craft"
         title="What I <em>actually do.</em>"
       />
-      <p v-reveal class="lede" style="margin-bottom: 3rem">
+      <p v-reveal class="lede">
         Four disciplines, one obsession: a website that
         <em>reads like it was written</em>, not assembled.
       </p>
