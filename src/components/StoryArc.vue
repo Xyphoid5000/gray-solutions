@@ -215,6 +215,18 @@ onMounted(() => {
       });
       spineTriggers.push(trigger);
     });
+    // The last stop can't always scroll up to its tripwire when the page
+    // ends right after the spine (the routed page has no bottom padding),
+    // so pin the finale to the page's real max scroll instead: hitting the
+    // bottom lights the last act, scrolling back up undraws it.
+    // 'bottom bottom' with no trigger element pins to the scroller's own
+    // max scroll (enter fires exactly at max, onLeaveBack above it).
+    const finale = ScrollTrigger.create({
+      start: 'bottom bottom',
+      onEnter: () => lightUpTo(acts.length),
+      onLeaveBack: () => lightUpTo(acts.length - 1),
+    });
+    spineTriggers.push(finale);
     return;
   }
 
