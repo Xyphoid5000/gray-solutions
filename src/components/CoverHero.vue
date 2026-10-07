@@ -622,7 +622,7 @@ onUnmounted(() => {
         <div class="ms-page ms-p2"></div>
         <div class="ms-page ms-p1">
           <div class="b-manuscript-frame">
-            <p class="b-stamp">Manuscript</p>
+            <p class="b-stamp">Gray Solutions</p>
             <p class="b-msub">Five chapters &middot; final draft</p>
             <WaxSeal v-if="bonusContent" />
           </div>
