@@ -19,6 +19,11 @@ const TRACKS: GraydioTrack[] = [
   { title: 'Equatorial Complex', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Equatorial%20Complex.mp3' },
   { title: 'Cloud Dancer', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Cloud%20Dancer.mp3' },
   { title: 'Brain Dance', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Brain%20Dance.mp3' },
+  { title: 'Ouroboros', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Ouroboros.mp3' },
+  { title: 'Crypto', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Crypto.mp3' },
+  { title: 'At Launch', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/At%20Launch.mp3' },
+  { title: 'Rocket', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Rocket.mp3' },
+  { title: 'Lightless Dawn', artist: 'Kevin MacLeod', url: 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Lightless%20Dawn.mp3' },
 ];
 
 export const useMusicStore = defineStore('music', () => {
