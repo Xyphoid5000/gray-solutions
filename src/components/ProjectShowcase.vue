@@ -10,7 +10,7 @@ defineProps<{ project: Project }>();
 <template>
   <article class="project-showcase" :aria-label="project.name">
     <div class="laptop-photo" role="img" :aria-label="project.imageAlt">
-      <img class="laptop-photo-frame" src="/projects/laptop-frame.png" alt="" />
+      <img class="laptop-photo-frame" src="/projects/laptop-frame.svg" alt="" />
       <img class="laptop-photo-shot" :src="project.image" :alt="''" loading="lazy" />
     </div>
     <div class="project-body">
