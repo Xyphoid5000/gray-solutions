@@ -889,7 +889,10 @@ html[data-blacklight='on'] .desk-phone-btn {
 }
 .home-apps {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.6rem;
+  max-width: 100%;
 }
 .app-icon {
   display: flex;
@@ -926,6 +929,20 @@ html[data-blacklight='on'] .desk-phone-btn {
 .app-contacts {
   background: linear-gradient(135deg, #3a2b12, #b07d2b);
   position: relative;
+}
+.app-games {
+  background: linear-gradient(135deg, #2a1a3a, #6b2f9e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.app-music {
+  background: linear-gradient(135deg, #3a1a1a, #b03a3a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
 }
 .app-contacts::after {
   content: '';

@@ -77,6 +77,8 @@ export const useMusicStore = defineStore('music', () => {
       '&auto_play=false&hide_related=true&show_comments=false&show_user=false';
     document.body.appendChild(iframe);
     widget = window.SC!.Widget(iframe);
+    // The widget ignores commands until it fires 'ready' — wait for it.
+    await new Promise<void>((resolve) => widget!.bind('ready', () => resolve()));
     widget.bind('finish', () => next());
     widget.bind('play', () => { isPlaying.value = true; });
     widget.bind('pause', () => { isPlaying.value = false; });
@@ -88,15 +90,12 @@ export const useMusicStore = defineStore('music', () => {
     const w = await ensureWidget();
     currentIndex.value = (i + tracks.value.length) % tracks.value.length;
     w.load(tracks.value[currentIndex.value].url, { auto_play: true });
-    isPlaying.value = true;
+    // isPlaying flips via the widget's 'play' event — not optimistically.
   }
 
   async function play() {
     const w = await ensureWidget();
-    // If nothing's loaded yet, start the current track.
-    w.getCurrentSound(() => {});
     w.play();
-    isPlaying.value = true;
   }
 
   async function pause() {
