@@ -246,6 +246,7 @@ a {
   font-weight: 400;
   color: var(--ink);
   max-width: 34ch;
+  margin-bottom: 3rem;
 }
 /* ---------- buttons ---------- */
 .btn {
@@ -1107,40 +1108,6 @@ html[data-theme='dark'] .laptop-photo {
   font-size: 1.15rem;
   color: var(--ink);
 }
-/* ---------- footer ---------- */
-.site-footer {
-  border-top: 1px solid var(--line-soft);
-  padding: 2.2rem 0;
-}
-.footer-inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--faint);
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
-}
-.footer-inner .to-top {
-  background: none;
-  border: none;
-  color: var(--faint);
-  font: inherit;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  transition: color 0.25s;
-  padding: 0;
-}
-.footer-inner .to-top:hover {
-  color: var(--ember);
-}
-
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
   .premise-grid {
@@ -1172,11 +1139,6 @@ html[data-theme='dark'] .laptop-photo {
   z-index: 800;
   pointer-events: auto;
   cursor: pointer;
-}
-/* In the transition Room, the desk is 100vh — absolute matches the viewport position. */
-.room-desk .read-pile {
-  position: absolute;
-  top: 22%;
 }
 .read-pile .pile-page {
   position: absolute;
@@ -1832,17 +1794,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 }
 
 /* ---------- light/dark pull cord ---------- */
-/* The pull cord only exists while bonus content is on. This wrapper is
-   the header-sized stage it swings from: the cord mounts folded up to
-   the right of its base, swings down around its mount on cue, and
-   folds back up the same way. The swing animates the wrapper so it
-   never fights the cord's own sway, and the inner knob keeps its own
-   pointer events. */
-.cord-drop-wrap {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
 /* A ceiling-pull cord hanging from the top of the viewport. It overlays
    the page, sways gently at idle, and toggles the theme when yanked. */
 .pull-cord {
@@ -2136,16 +2087,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
     max-height 0.7s ease,
     padding-top 0.7s ease,
     padding-bottom 0.7s ease;
-}
-/* Post-send retirement: the section fades, rises, and collapses after
-   the green confirmation has had its 3 seconds. */
-.cover-contact.is-leaving {
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(-28px);
-  max-height: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .cover-contact {
@@ -2789,18 +2730,6 @@ html[data-theme='dark'] .ms-back {
   --desk-pr: 60px;
   padding-left: var(--desk-pl);
   padding-right: var(--desk-pr);
-}
-/* Sandwich mode: the open manuscript becomes the sandwich — chapters as
-   toppings, no pages. Centered on the desk where the open book sat. */
-.manuscript-sandwich {
-  margin: 10vh auto;
-  position: relative;
-  z-index: 1;
-  animation: manuscript-sandwich-in 0.4s var(--ease-out);
-}
-@keyframes manuscript-sandwich-in {
-  from { opacity: 0; transform: translateY(14px) scale(0.97); }
-  to { opacity: 1; transform: none; }
 }
 /* The desk stage: a zero-height sticky layer pinned to the top of the
    viewport while the desk is on screen. The candle and pencil live on

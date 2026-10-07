@@ -11,14 +11,3 @@ export const siteConfig = {
   // TODO (Chris): confirm location — best guess from context.
   location: 'Cleveland, Ohio',
 } as const;
-
-export const palette = {
-  bg: '#0a0d12',
-  bgSoft: '#0e131b',
-  panel: '#111722',
-  silver: '#c7ccd4',
-  silverDim: '#8b93a1',
-  blue: '#2f9bff',
-  blueDeep: '#1f6fd0',
-  line: 'rgba(199, 204, 212, 0.12)',
-} as const;

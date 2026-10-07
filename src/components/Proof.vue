@@ -71,7 +71,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
         kicker="Chapter Three &mdash; The Proof"
         title="Don&rsquo;t take my <em>word for it.</em>"
       />
-      <p v-reveal class="lede" style="margin-bottom: 2.6rem">
+      <p v-reveal class="lede">
         A portfolio is a story&rsquo;s evidence locker. Here&rsquo;s what
         happens when a business gets <em>a website with a plot.</em>
       </p>

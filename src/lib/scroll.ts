@@ -12,25 +12,12 @@ export function setLenis(instance: Lenis | null): void {
   lenis = instance;
 }
 
-export function isSmoothScrollActive(): boolean {
-  return lenis !== null;
-}
-
 /** Smooth-scroll back to the very top (replays the scroll-driven intro). */
 export function scrollToTop(): void {
   if (lenis) {
     lenis.scrollTo(0, { duration: 2.4 });
   } else {
     window.scrollTo({ top: 0, behavior: 'auto' });
-  }
-}
-
-/** Smooth-scroll to an element, accounting for the fixed nav. */
-export function scrollToElement(el: HTMLElement): void {
-  if (lenis) {
-    lenis.scrollTo(el, { offset: -72, duration: 1.6 });
-  } else {
-    el.scrollIntoView({ behavior: 'auto' });
   }
 }
 
@@ -42,23 +29,4 @@ export function scrollSlowTo(el: HTMLElement, onComplete?: () => void): void {
     el.scrollIntoView({ behavior: 'smooth' });
     if (onComplete) window.setTimeout(onComplete, 700);
   }
-}
-
-/** Jump to the very top without animation (page turns). */
-export function scrollToTopImmediate(): void {
-  if (lenis) {
-    lenis.scrollTo(0, { immediate: true });
-  } else {
-    window.scrollTo(0, 0);
-  }
-}
-
-/** Pause smooth scrolling (e.g. while a full-screen menu is open). */
-export function stopScroll(): void {
-  lenis?.stop();
-}
-
-/** Resume smooth scrolling. */
-export function startScroll(): void {
-  lenis?.start();
 }

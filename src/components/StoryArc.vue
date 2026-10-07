@@ -301,7 +301,7 @@ onUnmounted(() => {
         kicker="Chapter Four &mdash; The Arc"
         title="Every project follows <em>the arc.</em>"
       />
-      <p v-reveal class="lede" style="margin-bottom: 3rem">
+      <p v-reveal class="lede">
         Stories have run on the same shape for
         <em>three thousand years</em> &mdash; so does my process.
       </p>
