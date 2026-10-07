@@ -12,6 +12,11 @@ import { useModalA11y } from '../composables/useModalA11y';
 import { useSettingsStore } from '../stores/settings';
 import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
+import GamesMenu from './phone/GamesMenu.vue';
+import BrickBreaker from './phone/BrickBreaker.vue';
+import FlappyBird from './phone/FlappyBird.vue';
+import SpaceInvaders from './phone/SpaceInvaders.vue';
+import MusicPlayer from './phone/MusicPlayer.vue';
 
 /** `shortcut`: this is the desk phone — it answers the floating
     settings shortcut. Other instances (e.g. the binding cinematic's)
@@ -47,7 +52,7 @@ function onLedColor(e: Event) {
 }
 
 const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings'>('pin');
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'music'>('pin');
 const settings = useSettingsStore();
 const bonus = useBonusStore();
 const siteNameDraft = ref(settings.siteName);
@@ -152,6 +157,10 @@ function openSnake() {
   snakeState.value = 'ready';
   snakeScore.value = 0;
   nextTick(() => drawSnake());
+}
+function onPlayGame(game: 'snake' | 'brick' | 'flappy' | 'invaders') {
+  if (game === 'snake') openSnake();
+  else screen.value = game;
 }
 function startSnake() {
   snake = [
@@ -465,9 +474,13 @@ onUnmounted(() => {
         <div v-else-if="screen === 'home'" class="scr scr-home">
           <p class="home-time">{{ new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }}</p>
           <div class="home-apps">
-            <button type="button" class="app-icon" @click="openSnake">
-              <span class="app-glyph app-snake" aria-hidden="true"></span>
-              Snake
+            <button type="button" class="app-icon" @click="screen = 'games'">
+              <span class="app-glyph app-games" aria-hidden="true">🎮</span>
+              Games
+            </button>
+            <button type="button" class="app-icon" @click="screen = 'music'">
+              <span class="app-glyph app-music" aria-hidden="true">🎵</span>
+              Graydio
             </button>
             <button type="button" class="app-icon" @click="openContacts">
               <span class="app-glyph app-contacts" aria-hidden="true"></span>
@@ -484,7 +497,7 @@ onUnmounted(() => {
         <!-- Snake -->
         <div v-else-if="screen === 'snake'" class="scr scr-snake" @keydown="onKey" tabindex="0">
           <div class="snake-head">
-            <button type="button" class="snake-back" @click="screen = 'home'; stopSnake();" aria-label="Back">‹</button>
+            <button type="button" class="snake-back" @click="screen = 'games'; stopSnake();" aria-label="Back">‹</button>
             <span>Score {{ snakeScore }}</span>
           </div>
           <div
@@ -500,6 +513,31 @@ onUnmounted(() => {
             ></canvas>
           </div>
           <p class="snake-hint">{{ isDesktop ? 'Arrow keys to steer' : 'Swipe to steer' }}</p>
+        </div>
+
+        <!-- Games menu -->
+        <div v-else-if="screen === 'games'" class="scr scr-games">
+          <GamesMenu @play="onPlayGame" @back="screen = 'home'" />
+        </div>
+
+        <!-- Brick Breaker -->
+        <div v-else-if="screen === 'brick'" class="scr scr-game">
+          <BrickBreaker @back="screen = 'games'" />
+        </div>
+
+        <!-- Flappy Bird -->
+        <div v-else-if="screen === 'flappy'" class="scr scr-game">
+          <FlappyBird @back="screen = 'games'" />
+        </div>
+
+        <!-- Space Invaders -->
+        <div v-else-if="screen === 'invaders'" class="scr scr-game">
+          <SpaceInvaders @back="screen = 'games'" />
+        </div>
+
+        <!-- Graydio -->
+        <div v-else-if="screen === 'music'" class="scr scr-game">
+          <MusicPlayer @back="screen = 'home'" />
         </div>
 
         <!-- Contacts -->
@@ -851,7 +889,10 @@ html[data-blacklight='on'] .desk-phone-btn {
 }
 .home-apps {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.6rem;
+  max-width: 100%;
 }
 .app-icon {
   display: flex;
@@ -870,24 +911,23 @@ html[data-blacklight='on'] .desk-phone-btn {
   border-radius: 15px;
   display: block;
 }
-.app-snake {
-  background: linear-gradient(135deg, #1d3a24, #2f6b3a);
-  position: relative;
-}
-.app-snake::after {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 26px;
-  width: 34px;
-  height: 8px;
-  border-radius: 4px;
-  background: #7ee787;
-  box-shadow: -8px -8px 0 -2px #7ee787;
-}
 .app-contacts {
   background: linear-gradient(135deg, #3a2b12, #b07d2b);
   position: relative;
+}
+.app-games {
+  background: linear-gradient(135deg, #2a1a3a, #6b2f9e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.app-music {
+  background: linear-gradient(135deg, #3a1a1a, #b03a3a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
 }
 .app-contacts::after {
   content: '';
@@ -932,6 +972,18 @@ html[data-blacklight='on'] .desk-phone-btn {
 /* Snake */
 .scr-snake {
   padding-top: 3rem;
+}
+/* Games */
+.scr-games,
+.scr-game {
+  padding-top: 3rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.scr-game > * {
+  flex: 1;
+  min-height: 0;
 }
 .snake-head {
   display: flex;
