@@ -158,6 +158,10 @@ function openSnake() {
   snakeScore.value = 0;
   nextTick(() => drawSnake());
 }
+function onPlayGame(game: 'snake' | 'brick' | 'flappy' | 'invaders') {
+  if (game === 'snake') openSnake();
+  else screen.value = game;
+}
 function startSnake() {
   snake = [
     { x: 5, y: 8 },
@@ -470,10 +474,6 @@ onUnmounted(() => {
         <div v-else-if="screen === 'home'" class="scr scr-home">
           <p class="home-time">{{ new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }}</p>
           <div class="home-apps">
-            <button type="button" class="app-icon" @click="openSnake">
-              <span class="app-glyph app-snake" aria-hidden="true"></span>
-              Snake
-            </button>
             <button type="button" class="app-icon" @click="screen = 'games'">
               <span class="app-glyph app-games" aria-hidden="true">🎮</span>
               Games
@@ -497,7 +497,7 @@ onUnmounted(() => {
         <!-- Snake -->
         <div v-else-if="screen === 'snake'" class="scr scr-snake" @keydown="onKey" tabindex="0">
           <div class="snake-head">
-            <button type="button" class="snake-back" @click="screen = 'home'; stopSnake();" aria-label="Back">‹</button>
+            <button type="button" class="snake-back" @click="screen = 'games'; stopSnake();" aria-label="Back">‹</button>
             <span>Score {{ snakeScore }}</span>
           </div>
           <div
@@ -517,7 +517,7 @@ onUnmounted(() => {
 
         <!-- Games menu -->
         <div v-else-if="screen === 'games'" class="scr scr-games">
-          <GamesMenu @play="screen = $event" @back="screen = 'home'" />
+          <GamesMenu @play="onPlayGame" @back="screen = 'home'" />
         </div>
 
         <!-- Brick Breaker -->
@@ -910,21 +910,6 @@ html[data-blacklight='on'] .desk-phone-btn {
   height: 58px;
   border-radius: 15px;
   display: block;
-}
-.app-snake {
-  background: linear-gradient(135deg, #1d3a24, #2f6b3a);
-  position: relative;
-}
-.app-snake::after {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 26px;
-  width: 34px;
-  height: 8px;
-  border-radius: 4px;
-  background: #7ee787;
-  box-shadow: -8px -8px 0 -2px #7ee787;
 }
 .app-contacts {
   background: linear-gradient(135deg, #3a2b12, #b07d2b);

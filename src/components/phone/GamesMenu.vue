@@ -1,14 +1,15 @@
 <script setup lang="ts">
-/** Games menu on the desk phone: pick one of the three bonus games. */
+/** Games menu on the desk phone: pick one of the four games. */
 const emit = defineEmits<{
-  play: [game: 'brick' | 'flappy' | 'invaders'];
+  play: [game: 'snake' | 'brick' | 'flappy' | 'invaders'];
   back: [];
 }>();
 
 const games = [
-  { id: 'brick' as const, name: 'Brick Breaker', glyph: '▦' },
-  { id: 'flappy' as const, name: 'Flappy Bird', glyph: '➶' },
-  { id: 'invaders' as const, name: 'Space Invaders', glyph: '👾' },
+  { id: 'snake' as const, name: 'Snake', glyph: '🐍', tile: 'tile-snake' },
+  { id: 'brick' as const, name: 'Brick Breaker', glyph: '🧱', tile: 'tile-brick' },
+  { id: 'flappy' as const, name: 'Flappy Bird', glyph: '🐦', tile: 'tile-flappy' },
+  { id: 'invaders' as const, name: 'Space Invaders', glyph: '👾', tile: 'tile-invaders' },
 ];
 </script>
 
@@ -18,17 +19,16 @@ const games = [
       <button type="button" class="games-back" @click="emit('back')" aria-label="Back">‹</button>
       <span>Games</span>
     </div>
-    <div class="games-list">
+    <div class="games-grid">
       <button
         v-for="g in games"
         :key="g.id"
         type="button"
-        class="game-row"
+        class="game-icon"
         @click="emit('play', g.id)"
       >
-        <span class="game-glyph" aria-hidden="true">{{ g.glyph }}</span>
-        <span class="game-name">{{ g.name }}</span>
-        <span class="game-go" aria-hidden="true">›</span>
+        <span class="game-tile" :class="g.tile" aria-hidden="true">{{ g.glyph }}</span>
+        {{ g.name }}
       </button>
     </div>
   </div>
@@ -57,39 +57,49 @@ const games = [
   color: inherit;
   padding: 0.2rem 0.5rem;
 }
-.games-list {
+.games-grid {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 1rem;
+}
+.game-icon {
   display: flex;
   flex-direction: column;
-  padding: 0.8rem;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.45rem;
+  background: none;
+  border: 0;
+  color: #c6cdd9;
+  font-size: 0.75rem;
+  cursor: pointer;
+  width: 4.5rem;
 }
-.game-row {
+.game-icon:active {
+  transform: scale(0.95);
+}
+.game-tile {
+  width: 58px;
+  height: 58px;
+  border-radius: 15px;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  padding: 0.9rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgba(128, 128, 128, 0.25);
-  background: rgba(128, 128, 128, 0.08);
-  cursor: pointer;
-  font: inherit;
-  color: inherit;
-  text-align: left;
+  justify-content: center;
+  font-size: 2rem;
 }
-.game-row:active {
-  transform: scale(0.98);
+.tile-snake {
+  background: linear-gradient(135deg, #1d3a24, #2f6b3a);
 }
-.game-glyph {
-  font-size: 1.5rem;
-  width: 2rem;
-  text-align: center;
+.tile-brick {
+  background: linear-gradient(135deg, #1a2a4a, #2f6b9e);
 }
-.game-name {
-  flex: 1;
-  font-weight: 500;
+.tile-flappy {
+  background: linear-gradient(135deg, #4a2e12, #c07d2b);
 }
-.game-go {
-  font-size: 1.2rem;
-  opacity: 0.5;
+.tile-invaders {
+  background: linear-gradient(135deg, #2a1a3a, #6b2f9e);
 }
 </style>
