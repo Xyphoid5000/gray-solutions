@@ -3,6 +3,17 @@
 * {
   -webkit-tap-highlight-color: transparent;
 }
+/* No text selection anywhere on the site (kills Android's long-press
+   select/copy toolbar) — form fields stay editable/selectable. */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* ============================================================
    GRAY SOLUTIONS — "Websites that tell stories"
