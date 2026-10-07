@@ -9,15 +9,16 @@ import { ref } from 'vue';
 export interface GraydioTrack {
   title: string;
   url: string; // SoundCloud track page URL
+  artist?: string; // defaults to Xyphoid
 }
 
 // A handful of Chris's tracks on loop. Swap/add URLs to change the lineup.
 const TRACKS: GraydioTrack[] = [
-  { title: 'Come Around?', url: 'https://soundcloud.com/xyphoid/come-around' },
-  { title: 'Fire (Relit)', url: 'https://soundcloud.com/xyphoid/fire-relit' },
-  { title: 'First Snowfall', url: 'https://soundcloud.com/xyphoid/first-snowfall' },
-  { title: 'Smile', url: 'https://soundcloud.com/xyphoid/smile' },
-  { title: 'Backroads', url: 'https://soundcloud.com/xyphoid/backroads' },
+  { title: 'Neptune', url: 'https://soundcloud.com/xyphoid/hope' },
+  { title: 'Pluto', url: 'https://soundcloud.com/xyphoid/pluto' },
+  { title: 'D V N C E', url: 'https://soundcloud.com/xyphoid/dvnce' },
+  { title: "Don't Eat Ladies Off The Sidewalk", url: 'https://soundcloud.com/chris-bubba-gray/dont-eat-ladies-off-the-sidewalk', artist: 'Chris Bubba Gray' },
+  { title: 'New Age', url: 'https://soundcloud.com/chris-bubba-gray/new-age', artist: 'Chris Bubba Gray' },
 ];
 
 declare global {
