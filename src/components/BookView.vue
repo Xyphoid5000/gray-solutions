@@ -14,7 +14,16 @@ gsap.registerPlugin(Flip);
 /** Sandwich mode: the open book keeps its structure — cover, tabs,
     page turns, pile — but the pages are the sandwich: the cover is
     the top bun, each chapter page is its topping. */
-const sandwich = computed(() => useSettingsStore().sandwich);
+const settings = useSettingsStore();
+const sandwich = computed(() => settings.sandwich);
+/** Bound book cover title: site name stacked by word (Gray / Solutions).
+    Escaped — the name comes from settings input. */
+const boundTitleHtml = computed(() =>
+  settings.siteName
+    .split(' ')
+    .map((w) => w.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'))
+    .join('<br />'),
+);
 /** Chapter index → topping, top of the sandwich first. */
 const sandwichKinds = ['pickles', 'tomato', 'lettuce', 'cheese', 'patty'] as const;
 
@@ -787,8 +796,8 @@ function onTouchEnd(e: TouchEvent) {
         <!-- Sandwich mode: the manuscript cover is the top bun. -->
         <SandwichIngredient v-if="sandwich" kind="bun-top" compact />
         <template v-else>
-          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Gray Solutions</span>
-          <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+          <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">{{ settings.siteName }}</span>
+          <span v-else class="pile-cover-title" aria-hidden="true" v-html="boundTitleHtml"></span>
         </template>
       </button>
       <button
@@ -820,8 +829,8 @@ function onTouchEnd(e: TouchEvent) {
           <!-- Sandwich mode: the manuscript cover is the top bun. -->
           <SandwichIngredient v-if="sandwich" kind="bun-top" compact />
           <template v-else>
-            <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">Gray Solutions</span>
-            <span v-else class="pile-cover-title" aria-hidden="true">Gray<br />Solutions</span>
+            <span v-if="!manuscriptBound" class="pile-stamp" aria-hidden="true">{{ settings.siteName }}</span>
+            <span v-else class="pile-cover-title" aria-hidden="true" v-html="boundTitleHtml"></span>
           </template>
           <span class="pile-grid-label" aria-hidden="true">{{ manuscriptBound ? 'Book cover' : 'Manuscript cover' }}</span>
         </button>
