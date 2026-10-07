@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useHighScore } from './useHighScore';
 
 /** Space Invaders on the desk phone: drag to move, tap to shoot. */
 const emit = defineEmits<{ back: [] }>();
@@ -7,6 +8,8 @@ const emit = defineEmits<{ back: [] }>();
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
 const state = ref<'ready' | 'playing' | 'over' | 'win'>('ready');
+const { high: best, maybeSave } = useHighScore('invaders');
+const newBest = ref(false);
 
 const W = 300;
 const H = 400;
@@ -50,6 +53,7 @@ function start() {
   bullets = [];
   enemyBullets = [];
   score.value = 0;
+  newBest.value = false;
   shipX = W / 2 - SHIP_W / 2;
   invDir = 1;
   frame = 0;
@@ -80,6 +84,7 @@ function update() {
   const alive = invaders.filter((i) => i.alive);
   if (alive.length === 0) {
     state.value = 'win';
+    newBest.value = maybeSave(score.value);
     running = false;
     return;
   }
@@ -90,6 +95,7 @@ function update() {
     if (inv.x < 4 || inv.x > W - 32) hitEdge = true;
     if (inv.y + 20 > SHIP_Y) {
       state.value = 'over';
+      newBest.value = maybeSave(score.value);
       running = false;
       return;
     }
@@ -135,6 +141,7 @@ function update() {
       b.y < SHIP_Y + SHIP_H
     ) {
       state.value = 'over';
+      newBest.value = maybeSave(score.value);
       running = false;
       return;
     }
@@ -237,6 +244,7 @@ onUnmounted(() => {
     <div class="game-head">
       <button type="button" class="game-back" @click="emit('back')" aria-label="Back">‹</button>
       <span>Score {{ score }}</span>
+      <span class="best">Best {{ best }}</span>
     </div>
     <canvas
       ref="canvasEl"
@@ -250,6 +258,7 @@ onUnmounted(() => {
       <p v-if="state === 'ready'">Drag to move · tap to shoot</p>
       <p v-else-if="state === 'over'">Game over! Score {{ score }}</p>
       <p v-else>You win! Score {{ score }}</p>
+      <p v-if="newBest" class="new-best">★ New best! ★</p>
       <button type="button" class="game-btn" @click="start">
         {{ state === 'ready' ? 'Start' : 'Play again' }}
       </button>
@@ -282,6 +291,14 @@ onUnmounted(() => {
   color: inherit;
   padding: 0.2rem 0.5rem;
 }
+.best {
+  color: #8b93a5;
+  font-size: 0.85em;
+}
+.new-best {
+  color: #f1c40f;
+  font-weight: 700;
+}
 .game-canvas {
   width: 100%;
   height: auto;
@@ -289,7 +306,10 @@ onUnmounted(() => {
 }
 .game-overlay {
   position: absolute;
-  inset: 0;
+  top: 3.2rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;

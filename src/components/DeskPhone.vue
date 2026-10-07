@@ -13,6 +13,7 @@ import { useSettingsStore } from '../stores/settings';
 import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
 import GamesMenu from './phone/GamesMenu.vue';
+import { useHighScore } from './phone/useHighScore';
 import BrickBreaker from './phone/BrickBreaker.vue';
 import FlappyBird from './phone/FlappyBird.vue';
 import SpaceInvaders from './phone/SpaceInvaders.vue';
@@ -126,6 +127,8 @@ const SNAKE_ROWS = 16;
 const CELL = 20;
 const snakeScore = ref(0);
 const snakeState = ref<'ready' | 'playing' | 'over'>('ready');
+const { high: snakeBest, maybeSave: maybeSaveSnake } = useHighScore('snake');
+const snakeNewBest = ref(false);
 let snake: { x: number; y: number }[] = [];
 let dir = { x: 1, y: 0 };
 let pendingDir = { x: 1, y: 0 };
@@ -156,6 +159,7 @@ function openSnake() {
   screen.value = 'snake';
   snakeState.value = 'ready';
   snakeScore.value = 0;
+  snakeNewBest.value = false;
   nextTick(() => drawSnake());
 }
 function onPlayGame(game: 'snake' | 'brick' | 'flappy' | 'invaders') {
@@ -189,6 +193,7 @@ function tickSnake() {
   if (dead) {
     stopSnake();
     snakeState.value = 'over';
+    snakeNewBest.value = maybeSaveSnake(snakeScore.value);
     drawSnake();
     return;
   }
@@ -253,6 +258,15 @@ function drawSnake() {
       (SNAKE_COLS * CELL) / 2,
       (SNAKE_ROWS * CELL) / 2 + 16,
     );
+    if (snakeNewBest.value) {
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = '700 13px Inter, system-ui, sans-serif';
+      ctx.fillText(
+        '★ New best! ★',
+        (SNAKE_COLS * CELL) / 2,
+        (SNAKE_ROWS * CELL) / 2 + 38,
+      );
+    }
   }
 }
 function onSnakeTap() {
@@ -499,6 +513,7 @@ onUnmounted(() => {
           <div class="snake-head">
             <button type="button" class="snake-back" @click="screen = 'games'; stopSnake();" aria-label="Back">‹</button>
             <span>Score {{ snakeScore }}</span>
+            <span class="snake-best">Best {{ snakeBest }}</span>
           </div>
           <div
             class="snake-wrap"
@@ -1001,6 +1016,10 @@ html[data-blacklight='on'] .desk-phone-btn {
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0 0.4rem;
+}
+.snake-best {
+  color: #8b93a5;
+  font-size: 0.85em;
 }
 .snake-wrap {
   border-radius: 0.6rem;

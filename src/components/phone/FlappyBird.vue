@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
+import { useHighScore } from './useHighScore';
 
 /** Flappy Bird on the desk phone: tap to flap through the pipes. */
 const emit = defineEmits<{ back: [] }>();
@@ -7,16 +8,18 @@ const emit = defineEmits<{ back: [] }>();
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 const score = ref(0);
 const state = ref<'ready' | 'playing' | 'over'>('ready');
+const { high: best, maybeSave } = useHighScore('flappy');
+const newBest = ref(false);
 
 const W = 300;
 const H = 400;
 const BIRD_X = 70;
 const BIRD_R = 12;
-const GRAVITY = 0.45;
-const FLAP = -7.5;
+const GRAVITY = 0.32;
+const FLAP = -8.0;
 const PIPE_W = 52;
-const PIPE_GAP = 110;
-const PIPE_SPEED = 2.2;
+const PIPE_GAP = 130;
+const PIPE_SPEED = 2.0;
 
 let birdY = H / 2;
 let birdV = 0;
@@ -35,6 +38,7 @@ function reset() {
 
 function start() {
   reset();
+  newBest.value = false;
   state.value = 'playing';
   running = true;
   loop();
@@ -97,6 +101,7 @@ function update() {
 
 function die() {
   state.value = 'over';
+  newBest.value = maybeSave(score.value);
   running = false;
 }
 
@@ -169,6 +174,7 @@ onUnmounted(() => {
     <div class="game-head">
       <button type="button" class="game-back" @click="emit('back')" aria-label="Back">‹</button>
       <span>Score {{ score }}</span>
+      <span class="best">Best {{ best }}</span>
     </div>
     <canvas
       ref="canvasEl"
@@ -180,6 +186,7 @@ onUnmounted(() => {
     <div v-if="state !== 'playing'" class="game-overlay">
       <p v-if="state === 'ready'">Tap to flap</p>
       <p v-else>Game over! Score {{ score }}</p>
+      <p v-if="newBest" class="new-best">★ New best! ★</p>
       <button type="button" class="game-btn" @click="start">
         {{ state === 'ready' ? 'Start' : 'Try again' }}
       </button>
@@ -212,6 +219,14 @@ onUnmounted(() => {
   color: inherit;
   padding: 0.2rem 0.5rem;
 }
+.best {
+  color: #8b93a5;
+  font-size: 0.85em;
+}
+.new-best {
+  color: #f1c40f;
+  font-weight: 700;
+}
 .game-canvas {
   width: 100%;
   height: auto;
@@ -219,7 +234,10 @@ onUnmounted(() => {
 }
 .game-overlay {
   position: absolute;
-  inset: 0;
+  top: 3.2rem;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
