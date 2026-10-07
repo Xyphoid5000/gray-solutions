@@ -508,7 +508,9 @@ onUnmounted(() => {
 }
 .overlay-btns {
   display: flex;
+  flex-direction: column;
   gap: 0.8rem;
+  align-items: center;
 }
 .game-btn {
   padding: 0.7rem 1.8rem;
