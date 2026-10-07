@@ -1,3 +1,9 @@
+/* Kill the mobile tap-highlight flash everywhere — the per-element rules
+   below stay as documentation, but this covers every tappable thing. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ============================================================
    GRAY SOLUTIONS — "Websites that tell stories"
    Design system: dark editorial, cinematic, warm paper on
