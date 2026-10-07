@@ -271,10 +271,13 @@ function drawSnake() {
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
-  // snake (glows purple while warping)
-  const warping = warpUntil > Date.now();
+  // snake (purple while warping; flashes green/purple when about to wear off)
+  const now = Date.now();
+  const warping = warpUntil > now;
+  const expiring = warping && warpUntil - now < 3000;
+  const showWarp = expiring ? Math.floor(now / 250) % 2 === 0 : warping;
   snake.forEach((s, i) => {
-    ctx.fillStyle = warping ? '#b366ff' : i === 0 ? '#7ee787' : '#3fa34d';
+    ctx.fillStyle = showWarp ? '#b366ff' : i === 0 ? '#7ee787' : '#3fa34d';
     const p = 2;
     ctx.fillRect(s.x * CELL + p, s.y * CELL + p, CELL - p * 2, CELL - p * 2);
   });

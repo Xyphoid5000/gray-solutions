@@ -24,7 +24,7 @@ const BASE_PADDLE_W = 70;
 
 interface Brick { x: number; y: number; w: number; h: number; color: string; alive: boolean; hits: number }
 interface Ball { x: number; y: number; dx: number; dy: number }
-type PowerKind = 'multi' | 'wide' | 'slow' | 'life';
+type PowerKind = 'multi' | 'wide' | 'slow' | 'life' | 'burning' | 'shrink' | 'speedup';
 interface PowerUp { x: number; y: number; kind: PowerKind }
 
 let paddleX = W / 2 - BASE_PADDLE_W / 2;
@@ -32,8 +32,11 @@ let paddleW = BASE_PADDLE_W;
 let balls: Ball[] = [];
 let bricks: Brick[] = [];
 let powerups: PowerUp[] = [];
-let wideUntil = 0;
-let slowUntil = 0;
+let paddleSizeUntil = 0;
+let paddleSizeFactor = 1;
+let ballSpeedUntil = 0;
+let ballSpeedFactor = 1;
+let burningUntil = 0;
 let raf = 0;
 let running = false;
 
@@ -43,6 +46,9 @@ const POWER_STYLE: Record<PowerKind, { color: string; glyph: string }> = {
   wide: { color: '#2ecc71', glyph: '⇔' },
   slow: { color: '#f1c40f', glyph: '◔' },
   life: { color: '#e74c3c', glyph: '♥' },
+  burning: { color: '#ff6b35', glyph: '🔥' },
+  shrink: { color: '#c0392b', glyph: '›‹' },
+  speedup: { color: '#f39c12', glyph: '⚡' },
 };
 
 function ballSpeed() {
@@ -98,8 +104,11 @@ function start() {
   lives.value = 3;
   newBest.value = false;
   paddleW = BASE_PADDLE_W;
-  wideUntil = 0;
-  slowUntil = 0;
+  paddleSizeUntil = 0;
+  paddleSizeFactor = 1;
+  ballSpeedUntil = 0;
+  ballSpeedFactor = 1;
+  burningUntil = 0;
   buildLevel(1);
   resetBalls();
   state.value = 'playing';
@@ -116,16 +125,44 @@ function nextLevel() {
 }
 
 function dropPowerup(x: number, y: number) {
-  if (Math.random() > 0.18) return;
-  const kinds: PowerKind[] = ['multi', 'wide', 'slow', 'multi', 'wide', 'slow', 'life'];
+  if (Math.random() > 0.13) return;
+  const kinds: PowerKind[] = [
+    'multi', 'multi', 'wide', 'wide', 'slow', 'slow',
+    'burning', 'burning',
+    'shrink', 'shrink', 'shrink', 'speedup', 'speedup', 'speedup',
+    'life',
+  ];
   const kind = kinds[Math.floor(Math.random() * kinds.length)];
   // Extra life is rare — re-roll most of the time
   if (kind === 'life' && Math.random() > 0.25) return;
   powerups.push({ x, y, kind });
 }
 
-function applyPowerup(kind: PowerKind) {
+function applyPaddleMod(factor: number, durationMs: number) {
+  paddleSizeFactor = factor;
+  paddleW = BASE_PADDLE_W * factor;
+  paddleSizeUntil = performance.now() + durationMs;
+  paddleX = Math.max(0, Math.min(W - paddleW, paddleX));
+}
+
+function applySpeedMod(factor: number, durationMs: number) {
   const now = performance.now();
+  // Undo the current mod before applying the new one
+  if (ballSpeedUntil > now) {
+    for (const b of balls) {
+      b.dx /= ballSpeedFactor;
+      b.dy /= ballSpeedFactor;
+    }
+  }
+  ballSpeedFactor = factor;
+  for (const b of balls) {
+    b.dx *= factor;
+    b.dy *= factor;
+  }
+  ballSpeedUntil = now + durationMs;
+}
+
+function applyPowerup(kind: PowerKind) {
   if (kind === 'multi') {
     const extra: Ball[] = [];
     for (const b of balls) {
@@ -139,14 +176,15 @@ function applyPowerup(kind: PowerKind) {
     balls.push(...extra);
     score.value += 5;
   } else if (kind === 'wide') {
-    paddleW = BASE_PADDLE_W * 1.6;
-    wideUntil = now + 15000;
+    applyPaddleMod(1.6, 15000);
+  } else if (kind === 'shrink') {
+    applyPaddleMod(0.6, 12000);
   } else if (kind === 'slow') {
-    for (const b of balls) {
-      b.dx *= 0.7;
-      b.dy *= 0.7;
-    }
-    slowUntil = now + 10000;
+    applySpeedMod(0.7, 10000);
+  } else if (kind === 'speedup') {
+    applySpeedMod(1.4, 8000);
+  } else if (kind === 'burning') {
+    burningUntil = performance.now() + 6000;
   } else if (kind === 'life') {
     lives.value = Math.min(lives.value + 1, 5);
   }
@@ -161,18 +199,21 @@ function loop() {
 
 function update() {
   const now = performance.now();
-  if (wideUntil && now > wideUntil) {
+  if (paddleSizeUntil && now > paddleSizeUntil) {
     paddleW = BASE_PADDLE_W;
-    wideUntil = 0;
+    paddleSizeFactor = 1;
+    paddleSizeUntil = 0;
     paddleX = Math.max(0, Math.min(W - paddleW, paddleX));
   }
-  if (slowUntil && now > slowUntil) {
+  if (ballSpeedUntil && now > ballSpeedUntil) {
     for (const b of balls) {
-      b.dx /= 0.7;
-      b.dy /= 0.7;
+      b.dx /= ballSpeedFactor;
+      b.dy /= ballSpeedFactor;
     }
-    slowUntil = 0;
+    ballSpeedFactor = 1;
+    ballSpeedUntil = 0;
   }
+  const burning = burningUntil > now;
 
   const paddleY = H - 24;
 
@@ -214,6 +255,7 @@ function update() {
 
   // Bricks
   for (const ball of balls) {
+    let bounced = false;
     for (const b of bricks) {
       if (!b.alive) continue;
       if (
@@ -222,16 +264,23 @@ function update() {
         ball.y + BALL_R > b.y &&
         ball.y - BALL_R < b.y + b.h
       ) {
-        b.hits--;
-        if (b.hits <= 0) {
+        if (burning) {
+          // Plow straight through — no bounce
           b.alive = false;
           score.value += 10;
           dropPowerup(b.x + b.w / 2, b.y + b.h / 2);
-        } else {
-          score.value += 5;
+        } else if (!bounced) {
+          b.hits--;
+          if (b.hits <= 0) {
+            b.alive = false;
+            score.value += 10;
+            dropPowerup(b.x + b.w / 2, b.y + b.h / 2);
+          } else {
+            score.value += 5;
+          }
+          ball.dy *= -1;
+          bounced = true;
         }
-        ball.dy *= -1;
-        break;
       }
     }
   }
@@ -294,16 +343,24 @@ function draw() {
     ctx.fillText(s.glyph, p.x, p.y + 1);
   }
 
-  // Paddle (glows while wide)
+  // Paddle (green = wide, red = shrunk)
   const paddleY = H - 24;
-  ctx.fillStyle = wideUntil ? '#2ecc71' : '#f2ecdf';
+  ctx.fillStyle =
+    paddleSizeFactor > 1 ? '#2ecc71' : paddleSizeFactor < 1 ? '#e74c3c' : '#f2ecdf';
   ctx.beginPath();
   ctx.roundRect(paddleX, paddleY, paddleW, PADDLE_H, 5);
   ctx.fill();
 
-  // Balls
-  ctx.fillStyle = '#fff';
+  // Balls (orange glow while burning)
+  const burning = burningUntil > performance.now();
   for (const ball of balls) {
+    if (burning) {
+      ctx.fillStyle = 'rgba(255,107,53,0.35)';
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_R + 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = burning ? '#ff6b35' : '#fff';
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2);
     ctx.fill();
@@ -372,7 +429,7 @@ onUnmounted(() => {
         {{ state === 'ready' ? 'Start' : 'Play again' }}
       </button>
     </div>
-    <p class="game-hint">Catch falling powerups · Arrow keys on desktop</p>
+    <p class="game-hint">Catch powerups — red ones are traps · Arrow keys on desktop</p>
   </div>
 </template>
 
