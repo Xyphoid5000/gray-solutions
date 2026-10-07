@@ -17,6 +17,8 @@ import { useHighScore } from './phone/useHighScore';
 import BrickBreaker from './phone/BrickBreaker.vue';
 import FlappyBird from './phone/FlappyBird.vue';
 import SpaceInvaders from './phone/SpaceInvaders.vue';
+import Pong from './phone/Pong.vue';
+import Frogger from './phone/Frogger.vue';
 import MusicPlayer from './phone/MusicPlayer.vue';
 
 /** `shortcut`: this is the desk phone — it answers the floating
@@ -53,7 +55,7 @@ function onLedColor(e: Event) {
 }
 
 const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'music'>('pin');
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger' | 'music'>('pin');
 const settings = useSettingsStore();
 const bonus = useBonusStore();
 const siteNameDraft = ref(settings.siteName);
@@ -133,6 +135,8 @@ let snake: { x: number; y: number }[] = [];
 let dir = { x: 1, y: 0 };
 let pendingDir = { x: 1, y: 0 };
 let food = { x: 7, y: 8 };
+let warpFood: { x: number; y: number } | null = null;
+let warpUntil = 0;
 let snakeTimer: number | null = null;
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 let touchStart: { x: number; y: number } | null = null;
@@ -151,7 +155,23 @@ function placeFood() {
     };
     if (!snake.some((s) => s.x === f.x && s.y === f.y)) {
       food = f;
-      return;
+      break;
+    }
+  }
+  // Occasionally spawn a warp pellet (eat it to phase through walls)
+  if (!warpFood && Math.random() < 0.22) {
+    for (let i = 0; i < 200; i++) {
+      const f = {
+        x: Math.floor(Math.random() * SNAKE_COLS),
+        y: Math.floor(Math.random() * SNAKE_ROWS),
+      };
+      if (
+        !snake.some((s) => s.x === f.x && s.y === f.y) &&
+        (f.x !== food.x || f.y !== food.y)
+      ) {
+        warpFood = f;
+        break;
+      }
     }
   }
 }
@@ -162,7 +182,7 @@ function openSnake() {
   snakeNewBest.value = false;
   nextTick(() => drawSnake());
 }
-function onPlayGame(game: 'snake' | 'brick' | 'flappy' | 'invaders') {
+function onPlayGame(game: 'snake' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger') {
   if (game === 'snake') openSnake();
   else screen.value = game;
 }
@@ -175,6 +195,8 @@ function startSnake() {
   dir = { x: 1, y: 0 };
   pendingDir = { x: 1, y: 0 };
   snakeScore.value = 0;
+  warpFood = null;
+  warpUntil = 0;
   placeFood();
   snakeState.value = 'playing';
   stopSnake();
@@ -184,11 +206,16 @@ function startSnake() {
 function tickSnake() {
   dir = pendingDir;
   const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  const warping = warpUntil > Date.now();
+  const hitWall =
+    head.x < 0 || head.y < 0 || head.x >= SNAKE_COLS || head.y >= SNAKE_ROWS;
+  if (hitWall && warping) {
+    // Phase through: wrap to the opposite edge
+    head.x = (head.x + SNAKE_COLS) % SNAKE_COLS;
+    head.y = (head.y + SNAKE_ROWS) % SNAKE_ROWS;
+  }
   const dead =
-    head.x < 0 ||
-    head.y < 0 ||
-    head.x >= SNAKE_COLS ||
-    head.y >= SNAKE_ROWS ||
+    (hitWall && !warping) ||
     snake.some((s) => s.x === head.x && s.y === head.y);
   if (dead) {
     stopSnake();
@@ -201,6 +228,10 @@ function tickSnake() {
   if (head.x === food.x && head.y === food.y) {
     snakeScore.value++;
     placeFood();
+  } else if (warpFood && head.x === warpFood.x && head.y === warpFood.y) {
+    warpFood = null;
+    warpUntil = Date.now() + 15000;
+    snakeScore.value += 2;
   } else {
     snake.pop();
   }
@@ -224,9 +255,26 @@ function drawSnake() {
     Math.PI * 2,
   );
   ctx.fill();
-  // snake
+  // warp pellet
+  if (warpFood) {
+    ctx.fillStyle = '#b366ff';
+    ctx.beginPath();
+    ctx.arc(
+      warpFood.x * CELL + CELL / 2,
+      warpFood.y * CELL + CELL / 2,
+      CELL / 2 - 5,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  // snake (glows purple while warping)
+  const warping = warpUntil > Date.now();
   snake.forEach((s, i) => {
-    ctx.fillStyle = i === 0 ? '#7ee787' : '#3fa34d';
+    ctx.fillStyle = warping ? '#b366ff' : i === 0 ? '#7ee787' : '#3fa34d';
     const p = 2;
     ctx.fillRect(s.x * CELL + p, s.y * CELL + p, CELL - p * 2, CELL - p * 2);
   });
@@ -548,6 +596,16 @@ onUnmounted(() => {
         <!-- Space Invaders -->
         <div v-else-if="screen === 'invaders'" class="scr scr-game">
           <SpaceInvaders @back="screen = 'games'" />
+        </div>
+
+        <!-- Pong -->
+        <div v-else-if="screen === 'pong'" class="scr scr-game">
+          <Pong @back="screen = 'games'" />
+        </div>
+
+        <!-- Frogger -->
+        <div v-else-if="screen === 'frogger'" class="scr scr-game">
+          <Frogger @back="screen = 'games'" />
         </div>
 
         <!-- Graydio -->
