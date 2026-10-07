@@ -22,7 +22,6 @@
   <path d="M 64 418 L 656 418 L 700 618 Q 704 648 674 648 L 46 648 Q 16 648 20 618 Z" fill="url(#alu)" />
   <path d="M 24 620 L 696 620 Q 702 648 672 648 L 48 648 Q 18 648 24 620 Z" fill="#000000" opacity="0.22" />
   <rect x="64" y="430" width="592" height="3" fill="#ffffff" opacity="0.22" />
-  <rect x="100" y="470" width="520" height="130" rx="12" fill="url(#deckg)" />
   <rect x="117.5" y="490" width="30" height="15" rx="3" fill="url(#keyg)" />
   <rect x="152.5" y="490" width="30" height="15" rx="3" fill="url(#keyg)" />
   <rect x="187.5" y="490" width="30" height="15" rx="3" fill="url(#keyg)" />
@@ -76,68 +75,70 @@
   <rect x="502.5" y="570" width="30" height="15" rx="3" fill="url(#keyg)" />
   <rect x="537.5" y="570" width="30" height="15" rx="3" fill="url(#keyg)" />
   <rect x="572.5" y="570" width="30" height="15" rx="3" fill="url(#keyg)" />
-  <rect x="116" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="154" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="192" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="230" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="268" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="306" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="344" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="382" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="420" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="458" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="496" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="534" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="572" y="486" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="116" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="154" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="192" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="230" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="268" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="306" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="344" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="382" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="420" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="458" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="496" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="534" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="572" y="508" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="116" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="154" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="192" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="230" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="268" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="306" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="344" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="382" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="420" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="458" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="496" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="534" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="572" y="530" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="116" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="154" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="192" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="230" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="268" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="306" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="344" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="382" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="420" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="458" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="496" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="534" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="572" y="552" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="116" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="154" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="192" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="230" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
   <rect x="268" y="574" width="184" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="458" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="496" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="534" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="572" y="574" width="32" height="16" rx="3" fill="url(#keyg)" />
-  <rect x="285" y="615" width="150" height="28" rx="8" fill="#1b1c1f" stroke="#ffffff" stroke-opacity="0.08" />
+  <path d="M 87 475 L 633 475 L 643 600 Q 643 608 635 608 L 85 608 Q 77 608 77 600 Z" fill="url(#deckg)" />
+  <rect x="106.0" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="145.4" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="184.9" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="224.4" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="263.8" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="303.3" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="342.8" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="382.2" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="421.7" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="461.2" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="500.6" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="540.1" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="579.6" y="488" width="34.5" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="104.2" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="143.9" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="183.7" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="223.4" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="263.2" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="302.9" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="342.6" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="382.4" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="422.1" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="461.8" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="501.6" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="541.3" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="581.1" y="510" width="34.7" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="102.4" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="142.4" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="182.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="222.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="262.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="302.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="342.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="382.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="422.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="462.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="502.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="542.5" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="582.6" y="532" width="35.0" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="100.7" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="141.0" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="181.2" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="221.5" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="261.8" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="302.1" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="342.4" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="382.6" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="422.9" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="463.2" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="503.5" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="543.8" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="584.0" y="554" width="35.3" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="98.9" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="139.5" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="180.0" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="220.6" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="261.1" y="576" width="197.8" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="463.9" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="504.4" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="545.0" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <rect x="585.5" y="576" width="35.6" height="15" rx="2.5" fill="url(#keyg)" />
+  <path d="M 290 618 L 430 618 L 434 642 Q 434 648 428 648 L 292 648 Q 286 648 286 642 Z" fill="#1b1c1f" stroke="#ffffff" stroke-opacity="0.08" />
   <path d="M 86 48 L 634 48 Q 656 48 656 70 L 656 410 Q 656 432 634 432 L 86 432 Q 64 432 64 410 L 64 70 Q 64 48 86 48 Z M 89 107 L 631 107 L 631 414 L 89 414 Z" fill="url(#bezelg)" fill-rule="evenodd" />
   <rect x="89" y="107" width="542" height="307" fill="none" stroke="#000000" stroke-width="2" opacity="0.6" />
   <rect x="90.5" y="108.5" width="539" height="304" fill="none" stroke="#ffffff" stroke-width="1" opacity="0.07" />
