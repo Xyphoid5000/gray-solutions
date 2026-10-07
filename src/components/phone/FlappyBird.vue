@@ -15,11 +15,11 @@ const W = 300;
 const H = 400;
 const BIRD_X = 70;
 const BIRD_R = 12;
-const GRAVITY = 0.32;
-const FLAP = -8.0;
+const GRAVITY = 0.28;
+const FLAP = -8.5;
 const PIPE_W = 52;
-const PIPE_GAP = 130;
-const PIPE_SPEED = 2.0;
+const PIPE_GAP = 140;
+const PIPE_SPEED = 1.9;
 
 let birdY = H / 2;
 let birdV = 0;
@@ -40,6 +40,7 @@ function start() {
   reset();
   newBest.value = false;
   state.value = 'playing';
+  birdV = FLAP; // start airborne — the opening tap is a flap
   running = true;
   loop();
 }
@@ -75,9 +76,11 @@ function update() {
     return;
   }
 
-  // Spawn pipes
-  if (frame % 95 === 0) {
-    const gapY = 90 + Math.random() * (H - 180 - PIPE_GAP);
+  // Spawn pipes — first one is gentle and centered on the bird
+  if (frame === 110) {
+    pipes.push({ x: W, gapY: H / 2 - PIPE_GAP / 2, passed: false });
+  } else if (frame > 110 && frame % 95 === 0) {
+    const gapY = 80 + Math.random() * (H - 160 - PIPE_GAP);
     pipes.push({ x: W, gapY, passed: false });
   }
 
