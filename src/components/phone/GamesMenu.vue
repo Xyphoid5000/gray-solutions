@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** Games menu on the desk phone: pick one of the four games. */
 const emit = defineEmits<{
-  play: [game: 'snake' | 'brick' | 'flappy' | 'invaders'];
+  play: [game: 'snake' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger'];
   back: [];
 }>();
 
@@ -10,6 +10,8 @@ const games = [
   { id: 'brick' as const, name: 'Brick Breaker', glyph: '🧱', tile: 'tile-brick' },
   { id: 'flappy' as const, name: 'Flappy Bird', glyph: '🐦', tile: 'tile-flappy' },
   { id: 'invaders' as const, name: 'Space Invaders', glyph: '👾', tile: 'tile-invaders' },
+  { id: 'pong' as const, name: 'Pong', glyph: '🏓', tile: 'tile-pong' },
+  { id: 'frogger' as const, name: 'Frogger', glyph: '🐸', tile: 'tile-frogger' },
 ];
 </script>
 
@@ -101,5 +103,11 @@ const games = [
 }
 .tile-invaders {
   background: linear-gradient(135deg, #2a1a3a, #6b2f9e);
+}
+.tile-pong {
+  background: linear-gradient(135deg, #0f2a3a, #1f7a8c);
+}
+.tile-frogger {
+  background: linear-gradient(135deg, #1a3a1a, #3a7d2b);
 }
 </style>

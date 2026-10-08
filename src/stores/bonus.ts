@@ -29,6 +29,11 @@ export const useBonusStore = defineStore('bonus', () => {
   /** Light sources driving the room. Starts with just the main light. */
   const lightSources = ref<string[]>(['main']);
 
+  /** Desk phone: once the PIN is entered it stays unlocked, and the
+      held phone UI can be opened from anywhere (desk or corner button). */
+  const phoneUnlocked = ref(false);
+  const phoneHeld = ref(false);
+
   function setEnabled(v: boolean) {
     enabled.value = v;
   }
@@ -62,6 +67,8 @@ export const useBonusStore = defineStore('bonus', () => {
     blowoutCount,
     candleGone,
     lightSources,
+    phoneUnlocked,
+    phoneHeld,
     setEnabled,
     setLed,
     setLedColor,

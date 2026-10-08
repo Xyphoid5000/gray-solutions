@@ -135,6 +135,11 @@ const trackClass = computed(() => ({
 .office-desk {
   overflow: hidden;
 }
+/* Constrain desk content to the header's max width on wide monitors. */
+.office-desk > * {
+  max-width: var(--wrap);
+  margin-inline: auto;
+}
 .office-shelf {
   position: relative;
   display: flex;
