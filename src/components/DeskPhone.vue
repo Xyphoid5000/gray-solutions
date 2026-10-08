@@ -12,11 +12,19 @@ import { useModalA11y } from '../composables/useModalA11y';
 import { useSettingsStore } from '../stores/settings';
 import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
+import GamesMenu from './phone/GamesMenu.vue';
+import { useHighScore } from './phone/useHighScore';
+import BrickBreaker from './phone/BrickBreaker.vue';
+import FlappyBird from './phone/FlappyBird.vue';
+import SpaceInvaders from './phone/SpaceInvaders.vue';
+import Pong from './phone/Pong.vue';
+import Frogger from './phone/Frogger.vue';
+import MusicPlayer from './phone/MusicPlayer.vue';
 
 /** `shortcut`: this is the desk phone — it answers the floating
     settings shortcut. Other instances (e.g. the binding cinematic's)
     ignore it. */
-const props = defineProps<{ shortcut?: boolean }>();
+const props = defineProps<{ shortcut?: boolean; docked?: boolean }>();
 
 const device = useDeviceStore();
 /** Desktop (fine pointer / wide viewport): snake starts with the space
@@ -46,10 +54,19 @@ function onLedColor(e: Event) {
   lights.refresh();
 }
 
-const held = ref(false);
-const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings'>('pin');
 const settings = useSettingsStore();
 const bonus = useBonusStore();
+/** Phone UI state lives in the bonus store so it survives view changes —
+    the desk button, corner button, and held phone all share it. */
+const held = computed({
+  get: () => bonus.phoneHeld,
+  set: (v: boolean) => { bonus.phoneHeld = v; },
+});
+const screen = ref<'pin' | 'locked' | 'home' | 'snake' | 'contacts' | 'call' | 'settings' | 'games' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger' | 'music'>('pin');
+const unlocked = computed({
+  get: () => bonus.phoneUnlocked,
+  set: (v: boolean) => { bonus.phoneUnlocked = v; },
+});
 const siteNameDraft = ref(settings.siteName);
 
 /** What the theme is actually showing for a variable right now — the
@@ -69,7 +86,9 @@ function pickUp() {
   held.value = true;
   pinEntry.value = '';
   pinError.value = false;
-  if (screen.value !== 'locked' && screen.value !== 'home') screen.value = 'pin';
+  if (!unlocked.value && screen.value !== 'locked' && screen.value !== 'home') {
+    screen.value = 'pin';
+  }
 }
 function putDown() {
   held.value = false;
@@ -97,6 +116,7 @@ function clearPin() {
 }
 function checkPin() {
   if (pinEntry.value === PIN) {
+    unlocked.value = true;
     screen.value = 'home';
     pinEntry.value = '';
     return;
@@ -117,14 +137,18 @@ function checkPin() {
 
 /* ---------------- Snake ---------------- */
 const SNAKE_COLS = 12;
-const SNAKE_ROWS = 16;
+const SNAKE_ROWS = 22;
 const CELL = 20;
 const snakeScore = ref(0);
 const snakeState = ref<'ready' | 'playing' | 'over'>('ready');
+const { high: snakeBest, maybeSave: maybeSaveSnake } = useHighScore('snake');
+const snakeNewBest = ref(false);
 let snake: { x: number; y: number }[] = [];
 let dir = { x: 1, y: 0 };
 let pendingDir = { x: 1, y: 0 };
 let food = { x: 7, y: 8 };
+let warpFood: { x: number; y: number } | null = null;
+let warpUntil = 0;
 let snakeTimer: number | null = null;
 const canvasEl = ref<HTMLCanvasElement | null>(null);
 let touchStart: { x: number; y: number } | null = null;
@@ -143,7 +167,23 @@ function placeFood() {
     };
     if (!snake.some((s) => s.x === f.x && s.y === f.y)) {
       food = f;
-      return;
+      break;
+    }
+  }
+  // Occasionally spawn a warp pellet (eat it to phase through walls)
+  if (!warpFood && Math.random() < 0.22) {
+    for (let i = 0; i < 200; i++) {
+      const f = {
+        x: Math.floor(Math.random() * SNAKE_COLS),
+        y: Math.floor(Math.random() * SNAKE_ROWS),
+      };
+      if (
+        !snake.some((s) => s.x === f.x && s.y === f.y) &&
+        (f.x !== food.x || f.y !== food.y)
+      ) {
+        warpFood = f;
+        break;
+      }
     }
   }
 }
@@ -151,7 +191,12 @@ function openSnake() {
   screen.value = 'snake';
   snakeState.value = 'ready';
   snakeScore.value = 0;
+  snakeNewBest.value = false;
   nextTick(() => drawSnake());
+}
+function onPlayGame(game: 'snake' | 'brick' | 'flappy' | 'invaders' | 'pong' | 'frogger') {
+  if (game === 'snake') openSnake();
+  else screen.value = game;
 }
 function startSnake() {
   snake = [
@@ -162,6 +207,8 @@ function startSnake() {
   dir = { x: 1, y: 0 };
   pendingDir = { x: 1, y: 0 };
   snakeScore.value = 0;
+  warpFood = null;
+  warpUntil = 0;
   placeFood();
   snakeState.value = 'playing';
   stopSnake();
@@ -171,15 +218,21 @@ function startSnake() {
 function tickSnake() {
   dir = pendingDir;
   const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  const warping = warpUntil > Date.now();
+  const hitWall =
+    head.x < 0 || head.y < 0 || head.x >= SNAKE_COLS || head.y >= SNAKE_ROWS;
+  if (hitWall && warping) {
+    // Phase through: wrap to the opposite edge
+    head.x = (head.x + SNAKE_COLS) % SNAKE_COLS;
+    head.y = (head.y + SNAKE_ROWS) % SNAKE_ROWS;
+  }
   const dead =
-    head.x < 0 ||
-    head.y < 0 ||
-    head.x >= SNAKE_COLS ||
-    head.y >= SNAKE_ROWS ||
+    (hitWall && !warping) ||
     snake.some((s) => s.x === head.x && s.y === head.y);
   if (dead) {
     stopSnake();
     snakeState.value = 'over';
+    snakeNewBest.value = maybeSaveSnake(snakeScore.value);
     drawSnake();
     return;
   }
@@ -187,6 +240,10 @@ function tickSnake() {
   if (head.x === food.x && head.y === food.y) {
     snakeScore.value++;
     placeFood();
+  } else if (warpFood && head.x === warpFood.x && head.y === warpFood.y) {
+    warpFood = null;
+    warpUntil = Date.now() + 15000;
+    snakeScore.value += 2;
   } else {
     snake.pop();
   }
@@ -210,9 +267,29 @@ function drawSnake() {
     Math.PI * 2,
   );
   ctx.fill();
-  // snake
+  // warp pellet
+  if (warpFood) {
+    ctx.fillStyle = '#b366ff';
+    ctx.beginPath();
+    ctx.arc(
+      warpFood.x * CELL + CELL / 2,
+      warpFood.y * CELL + CELL / 2,
+      CELL / 2 - 5,
+      0,
+      Math.PI * 2,
+    );
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  // snake (purple while warping; flashes green/purple when about to wear off)
+  const now = Date.now();
+  const warping = warpUntil > now;
+  const expiring = warping && warpUntil - now < 3000;
+  const showWarp = expiring ? Math.floor(now / 250) % 2 === 0 : warping;
   snake.forEach((s, i) => {
-    ctx.fillStyle = i === 0 ? '#7ee787' : '#3fa34d';
+    ctx.fillStyle = showWarp ? '#b366ff' : i === 0 ? '#7ee787' : '#3fa34d';
     const p = 2;
     ctx.fillRect(s.x * CELL + p, s.y * CELL + p, CELL - p * 2, CELL - p * 2);
   });
@@ -244,6 +321,15 @@ function drawSnake() {
       (SNAKE_COLS * CELL) / 2,
       (SNAKE_ROWS * CELL) / 2 + 16,
     );
+    if (snakeNewBest.value) {
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = '700 13px Inter, system-ui, sans-serif';
+      ctx.fillText(
+        '★ New best! ★',
+        (SNAKE_COLS * CELL) / 2,
+        (SNAKE_ROWS * CELL) / 2 + 38,
+      );
+    }
   }
 }
 function onSnakeTap() {
@@ -376,10 +462,24 @@ function openSettingsDirect() {
   screen.value = 'settings';
   siteNameDraft.value = settings.siteName;
 }
+function onPinKey(e: KeyboardEvent) {
+  if (screen.value !== 'pin') return;
+  if (/^[0-9]$/.test(e.key)) {
+    pressDigit(e.key);
+  } else if (e.key === 'Backspace') {
+    pinEntry.value = pinEntry.value.slice(0, -1);
+    pinError.value = false;
+  }
+}
+
 onMounted(() => {
   if (props.shortcut) window.addEventListener('gs:open-phone-settings', openSettingsDirect);
+  window.addEventListener('keydown', onPinKey);
 });
-onUnmounted(() => window.removeEventListener('gs:open-phone-settings', openSettingsDirect));
+onUnmounted(() => {
+  window.removeEventListener('gs:open-phone-settings', openSettingsDirect);
+  window.removeEventListener('keydown', onPinKey);
+});
 
 onUnmounted(() => {
   stopSnake();
@@ -388,13 +488,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- The phone on the desk — tappable now. -->
-  <button
-    class="desk-phone-btn"
-    type="button"
-    aria-label="Pick up the phone"
-    @click="pickUp"
-  >
+  <!-- The phone on the desk — teleported to the desk slot. Hidden when
+       undocked (the corner button in App.vue takes over off the desk). -->
+  <Teleport to="#desk-phone-slot" :disabled="!docked">
+    <button
+      v-if="docked"
+      class="desk-phone-btn"
+      type="button"
+      aria-label="Pick up the phone"
+      @click="pickUp"
+    >
     <svg viewBox="0 0 60 112">
       <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
       <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
@@ -404,7 +507,8 @@ onUnmounted(() => {
       <rect x="58" y="30" width="3" height="14" rx="1.5" class="phone-button" />
       <circle cx="47" cy="24" r="3.2" class="phone-notif" />
     </svg>
-  </button>
+    </button>
+  </Teleport>
 
   <!-- Picked up: the phone in hand. Teleported to <body> so it can
        open from the main screen too — there the desk slide (and this
@@ -465,9 +569,13 @@ onUnmounted(() => {
         <div v-else-if="screen === 'home'" class="scr scr-home">
           <p class="home-time">{{ new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }}</p>
           <div class="home-apps">
-            <button type="button" class="app-icon" @click="openSnake">
-              <span class="app-glyph app-snake" aria-hidden="true"></span>
-              Snake
+            <button type="button" class="app-icon" @click="screen = 'games'">
+              <span class="app-glyph app-games" aria-hidden="true">🎮</span>
+              Games
+            </button>
+            <button type="button" class="app-icon" @click="screen = 'music'">
+              <span class="app-glyph app-music" aria-hidden="true">🎵</span>
+              Graydio
             </button>
             <button type="button" class="app-icon" @click="openContacts">
               <span class="app-glyph app-contacts" aria-hidden="true"></span>
@@ -484,8 +592,9 @@ onUnmounted(() => {
         <!-- Snake -->
         <div v-else-if="screen === 'snake'" class="scr scr-snake" @keydown="onKey" tabindex="0">
           <div class="snake-head">
-            <button type="button" class="snake-back" @click="screen = 'home'; stopSnake();" aria-label="Back">‹</button>
+            <button type="button" class="snake-back" @click="screen = 'games'; stopSnake();" aria-label="Back">‹</button>
             <span>Score {{ snakeScore }}</span>
+            <span class="snake-best">Best {{ snakeBest }}</span>
           </div>
           <div
             class="snake-wrap"
@@ -500,6 +609,41 @@ onUnmounted(() => {
             ></canvas>
           </div>
           <p class="snake-hint">{{ isDesktop ? 'Arrow keys to steer' : 'Swipe to steer' }}</p>
+        </div>
+
+        <!-- Games menu -->
+        <div v-else-if="screen === 'games'" class="scr scr-games">
+          <GamesMenu @play="onPlayGame" @back="screen = 'home'" />
+        </div>
+
+        <!-- Brick Breaker -->
+        <div v-else-if="screen === 'brick'" class="scr scr-game">
+          <BrickBreaker @back="screen = 'games'" />
+        </div>
+
+        <!-- Flappy Bird -->
+        <div v-else-if="screen === 'flappy'" class="scr scr-game">
+          <FlappyBird @back="screen = 'games'" />
+        </div>
+
+        <!-- Space Invaders -->
+        <div v-else-if="screen === 'invaders'" class="scr scr-game">
+          <SpaceInvaders @back="screen = 'games'" />
+        </div>
+
+        <!-- Pong -->
+        <div v-else-if="screen === 'pong'" class="scr scr-game">
+          <Pong @back="screen = 'games'" />
+        </div>
+
+        <!-- Frogger -->
+        <div v-else-if="screen === 'frogger'" class="scr scr-game">
+          <Frogger @back="screen = 'games'" />
+        </div>
+
+        <!-- Graydio -->
+        <div v-else-if="screen === 'music'" class="scr scr-game">
+          <MusicPlayer @back="screen = 'home'" />
         </div>
 
         <!-- Contacts -->
@@ -851,7 +995,10 @@ html[data-blacklight='on'] .desk-phone-btn {
 }
 .home-apps {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 1.6rem;
+  max-width: 100%;
 }
 .app-icon {
   display: flex;
@@ -870,24 +1017,23 @@ html[data-blacklight='on'] .desk-phone-btn {
   border-radius: 15px;
   display: block;
 }
-.app-snake {
-  background: linear-gradient(135deg, #1d3a24, #2f6b3a);
-  position: relative;
-}
-.app-snake::after {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 26px;
-  width: 34px;
-  height: 8px;
-  border-radius: 4px;
-  background: #7ee787;
-  box-shadow: -8px -8px 0 -2px #7ee787;
-}
 .app-contacts {
   background: linear-gradient(135deg, #3a2b12, #b07d2b);
   position: relative;
+}
+.app-games {
+  background: linear-gradient(135deg, #2a1a3a, #6b2f9e);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+.app-music {
+  background: linear-gradient(135deg, #3a1a1a, #b03a3a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
 }
 .app-contacts::after {
   content: '';
@@ -933,6 +1079,18 @@ html[data-blacklight='on'] .desk-phone-btn {
 .scr-snake {
   padding-top: 3rem;
 }
+/* Games */
+.scr-games,
+.scr-game {
+  padding-top: 3rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.scr-game > * {
+  flex: 1;
+  min-height: 0;
+}
 .snake-head {
   display: flex;
   align-items: center;
@@ -950,6 +1108,10 @@ html[data-blacklight='on'] .desk-phone-btn {
   cursor: pointer;
   padding: 0 0.4rem;
 }
+.snake-best {
+  color: #8b93a5;
+  font-size: 0.85em;
+}
 .snake-wrap {
   border-radius: 0.6rem;
   overflow: hidden;
@@ -961,7 +1123,7 @@ html[data-blacklight='on'] .desk-phone-btn {
 .snake-wrap canvas {
   display: block;
   width: 240px;
-  height: 320px;
+  height: 440px;
 }
 .snake-hint {
   font-size: 0.75rem;
