@@ -86,7 +86,10 @@ function pickUp() {
   held.value = true;
   pinEntry.value = '';
   pinError.value = false;
-  if (!unlocked.value && screen.value !== 'locked' && screen.value !== 'home') {
+  if (unlocked.value) {
+    // Reopening always lands back on the home screen.
+    screen.value = 'home';
+  } else if (screen.value !== 'locked' && screen.value !== 'home') {
     screen.value = 'pin';
   }
 }
