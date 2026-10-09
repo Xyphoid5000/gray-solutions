@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
+import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { noScroll, useRouteTransition } from './router/useRouteTransition';
 import Lenis from 'lenis';
@@ -37,6 +37,27 @@ const office = useOfficeStore();
 const bonus = useBonusStore();
 const settings = useSettingsStore();
 const interactions = useInteractionsStore();
+
+/** Live clock for the corner phone button's screen. Runs only while the
+    button is visible. */
+const now = ref(new Date());
+let clockTimer: number | null = null;
+const cornerClock = computed(() =>
+  now.value.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+);
+watch(
+  () => bonus.enabled && bonus.phoneUnlocked && office.view !== 'desk',
+  (visible) => {
+    if (visible && clockTimer === null) {
+      now.value = new Date();
+      clockTimer = window.setInterval(() => { now.value = new Date(); }, 10000);
+    } else if (!visible && clockTimer !== null) {
+      clearInterval(clockTimer);
+      clockTimer = null;
+    }
+  },
+  { immediate: true }
+);
 // Device capabilities (touch / screen size). Instantiated here so it's
 // live from startup; components read it when they need touch-vs-desktop
 // behavior. Changes nothing on its own.
@@ -987,6 +1008,7 @@ onUnmounted(() => {
     <svg viewBox="0 0 60 112" aria-hidden="true">
       <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
       <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
+      <text x="30" y="62" text-anchor="middle" class="corner-clock">{{ cornerClock }}</text>
     </svg>
   </button>
   <!-- Below the Office carousel, shelf view only (home page). -->
@@ -1154,5 +1176,11 @@ onUnmounted(() => {
   width: 100%;
   height: auto;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+.phone-corner-btn .corner-clock {
+  font-size: 9px;
+  font-weight: 600;
+  fill: #e8e4da;
+  font-family: inherit;
 }
 </style>
