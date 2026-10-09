@@ -971,19 +971,12 @@ onUnmounted(() => {
       <DeskPencil />
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
-      <!-- Anchor for the desk phone button (teleported from App root). -->
-      <div id="desk-phone-slot" v-if="bonus.enabled" style="display: contents;"></div>
+      <DeskPhone v-if="bonus.enabled" shortcut :docked="office.view === 'desk'" />
     </template>
   </Office>
   </main>
-  <!-- Desk phone: lives at App root so it survives view changes. The desk
-       button teleports to the desk; the corner button appears off-desk
-       once unlocked. Hidden while the book is open. -->
-  <DeskPhone
-    v-if="bonus.enabled"
-    shortcut
-    :docked="office.view === 'desk'"
-  />
+  <!-- Phone corner button: appears off-desk once unlocked. The held phone
+       UI lives in DeskPhone (teleported to body), so this just opens it. -->
   <button
     v-if="bonus.enabled && bonus.phoneUnlocked && office.view !== 'desk'"
     type="button"
