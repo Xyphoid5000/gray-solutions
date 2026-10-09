@@ -14,6 +14,7 @@ import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
 import GamesMenu from './phone/GamesMenu.vue';
 import { useHighScore } from './phone/useHighScore';
+import { useNow } from '../composables/useNow';
 import BrickBreaker from './phone/BrickBreaker.vue';
 import FlappyBird from './phone/FlappyBird.vue';
 import SpaceInvaders from './phone/SpaceInvaders.vue';
@@ -67,6 +68,8 @@ const unlocked = computed({
   get: () => bonus.phoneUnlocked,
   set: (v: boolean) => { bonus.phoneUnlocked = v; },
 });
+/** Live clock for the desk phone's screen (shown once unlocked). */
+const { time: deskClock } = useNow();
 const siteNameDraft = ref(settings.siteName);
 
 /** What the theme is actually showing for a variable right now — the
@@ -86,7 +89,10 @@ function pickUp() {
   held.value = true;
   pinEntry.value = '';
   pinError.value = false;
-  if (!unlocked.value && screen.value !== 'locked' && screen.value !== 'home') {
+  if (unlocked.value) {
+    // Reopening always lands back on the home screen.
+    screen.value = 'home';
+  } else if (screen.value !== 'locked' && screen.value !== 'home') {
     screen.value = 'pin';
   }
 }
@@ -488,16 +494,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- The phone on the desk — teleported to the desk slot. Hidden when
-       undocked (the corner button in App.vue takes over off the desk). -->
-  <Teleport to="#desk-phone-slot" :disabled="!docked">
-    <button
-      v-if="docked"
-      class="desk-phone-btn"
-      type="button"
-      aria-label="Pick up the phone"
-      @click="pickUp"
-    >
+  <!-- The phone on the desk — tappable. The desk slide is always mounted
+       (CSS carousel), so this stays put. Off-desk, the corner button in
+       App.vue opens the held phone instead. -->
+  <button
+    v-if="docked"
+    class="desk-phone-btn"
+    type="button"
+    aria-label="Pick up the phone"
+    @click="pickUp"
+  >
     <svg viewBox="0 0 60 112">
       <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
       <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
@@ -506,9 +512,9 @@ onUnmounted(() => {
       <rect x="23" y="15" width="14" height="4" rx="2" class="phone-island" />
       <rect x="58" y="30" width="3" height="14" rx="1.5" class="phone-button" />
       <circle cx="47" cy="24" r="3.2" class="phone-notif" />
+      <text v-if="unlocked" x="30" y="62" text-anchor="middle" class="desk-clock">{{ deskClock }}</text>
     </svg>
-    </button>
-  </Teleport>
+  </button>
 
   <!-- Picked up: the phone in hand. Teleported to <body> so it can
        open from the main screen too — there the desk slide (and this
@@ -789,6 +795,12 @@ onUnmounted(() => {
   height: auto;
   display: block;
   overflow: visible;
+}
+.desk-phone-btn .desk-clock {
+  font-size: 10px;
+  font-weight: 600;
+  fill: #e8e4da;
+  font-family: inherit;
 }
 .phone-body {
   fill: #15171b;

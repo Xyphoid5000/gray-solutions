@@ -23,6 +23,7 @@ import DeskCandle from './components/DeskCandle.vue';
 import MatchHand from './components/MatchHand.vue';
 import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
+import { useNow } from './composables/useNow';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
 import { useSettingsStore } from './stores/settings';
@@ -37,6 +38,9 @@ const office = useOfficeStore();
 const bonus = useBonusStore();
 const settings = useSettingsStore();
 const interactions = useInteractionsStore();
+
+/** Live clock for the corner phone button's screen. */
+const { time: cornerClock } = useNow();
 // Device capabilities (touch / screen size). Instantiated here so it's
 // live from startup; components read it when they need touch-vs-desktop
 // behavior. Changes nothing on its own.
@@ -971,19 +975,12 @@ onUnmounted(() => {
       <DeskPencil />
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
-      <!-- Anchor for the desk phone button (teleported from App root). -->
-      <div id="desk-phone-slot" v-if="bonus.enabled"></div>
+      <DeskPhone v-if="bonus.enabled" shortcut :docked="office.view === 'desk'" />
     </template>
   </Office>
   </main>
-  <!-- Desk phone: lives at App root so it survives view changes. The desk
-       button teleports to the desk; the corner button appears off-desk
-       once unlocked. Hidden while the book is open. -->
-  <DeskPhone
-    v-if="bonus.enabled"
-    shortcut
-    :docked="office.view === 'desk'"
-  />
+  <!-- Phone corner button: appears off-desk once unlocked. The held phone
+       UI lives in DeskPhone (teleported to body), so this just opens it. -->
   <button
     v-if="bonus.enabled && bonus.phoneUnlocked && office.view !== 'desk'"
     type="button"
@@ -994,6 +991,7 @@ onUnmounted(() => {
     <svg viewBox="0 0 60 112" aria-hidden="true">
       <rect x="2" y="2" width="56" height="108" rx="10" class="phone-body" />
       <rect x="7" y="12" width="46" height="88" rx="4" class="phone-screen" />
+      <text x="30" y="62" text-anchor="middle" class="corner-clock">{{ cornerClock }}</text>
     </svg>
   </button>
   <!-- Below the Office carousel, shelf view only (home page). -->
@@ -1161,5 +1159,11 @@ onUnmounted(() => {
   width: 100%;
   height: auto;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+.phone-corner-btn .corner-clock {
+  font-size: 9px;
+  font-weight: 600;
+  fill: #e8e4da;
+  font-family: inherit;
 }
 </style>
