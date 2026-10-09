@@ -14,6 +14,7 @@ import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
 import GamesMenu from './phone/GamesMenu.vue';
 import { useHighScore } from './phone/useHighScore';
+import { useNow } from '../composables/useNow';
 import BrickBreaker from './phone/BrickBreaker.vue';
 import FlappyBird from './phone/FlappyBird.vue';
 import SpaceInvaders from './phone/SpaceInvaders.vue';
@@ -67,6 +68,8 @@ const unlocked = computed({
   get: () => bonus.phoneUnlocked,
   set: (v: boolean) => { bonus.phoneUnlocked = v; },
 });
+/** Live clock for the desk phone's screen (shown once unlocked). */
+const { time: deskClock } = useNow();
 const siteNameDraft = ref(settings.siteName);
 
 /** What the theme is actually showing for a variable right now — the
@@ -509,6 +512,7 @@ onUnmounted(() => {
       <rect x="23" y="15" width="14" height="4" rx="2" class="phone-island" />
       <rect x="58" y="30" width="3" height="14" rx="1.5" class="phone-button" />
       <circle cx="47" cy="24" r="3.2" class="phone-notif" />
+      <text v-if="unlocked" x="30" y="62" text-anchor="middle" class="desk-clock">{{ deskClock }}</text>
     </svg>
   </button>
 
@@ -791,6 +795,12 @@ onUnmounted(() => {
   height: auto;
   display: block;
   overflow: visible;
+}
+.desk-phone-btn .desk-clock {
+  font-size: 10px;
+  font-weight: 600;
+  fill: #e8e4da;
+  font-family: inherit;
 }
 .phone-body {
   fill: #15171b;

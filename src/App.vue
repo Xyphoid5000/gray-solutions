@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
+import { onMounted, onUnmounted, provide, ref, toRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { noScroll, useRouteTransition } from './router/useRouteTransition';
 import Lenis from 'lenis';
@@ -23,6 +23,7 @@ import DeskCandle from './components/DeskCandle.vue';
 import MatchHand from './components/MatchHand.vue';
 import MatchGuy from './components/MatchGuy.vue';
 import { setLenis } from './lib/scroll';
+import { useNow } from './composables/useNow';
 import { useOfficeStore } from './stores/office';
 import { useBonusStore } from './stores/bonus';
 import { useSettingsStore } from './stores/settings';
@@ -38,26 +39,8 @@ const bonus = useBonusStore();
 const settings = useSettingsStore();
 const interactions = useInteractionsStore();
 
-/** Live clock for the corner phone button's screen. Runs only while the
-    button is visible. */
-const now = ref(new Date());
-let clockTimer: number | null = null;
-const cornerClock = computed(() =>
-  now.value.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-);
-watch(
-  () => bonus.enabled && bonus.phoneUnlocked && office.view !== 'desk',
-  (visible) => {
-    if (visible && clockTimer === null) {
-      now.value = new Date();
-      clockTimer = window.setInterval(() => { now.value = new Date(); }, 10000);
-    } else if (!visible && clockTimer !== null) {
-      clearInterval(clockTimer);
-      clockTimer = null;
-    }
-  },
-  { immediate: true }
-);
+/** Live clock for the corner phone button's screen. */
+const { time: cornerClock } = useNow();
 // Device capabilities (touch / screen size). Instantiated here so it's
 // live from startup; components read it when they need touch-vs-desktop
 // behavior. Changes nothing on its own.
