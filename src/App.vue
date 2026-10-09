@@ -972,7 +972,7 @@ onUnmounted(() => {
       <DeskClutter />
       <FirstDraft v-if="bonus.enabled" />
       <!-- Anchor for the desk phone button (teleported from App root). -->
-      <div id="desk-phone-slot" v-if="bonus.enabled"></div>
+      <div id="desk-phone-slot" v-if="bonus.enabled" style="display: contents;"></div>
     </template>
   </Office>
   </main>
