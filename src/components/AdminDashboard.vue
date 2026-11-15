@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import RequestList from './RequestList.vue';
-import { dashboardFetch, type DashboardMe } from '../lib/dashboard';
+import { dashboardFetch, type DashboardClient, type DashboardMe } from '../lib/dashboard';
 import { formatPrice } from '../lib/pricing';
 
 const props = defineProps<{ data: DashboardMe }>();
-const emit = defineEmits<{ refresh: [] }>();
+const emit = defineEmits<{ refresh: []; preview: [client: DashboardClient] }>();
 
 const clientFilter = ref<'all' | 'current' | 'prospective'>('all');
 const requestFilter = ref('all');
@@ -82,15 +82,20 @@ async function setBilled(clientId: number, billed: boolean) {
           <span> &middot; {{ c.pricing.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
         </p>
         <p v-else class="client-pricing">No quote yet.</p>
-        <button
-          class="btn btn-ghost"
-          type="button"
-          title="Toggle billed state"
-          :disabled="updatingBilled === c.id"
-          @click="setBilled(c.id, !(c.pricing?.billed ?? false))"
-        >
-          {{ c.pricing?.billed ? 'Billed ✓' : 'Mark billed' }}
-        </button>
+        <div class="client-actions">
+          <button
+            class="btn btn-ghost"
+            type="button"
+            title="Toggle billed state"
+            :disabled="updatingBilled === c.id"
+            @click="setBilled(c.id, !(c.pricing?.billed ?? false))"
+          >
+            {{ c.pricing?.billed ? 'Billed ✓' : 'Mark billed' }}
+          </button>
+          <button class="btn btn-ghost" type="button" @click="emit('preview', c)">
+            View dashboard
+          </button>
+        </div>
       </li>
     </ul>
     <p v-if="clients.length === 0" class="dash-empty">No clients match this filter.</p>
@@ -187,6 +192,11 @@ h2 {
 }
 .client-pricing {
   margin: 0.6rem 0 0.9rem;
+}
+.client-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
 }
 .dash-empty {
   color: var(--muted);

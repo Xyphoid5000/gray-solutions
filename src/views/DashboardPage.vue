@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import ChapterHeading from '../components/ChapterHeading.vue';
 import AdminDashboard from '../components/AdminDashboard.vue';
@@ -19,6 +19,25 @@ const error = ref('');
 const email = ref('');
 const sending = ref(false);
 const me = ref<DashboardMe | null>(null);
+// Admin preview: the id of the client whose dashboard is being viewed
+// as the client sees it. The id (not the object) is stored so the
+// preview always renders the freshest data after a refresh.
+const previewClientId = ref<number | null>(null);
+
+const previewMe = computed<DashboardMe | null>(() => {
+  if (previewClientId.value === null || !me.value) return null;
+  const client = (me.value.clients ?? []).find((c) => c.id === previewClientId.value);
+  if (!client) return null;
+  return {
+    role: 'client',
+    email: client.email,
+    client,
+    pricing: client.pricing,
+    requests: me.value.requests.filter((r) => r.clientId === client.id),
+    tiers: me.value.tiers,
+    uploadsEnabled: me.value.uploadsEnabled,
+  };
+});
 
 async function loadMe(): Promise<boolean> {
   const { res, data } = await dashboardFetch('/api/dashboard/me');
@@ -101,6 +120,7 @@ async function refresh() {
 function signOut() {
   clearDashboardToken();
   me.value = null;
+  previewClientId.value = null;
   state.value = 'login';
 }
 </script>
@@ -147,7 +167,24 @@ function signOut() {
             <p class="dash-signed-in">Signed in as {{ me.email }}</p>
             <button class="btn btn-ghost" type="button" @click="signOut">Sign out</button>
           </div>
-          <AdminDashboard v-if="me.role === 'admin'" :data="me" @refresh="refresh" />
+          <div v-if="previewMe">
+            <div class="preview-bar" role="status">
+              <p>
+                Viewing {{ previewMe.client?.businessName }}&rsquo;s dashboard as the client sees
+                it &mdash; actions are disabled in preview.
+              </p>
+              <button class="btn btn-ghost" type="button" @click="previewClientId = null">
+                Back to admin
+              </button>
+            </div>
+            <ClientDashboard :data="previewMe" :preview="true" @refresh="refresh" />
+          </div>
+          <AdminDashboard
+            v-else-if="me.role === 'admin'"
+            :data="me"
+            @refresh="refresh"
+            @preview="previewClientId = $event.id"
+          />
           <ClientDashboard v-else :data="me" @refresh="refresh" />
         </div>
       </div>
@@ -173,6 +210,20 @@ function signOut() {
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+.preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--ember);
+  border-radius: 12px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 2rem;
+}
+.preview-bar p {
+  margin: 0;
 }
 .dash-error {
   color: var(--ember);
