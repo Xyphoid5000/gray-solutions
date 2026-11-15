@@ -1,11 +1,13 @@
 // Cloudflare Worker entry: serves the static site, plus the contact-form
-// API and the referral-token API.
+// API, the referral-token API, the pricing API, and the client/admin
+// dashboard APIs (magic-link sign-in, requests, billing).
 //
 // Non-API requests fall through to the static assets (same behavior as the
 // dashboard-managed assets-only setup). POST /api/contact sends the inquiry
 // to chris@graywebsolutions.com via Resend. GET /api/referral?token=xxx
 // looks a share-link token up in the shared client database
 // (gray-solutions-db, bound as DB_CLIENTS) and marks it opened.
+// GET /api/pricing returns the pricing tiers from the same database.
 //
 // Every contact submission is also recorded in the client database
 // (best-effort, after the email to Chris goes out — a database failure
@@ -13,34 +15,21 @@
 // the lead 10% off; the first submission through a token sets the
 // referrer's reward — 20% off a new site for prospects, 10% off future
 // enhancements for established clients — and emails them from
-// chris@graywebsolutions.com.
+// chris@graywebsolutions.com. A picked pricing tier quotes straight
+// into the pricing row: tier price, feature rate when it applies,
+// then the effective discount.
 
-interface D1Result<T = unknown> {
-  results: T[];
-  success: boolean;
-}
-
-interface D1PreparedStatement {
-  bind(...values: unknown[]): D1PreparedStatement;
-  first<T = unknown>(column?: string): Promise<T | null>;
-  all<T = unknown>(): Promise<D1Result<T>>;
-  run(): Promise<{
-    success: boolean;
-    meta?: { last_row_id?: number; changes?: number };
-  }>;
-}
-
-interface D1Database {
-  prepare(query: string): D1PreparedStatement;
-}
-
-interface Env {
-  ASSETS: Fetcher;
-  DB_CLIENTS?: D1Database;
-  RESEND_API_KEY?: string;
-  CONTACT_TO?: string;
-  CONTACT_FROM?: string;
-}
+import { json, clientIp } from './worker/http';
+import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
+import { handlePricing, quotePriceCents } from './worker/pricing';
+import { handleMagicLink, handleVerify, authenticateSession } from './worker/auth';
+import {
+  handleMe,
+  handleCreateRequest,
+  handleUpdateRequest,
+  handleSetBilled,
+  handleRequestImage,
+} from './worker/dashboard';
 
 interface ContactPayload {
   name?: string;
@@ -54,29 +43,21 @@ interface ContactPayload {
   discountVerified?: boolean;
   /** Referral token from ?ref=, when the visit came through a share link. */
   referralToken?: string;
+  /** Pricing tier the visitor picked, when they picked one. */
+  tierId?: unknown;
+  /** 'install' for a new site; 'feature' for work on an existing site. */
+  projectType?: string;
   /** Honeypot — real users leave this empty. */
   company?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CHRIS_EMAIL = 'chris@graywebsolutions.com';
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
-}
 
 // Referral-lookup throttle: per-isolate in-memory map, 30 lookups /
 // 15 min / IP. Tokens are unguessable, so this only blunts scanning.
 const lookups = new Map<string, { count: number; resetAt: number }>();
 const MAX_LOOKUPS = 30;
 const WINDOW_MS = 15 * 60 * 1000;
-
-function clientIp(request: Request): string {
-  return request.headers.get('cf-connecting-ip') ?? 'unknown';
-}
 
 function lookupThrottled(ip: string): boolean {
   const entry = lookups.get(ip);
@@ -203,6 +184,8 @@ async function recordSubmission(
     siteUrl: string;
     discountVerified: boolean;
     referralToken: string;
+    tierId: number | null;
+    projectType: string;
   },
 ): Promise<void> {
   const email = input.email.toLowerCase();
@@ -262,7 +245,37 @@ async function recordSubmission(
       .run();
   }
 
-  // The referrer's 20% and the used-mark land only after their email
+  // A picked tier quotes straight into the pricing row: tier price,
+  // feature rate when it applies, then the effective discount. Its
+  // own try/catch — on the pre-v2 schema (no tier_id/billed
+  // columns) the discount recording above already landed, and the
+  // quote is simply skipped until the schema is upgraded.
+  if (input.tierId) {
+    try {
+      const tier = await db
+        .prepare('SELECT price_cents FROM pricing_tiers WHERE id = ?')
+        .bind(input.tierId)
+        .first<{ price_cents: number }>();
+      if (tier) {
+        const current = await db
+          .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ?')
+          .bind(lead.id)
+          .first<{ discount_pct: number }>();
+        const effective = current ? current.discount_pct : discount;
+        const quoted = quotePriceCents(tier.price_cents, input.projectType, effective);
+        await db
+          .prepare(
+            `UPDATE client_pricing SET tier_id = ?, project_type = ?, quoted_price_cents = ?, billed = 0, updated_at = datetime('now') WHERE client_id = ?`,
+          )
+          .bind(input.tierId, input.projectType, quoted, lead.id)
+          .run();
+      }
+    } catch (err) {
+      console.error('Quote record skipped:', err);
+    }
+  }
+
+  // The referrer's reward and the used-mark land only after their email
   // goes out — if the send fails, the token stays unused and a later
   // submission through it retries the notification.
   if (firstUse && env.RESEND_API_KEY) {
@@ -320,6 +333,9 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   const discountLine = (payload.discountLine ?? '').trim() || 'Discount code: —';
   const discountVerified = payload.discountVerified === true;
   const referralToken = (payload.referralToken ?? '').trim().slice(0, 128);
+  const tierIdRaw = typeof payload.tierId === 'number' ? payload.tierId : NaN;
+  const tierId = Number.isInteger(tierIdRaw) && tierIdRaw > 0 ? tierIdRaw : null;
+  const projectType = payload.projectType === 'feature' ? 'feature' : 'install';
 
   if (!name || !EMAIL_RE.test(email) || !comments) {
     return json({ ok: false, error: 'Please fill in your name, a valid email, and your project details.' }, 400);
@@ -328,12 +344,27 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   const to = env.CONTACT_TO || CHRIS_EMAIL;
   const from = env.CONTACT_FROM || 'website@graywebsolutions.com';
 
+  // Name the picked tier in the inquiry email when the tier table
+  // exists; a missing table just omits the line.
+  let tierLine = '';
+  if (tierId && env.DB_CLIENTS) {
+    try {
+      const tier = await env.DB_CLIENTS.prepare('SELECT name FROM pricing_tiers WHERE id = ?')
+        .bind(tierId)
+        .first<{ name: string }>();
+      if (tier) tierLine = `Pricing tier: ${tier.name}`;
+    } catch {
+      /* pre-v2 schema — omit the line */
+    }
+  }
+
   const text = [
     `Name: ${name}`,
     `Email: ${email}`,
     `Phone: ${phone || '—'}`,
     `Existing site: ${hasSite ? `Yes — ${siteUrl || '—'}` : 'No'}`,
     discountLine,
+    tierLine,
     referralToken ? `Referral token: ${referralToken}` : '',
     '',
     comments,
@@ -377,6 +408,8 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
         siteUrl,
         discountVerified,
         referralToken,
+        tierId,
+        projectType,
       });
     } catch (err) {
       console.error('Client record failed:', err);
@@ -400,6 +433,69 @@ export default {
         return json({ ok: false, error: 'Method not allowed.' }, 405);
       }
       return handleReferral(request, env);
+    }
+    if (url.pathname === '/api/pricing') {
+      return handlePricing(request, env);
+    }
+    if (url.pathname === '/api/auth/magic-link') {
+      return handleMagicLink(request, env);
+    }
+    if (url.pathname === '/api/auth/verify') {
+      return handleVerify(request, env);
+    }
+    if (url.pathname === '/api/dashboard/me') {
+      if (request.method !== 'GET') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      const session = await authenticateSession(request, env);
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to view the dashboard.' }, 401);
+      }
+      return handleMe(request, env, session);
+    }
+    if (url.pathname === '/api/requests') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      const session = await authenticateSession(request, env);
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to submit a request.' }, 401);
+      }
+      return handleCreateRequest(request, env, session);
+    }
+    const requestMatch = /^\/api\/requests\/(\d+)$/.exec(url.pathname);
+    if (requestMatch) {
+      if (request.method !== 'PATCH') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      const session = await authenticateSession(request, env);
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to update requests.' }, 401);
+      }
+      return handleUpdateRequest(request, env, session, Number(requestMatch[1]));
+    }
+    const billedMatch = /^\/api\/clients\/(\d+)\/billed$/.exec(url.pathname);
+    if (billedMatch) {
+      if (request.method !== 'PATCH') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      const session = await authenticateSession(request, env);
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to update billing.' }, 401);
+      }
+      return handleSetBilled(request, env, session, Number(billedMatch[1]));
+    }
+    if (url.pathname === '/api/request-image') {
+      if (request.method !== 'GET') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      // Image links open in a new tab, so the session token travels
+      // as a query param here — the one endpoint that allows it.
+      const session = await authenticateSession(request, env, { allowQueryToken: true });
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to view images.' }, 401);
+      }
+      return handleRequestImage(request, env, session);
     }
     return env.ASSETS.fetch(request);
   },
