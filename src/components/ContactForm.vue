@@ -3,12 +3,15 @@ import { ref, watch } from 'vue';
 import { activeDiscountCode } from '../lib/discount';
 import { contactSubmitted } from '../lib/contact';
 import { useBonusStore } from '../stores/bonus';
+import { useReferralStore } from '../stores/referral';
 import { useSettingsStore } from '../stores/settings';
 import { storeToRefs } from 'pinia';
 
 defineProps<{ isBound?: boolean }>();
 
 const bonus = useBonusStore();
+const referral = useReferralStore();
+const { active: referralActive, referrerName } = storeToRefs(referral);
 const { siteName } = storeToRefs(useSettingsStore());
 const hasSite = ref('');
 const formStatus = ref('');
@@ -98,10 +101,12 @@ async function submitContactForm(event: SubmitEvent) {
   // A code only counts if it matches the one currently on the phone.
   discountError.value = '';
   let discountLine = `Discount code: ${discount || '—'}`;
+  let discountVerified = false;
   if (discount) {
     const live = activeDiscountCode.value.trim();
     if (live && discount.toUpperCase() === live.toUpperCase()) {
-      discountLine = `Discount code: ${live} — verified (20% off)`;
+      discountLine = `Discount code: ${live} — verified (10% off)`;
+      discountVerified = true;
     } else {
       discountError.value = "That doesn't match the code on the site.";
       return;
@@ -122,6 +127,8 @@ async function submitContactForm(event: SubmitEvent) {
         siteUrl,
         comments,
         discountLine,
+        discountVerified,
+        referralToken: referralActive.value ? referral.token : '',
         company,
       }),
     });
@@ -205,6 +212,9 @@ async function submitContactForm(event: SubmitEvent) {
         placeholder="What does your business do, who is it for, and what should your website accomplish?"
       ></textarea>
     </label>
+    <p v-if="referralActive" class="referral-note">
+      {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}10% off your website, applied when you send this form.
+    </p>
     <label class="field">
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
@@ -212,7 +222,7 @@ async function submitContactForm(event: SubmitEvent) {
       <input ref="discountInput" name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" />
       <small v-if="discountError" id="discount-error" class="discount-error" role="alert">{{ discountError }}</small>
       <span v-if="showPuzzleInfo" class="puzzle-info-text">
-        <small>Somewhere on this site is a one time code for 20% off your website.</small>
+        <small>Somewhere on this site is a one time code for 10% off your website.</small>
         <button v-if="!showHint" type="button" class="hint-btn" @click="revealHint">Show hint</button>
         <small v-else class="puzzle-hint">{{ hintSeesBonus ? 'review the first draft.' : `Turn the ${isBound ? siteName + ' book' : 'manuscript'} around.` }}</small>
       </span>

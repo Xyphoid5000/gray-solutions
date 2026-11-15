@@ -3,7 +3,7 @@
  * The desk phone, now tappable. Tap it to pick it up: it's PIN-locked
  * (the UV ink hides the code in four plain sentences). Three wrong
  * tries locks it for the session. Unlock it for Snake and Contacts —
- * calling Gray Solutions reveals the 20%-off code, and if the match
+ * calling Gray Solutions reveals the 10%-off code, and if the match
  * guy has quit, his contact appears so you can hire him back.
  */
 import { computed, inject, ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue';
@@ -747,7 +747,7 @@ onUnmounted(() => {
           <div v-else-if="callStatus === 'connected' && callContact?.special === 'gray'" class="call-code">
             <p class="call-thanks">Thanks for calling {{ settings.siteName }}!</p>
             <p class="call-code-value">{{ activeDiscountCode }}</p>
-            <p class="call-code-note">Mention it in the contact form for <strong>20% off</strong> your new website.</p>
+            <p class="call-code-note">Mention it in the contact form for <strong>10% off</strong> your new website.</p>
           </div>
           <p v-else-if="callStatus === 'connected'" class="call-status">
             {{
