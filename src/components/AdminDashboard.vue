@@ -10,7 +10,7 @@ const emit = defineEmits<{ refresh: []; preview: [client: DashboardClient] }>();
 const clientFilter = ref<'all' | 'current' | 'prospective'>('all');
 const requestFilter = ref('all');
 const updatingRequest = ref(0);
-const updatingBilled = ref(0);
+const updatingBilled = ref('');
 
 const clients = computed(() =>
   (props.data.clients ?? []).filter(
@@ -32,14 +32,14 @@ async function setStatus(id: number, status: string) {
   emit('refresh');
 }
 
-async function setBilled(clientId: number, billed: boolean) {
-  updatingBilled.value = clientId;
+async function setBilled(clientId: number, projectType: string, billed: boolean) {
+  updatingBilled.value = `${clientId}:${projectType}`;
   await dashboardFetch(`/api/clients/${clientId}/billed`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ billed }),
+    body: JSON.stringify({ billed, projectType }),
   });
-  updatingBilled.value = 0;
+  updatingBilled.value = '';
   emit('refresh');
 }
 </script>
@@ -73,25 +73,27 @@ async function setBilled(clientId: number, billed: boolean) {
           <span class="dash-badge">{{ c.isClient ? 'Current' : 'Prospective' }}</span>
         </div>
         <p class="client-meta">{{ c.contactName }} &mdash; {{ c.email }}</p>
-        <p v-if="c.pricing" class="client-pricing">
-          <span v-if="c.pricing.tierName">{{ c.pricing.tierName }}</span>
-          <span v-if="c.pricing.discountPct"> &middot; {{ c.pricing.discountPct }}% off</span>
-          <span v-if="c.pricing.quotedPriceCents !== null">
-            &middot; {{ formatPrice(c.pricing.quotedPriceCents) }}</span
-          >
-          <span> &middot; {{ c.pricing.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
-        </p>
-        <p v-else class="client-pricing">No quote yet.</p>
-        <div class="client-actions">
+        <div v-for="p in c.pricings" :key="p.projectType" class="client-pricing-row">
+          <p class="client-pricing">
+            <span>{{ p.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
+            <span v-if="p.tierName"> &middot; {{ p.tierName }}</span>
+            <span v-if="p.discountPct"> &middot; {{ p.discountPct }}% off</span>
+            <span v-if="p.quotedPriceCents !== null">
+              &middot; {{ formatPrice(p.quotedPriceCents) }}</span
+            >
+          </p>
           <button
             class="btn btn-ghost"
             type="button"
-            title="Toggle billed state"
-            :disabled="updatingBilled === c.id"
-            @click="setBilled(c.id, !(c.pricing?.billed ?? false))"
+            :title="`Toggle billed state for the ${p.projectType} row`"
+            :disabled="updatingBilled === `${c.id}:${p.projectType}`"
+            @click="setBilled(c.id, p.projectType, !p.billed)"
           >
-            {{ c.pricing?.billed ? 'Billed ✓' : 'Mark billed' }}
+            {{ p.billed ? 'Billed ✓' : 'Mark billed' }}
           </button>
+        </div>
+        <p v-if="c.pricings.length === 0" class="client-pricing">No quote yet.</p>
+        <div class="client-actions">
           <button class="btn btn-ghost" type="button" @click="emit('preview', c)">
             View dashboard
           </button>
@@ -193,10 +195,21 @@ h2 {
 .client-pricing {
   margin: 0.6rem 0 0.9rem;
 }
+.client-pricing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0.6rem 0;
+}
+.client-pricing-row .client-pricing {
+  margin: 0;
+}
 .client-actions {
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
+  margin-top: 0.9rem;
 }
 .dash-empty {
   color: var(--muted);

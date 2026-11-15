@@ -44,8 +44,7 @@ interface RequestRow {
   created_at: string;
 }
 
-function shapePricing(p: PricingRow | undefined, tierNames: Map<number, string>) {
-  if (!p) return null;
+function shapePricing(p: PricingRow, tierNames: Map<number, string>) {
   return {
     projectType: p.project_type,
     tierId: p.tier_id,
@@ -54,6 +53,14 @@ function shapePricing(p: PricingRow | undefined, tierNames: Map<number, string>)
     quotedPriceCents: p.quoted_price_cents,
     billed: p.billed === 1,
   };
+}
+
+/** Install first, then feature — the order both dashboards show. */
+function shapePricings(rows: PricingRow[], tierNames: Map<number, string>) {
+  return rows
+    .slice()
+    .sort((a, b) => Number(a.project_type !== 'install') - Number(b.project_type !== 'install'))
+    .map((p) => shapePricing(p, tierNames));
 }
 
 function shapeRequest(
@@ -113,7 +120,12 @@ export async function handleMe(
       const requestsRes = await db
         .prepare('SELECT id, client_id, type, details, image_key, status, tier_id, created_at FROM client_requests ORDER BY id DESC')
         .all<RequestRow>();
-      const pricingByClient = new Map(pricingRes.results.map((p) => [p.client_id, p]));
+      const pricingByClient = new Map<number, PricingRow[]>();
+      for (const p of pricingRes.results) {
+        const rows = pricingByClient.get(p.client_id) ?? [];
+        rows.push(p);
+        pricingByClient.set(p.client_id, rows);
+      }
       const namesById = new Map(clientsRes.results.map((c) => [c.id, c.business_name]));
       return json({
         ok: true,
@@ -125,7 +137,7 @@ export async function handleMe(
           contactName: c.contact_name,
           email: c.email,
           isClient: c.is_client === 1,
-          pricing: shapePricing(pricingByClient.get(c.id), tierNames),
+          pricings: shapePricings(pricingByClient.get(c.id) ?? [], tierNames),
         })),
         requests: requestsRes.results.map((r) =>
           shapeRequest(r, namesById.get(r.client_id) ?? '', tierNames),
@@ -145,16 +157,16 @@ export async function handleMe(
         role: 'client',
         email: session.email,
         client: null,
-        pricing: null,
+        pricings: [],
         requests: [],
         tiers,
         uploadsEnabled,
       });
     }
-    const pricing = await db
+    const pricingRes = await db
       .prepare('SELECT client_id, project_type, tier_id, discount_pct, quoted_price_cents, billed FROM client_pricing WHERE client_id = ?')
       .bind(client.id)
-      .first<PricingRow>();
+      .all<PricingRow>();
     const requestsRes = await db
       .prepare('SELECT id, client_id, type, details, image_key, status, tier_id, created_at FROM client_requests WHERE client_id = ? ORDER BY id DESC')
       .bind(client.id)
@@ -170,7 +182,7 @@ export async function handleMe(
         email: client.email,
         isClient: client.is_client === 1,
       },
-      pricing: shapePricing(pricing ?? undefined, tierNames),
+      pricings: shapePricings(pricingRes.results, tierNames),
       requests: requestsRes.results.map((r) => shapeRequest(r, client.business_name, tierNames)),
       tiers,
       uploadsEnabled,
@@ -343,6 +355,7 @@ export async function handleSetBilled(
   if (billed !== 0 && billed !== 1 && billed !== true && billed !== false) {
     return json({ ok: false, error: 'Send billed as true or false.' }, 400);
   }
+  const projectType = body.projectType === 'feature' ? 'feature' : 'install';
   try {
     const client = await env.DB_CLIENTS.prepare('SELECT id FROM clients WHERE id = ?')
       .bind(clientId)
@@ -350,13 +363,13 @@ export async function handleSetBilled(
     if (!client) {
       return json({ ok: false, error: 'Client not found.' }, 404);
     }
-    await env.DB_CLIENTS.prepare('INSERT OR IGNORE INTO client_pricing (client_id) VALUES (?)')
-      .bind(clientId)
+    await env.DB_CLIENTS.prepare('INSERT OR IGNORE INTO client_pricing (client_id, project_type) VALUES (?, ?)')
+      .bind(clientId, projectType)
       .run();
     await env.DB_CLIENTS.prepare(
-      `UPDATE client_pricing SET billed = ?, updated_at = datetime('now') WHERE client_id = ?`,
+      `UPDATE client_pricing SET billed = ?, updated_at = datetime('now') WHERE client_id = ? AND project_type = ?`,
     )
-      .bind(billed ? 1 : 0, clientId)
+      .bind(billed ? 1 : 0, clientId, projectType)
       .run();
     return json({ ok: true });
   } catch (err) {
@@ -470,7 +483,7 @@ export async function handleMintShareToken(
       token = minted.token;
     }
     const pricing = await db
-      .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ?')
+      .prepare("SELECT discount_pct FROM client_pricing WHERE client_id = ? AND project_type = 'install'")
       .bind(me.id)
       .first<{ discount_pct: number }>();
     return json({

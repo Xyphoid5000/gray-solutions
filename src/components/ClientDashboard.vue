@@ -139,17 +139,16 @@ async function copyShareLink() {
     <section aria-label="My info">
       <h2>{{ props.data.client.businessName }}</h2>
       <p class="client-meta">{{ props.data.client.contactName }} &mdash; {{ props.data.client.email }}</p>
-      <p v-if="props.data.pricing" class="client-pricing">
-        <span v-if="props.data.pricing.tierName">{{ props.data.pricing.tierName }}</span>
-        <span v-if="props.data.pricing.discountPct">
-          &middot; {{ props.data.pricing.discountPct }}% off</span
+      <p v-for="p in props.data.pricings" :key="p.projectType" class="client-pricing">
+        <span>{{ p.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
+        <span v-if="p.tierName"> &middot; {{ p.tierName }}</span>
+        <span v-if="p.discountPct"> &middot; {{ p.discountPct }}% off</span>
+        <span v-if="p.quotedPriceCents !== null">
+          &middot; {{ formatPrice(p.quotedPriceCents) }}</span
         >
-        <span v-if="props.data.pricing.quotedPriceCents !== null">
-          &middot; {{ formatPrice(props.data.pricing.quotedPriceCents) }}</span
-        >
-        <span v-if="props.data.pricing.billed"> &middot; Billed</span>
+        <span v-if="p.billed"> &middot; Billed</span>
       </p>
-      <p v-else class="client-pricing">No quote yet &mdash; Chris will follow up with one.</p>
+      <p v-if="props.data.pricings.length === 0" class="client-pricing">No quote yet &mdash; Chris will follow up with one.</p>
     </section>
     <section aria-label="My requests">
       <h2>My requests</h2>

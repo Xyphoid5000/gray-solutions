@@ -237,20 +237,25 @@ async function recordSubmission(
     }
   }
 
+  // The lead's discount is for their new site — the install row
+  // only. A feature row they may already hold keeps its own terms.
   if (discount > 0) {
     await db
       .prepare(
-        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
+        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = 'install'`,
       )
       .bind(discount, lead.id)
       .run();
   }
 
-  // A picked tier quotes straight into the pricing row: tier price,
-  // feature rate when it applies, then the effective discount. Its
-  // own try/catch — on the pre-v2 schema (no tier_id/billed
-  // columns) the discount recording above already landed, and the
-  // quote is simply skipped until the schema is upgraded.
+  // A picked tier quotes straight into the pricing row for this
+  // (client, project type): tier price, feature rate when it
+  // applies, then the effective discount — the row's own discount,
+  // so a feature quote for an established client applies their
+  // reward. Its own try/catch — on the pre-v3 schema (no composite
+  // key) the upsert fails, the discount recording above already
+  // landed, and the quote is simply skipped until the schema is
+  // upgraded.
   if (input.tierId) {
     try {
       const tier = await db
@@ -259,16 +264,22 @@ async function recordSubmission(
         .first<{ price_cents: number }>();
       if (tier) {
         const current = await db
-          .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ?')
-          .bind(lead.id)
+          .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ? AND project_type = ?')
+          .bind(lead.id, input.projectType)
           .first<{ discount_pct: number }>();
         const effective = current ? current.discount_pct : discount;
         const quoted = quotePriceCents(tier.price_cents, input.projectType, effective);
         await db
           .prepare(
-            `UPDATE client_pricing SET tier_id = ?, project_type = ?, quoted_price_cents = ?, billed = 0, updated_at = datetime('now') WHERE client_id = ?`,
+            `INSERT INTO client_pricing (client_id, project_type, tier_id, discount_pct, quoted_price_cents, billed)
+             VALUES (?, ?, ?, ?, ?, 0)
+             ON CONFLICT(client_id, project_type) DO UPDATE SET
+               tier_id = excluded.tier_id,
+               quoted_price_cents = excluded.quoted_price_cents,
+               billed = 0,
+               updated_at = datetime('now')`,
           )
-          .bind(input.tierId, input.projectType, quoted, lead.id)
+          .bind(lead.id, input.projectType, input.tierId, effective, quoted)
           .run();
       }
     } catch (err) {
@@ -288,18 +299,21 @@ async function recordSubmission(
       input.siteUrl,
       firstUse.isEstablished,
     );
-    await db
-      .prepare('INSERT OR IGNORE INTO client_pricing (client_id) VALUES (?)')
-      .bind(firstUse.referrerId)
-      .run();
-    // Prospects earn 20% off a new site; established clients earn 10%
-    // off future enhancements.
+    // Prospects earn 20% off a new site (their install row);
+    // established clients earn 10% off future enhancements — a new
+    // feature row with no tier and no quote, leaving their install
+    // row (and its billed flag) untouched.
     const referrerPct = firstUse.isEstablished ? 10 : 20;
+    const rewardType = firstUse.isEstablished ? 'feature' : 'install';
+    await db
+      .prepare('INSERT OR IGNORE INTO client_pricing (client_id, project_type) VALUES (?, ?)')
+      .bind(firstUse.referrerId, rewardType)
+      .run();
     await db
       .prepare(
-        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
+        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = ?`,
       )
-      .bind(referrerPct, firstUse.referrerId)
+      .bind(referrerPct, firstUse.referrerId, rewardType)
       .run();
     await db
       .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
