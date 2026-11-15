@@ -2270,6 +2270,12 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   color: #e5484d;
   font-weight: 600;
 }
+.referral-note {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--ember);
+  font-weight: 600;
+}
 .contact-form input[type='text'],
 .contact-form input[type='email'],
 .contact-form input[type='tel'],
