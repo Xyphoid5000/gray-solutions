@@ -32,7 +32,7 @@ const previewMe = computed<DashboardMe | null>(() => {
     role: 'client',
     email: client.email,
     client,
-    pricing: client.pricing,
+    pricings: client.pricings,
     requests: me.value.requests.filter((r) => r.clientId === client.id),
     tiers: me.value.tiers,
     uploadsEnabled: me.value.uploadsEnabled,

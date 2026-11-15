@@ -21,7 +21,8 @@ export interface DashboardClient {
   contactName: string;
   email: string;
   isClient: boolean;
-  pricing: DashboardPricing | null;
+  /** One row per project type — install first, then feature. */
+  pricings: DashboardPricing[];
 }
 
 export interface DashboardRequest {
@@ -45,7 +46,8 @@ export interface DashboardMe {
   client: DashboardClient | null;
   /** Admin only: every client. */
   clients?: DashboardClient[];
-  pricing: DashboardPricing | null;
+  /** The signed-in client's pricing rows (install, then feature). */
+  pricings: DashboardPricing[];
   requests: DashboardRequest[];
   tiers: PricingTier[];
   uploadsEnabled: boolean;

@@ -9,6 +9,13 @@
 -- added; client_pricing reshaped (project_type, tier_id, billed).
 -- Upgrading an existing database: DROP TABLE client_pricing first,
 -- then run this file — the other tables keep their rows.
+--
+-- v3 (2026-11-15): client_pricing holds one row per (client,
+-- project type) — a client's install quote and their standing
+-- enhancement terms are separate records, so an established
+-- client's referral reward lands as a new feature row and never
+-- touches their install row. Upgrading: run
+-- sql/migrate-v2-to-v3.sql (it COPIES the rows — do not DROP).
 
 CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,16 +62,21 @@ INSERT OR IGNORE INTO pricing_tiers (id, name, price_cents, description) VALUES
   (3, 'Payment processing', 300000, 'A web application with payment processing — checkout and invoices, built in.');
 
 CREATE TABLE IF NOT EXISTS client_pricing (
-  client_id INTEGER PRIMARY KEY REFERENCES clients(id),
+  -- One row per (client, project type): the install row carries the
+  -- site quote, the feature row carries the standing enhancement
+  -- terms (a referral reward, a future quote). Neither row's writes
+  -- touch the other.
+  client_id INTEGER NOT NULL REFERENCES clients(id),
   -- 'install' = a new site build; 'feature' = a feature on an
   -- established client's site (priced from the tier at the
   -- returning-client rate).
   project_type TEXT NOT NULL DEFAULT 'install' CHECK (project_type IN ('install', 'feature')),
   -- The tier this quote prices from. NULL until a tier is picked.
   tier_id INTEGER REFERENCES pricing_tiers(id),
-  -- 0, 10, or 20. 10 = referred lead or hidden-code finder; 20 = a
-  -- share of theirs brought in a lead (10 off future enhancements
-  -- for established clients). 20 is the cap — never stacks.
+  -- 0, 10, or 20. On the install row: 10 = referred lead or
+  -- hidden-code finder; 20 = a share of theirs brought in a lead.
+  -- On the feature row: 10 = an established client's reward for a
+  -- share that brought in a lead. 20 is the cap — never stacks.
   discount_pct INTEGER NOT NULL DEFAULT 0 CHECK (discount_pct IN (0, 10, 20)),
   -- After any discount, in cents — the number the client saw. NULL
   -- until quoted. The pre-discount price is the tier's price (see
@@ -72,11 +84,12 @@ CREATE TABLE IF NOT EXISTS client_pricing (
   -- tier_id NULL and carries the agreed number here.
   quoted_price_cents INTEGER CHECK (quoted_price_cents IS NULL OR quoted_price_cents >= 0),
   -- 1 once Chris has billed the client for this quote. A fresh
-  -- submission resets it to 0 — a new inquiry means a new,
+  -- submission resets its own row to 0 — a new inquiry means a new,
   -- unbilled quote.
   billed INTEGER NOT NULL DEFAULT 0 CHECK (billed IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (client_id, project_type)
 );
 
 CREATE TABLE IF NOT EXISTS client_requests (
