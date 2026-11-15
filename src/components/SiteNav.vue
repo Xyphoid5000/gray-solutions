@@ -32,6 +32,16 @@ function goPath(path: string) {
   if (route.path !== path) router.push(path);
   else window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+/** Demos live on their own subdomain — a new tab, the portfolio stays open.
+    Plain two-arg form on purpose: the features-string form ('noopener')
+    returns null in headless Chromium. The opener link is severed
+    explicitly instead, same protection. */
+function goDemos() {
+  menuOpen.value = false;
+  desktopMenuOpen.value = false;
+  const w = window.open('https://demos.graywebsolutions.com', '_blank');
+  if (w) w.opener = null;
+}
 
 /** The cord lives here but only while bonus content is on. It mounts
     with everything hidden inside the G. emblem (the G is its housing —
@@ -218,6 +228,7 @@ function retractCord(done: () => void) {
       <button type="button" @click="goPath('/pricing')">Pricing</button>
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
+      <button type="button" @click="goDemos">Demos</button>
     </div>
     <!-- Mobile hamburger. -->
     <button
@@ -241,6 +252,7 @@ function retractCord(done: () => void) {
       <button type="button" @click="goPath('/pricing')">Pricing</button>
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
+      <button type="button" @click="goDemos">Demos</button>
     </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
       <label class="a11y-toggle">
