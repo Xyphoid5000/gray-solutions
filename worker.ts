@@ -29,6 +29,7 @@ import {
   handleUpdateRequest,
   handleSetBilled,
   handleRequestImage,
+  handleMintShareToken,
 } from './worker/dashboard';
 
 interface ContactPayload {
@@ -452,6 +453,16 @@ export default {
         return json({ ok: false, error: 'Sign in to view the dashboard.' }, 401);
       }
       return handleMe(request, env, session);
+    }
+    if (url.pathname === '/api/referral-token') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      const session = await authenticateSession(request, env);
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to get a share link.' }, 401);
+      }
+      return handleMintShareToken(request, env, session);
     }
     if (url.pathname === '/api/requests') {
       if (request.method !== 'POST') {

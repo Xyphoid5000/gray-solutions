@@ -5,7 +5,7 @@
 // when the bucket is bound; without it, requests still work, just
 // without images.
 
-import { json, readJson } from './http';
+import { json, readJson, makeThrottle, clientIp } from './http';
 import type { D1Database, Env } from './env';
 import type { Session } from './auth';
 import { randomToken } from './crypto';
@@ -405,4 +405,82 @@ export async function handleRequestImage(
       'cache-control': 'private, max-age=3600',
     },
   });
+}
+
+// Dashboard share links: a signed-in client mints their own referral
+// link from the dashboard — the same token system the demo exit form
+// uses, keyed to the demo_slug 'dashboard' so one token per client
+// covers dashboard shares. The reward logic lives on the contact
+// submission (first use of the token), keyed off the token alone, so
+// nothing else needs to know where the link came from. The link
+// always points at the canonical home, never a preview host — the
+// demos Worker hardcodes the same origin for its share links.
+const GS_HOME = 'https://graywebsolutions.com';
+const SHARE_SLUG = 'dashboard';
+const shareThrottle = makeThrottle(5, 15 * 60 * 1000);
+
+export async function handleMintShareToken(
+  request: Request,
+  env: Env,
+  session: Session,
+): Promise<Response> {
+  if (request.method !== 'POST') {
+    return json({ ok: false, error: 'Method not allowed.' }, 405);
+  }
+  if (session.role !== 'client') {
+    return json({ ok: false, error: 'Only client accounts can share a referral link.' }, 403);
+  }
+  if (!env.DB_CLIENTS) {
+    return json({ ok: false, error: 'Sharing is not configured yet.' }, 503);
+  }
+  const ip = clientIp(request);
+  if (shareThrottle.blocked(ip)) {
+    return json({ ok: false, error: 'Too many requests. Try again in a few minutes.' }, 429);
+  }
+  shareThrottle.record(ip);
+
+  const db = env.DB_CLIENTS;
+  try {
+    const me = await clientIdFor(db, session.email);
+    if (!me) {
+      return json({ ok: false, error: 'No client record for this email yet.' }, 403);
+    }
+    // One token per client for dashboard shares — return the existing
+    // one if the client already shared from here.
+    const existing = await db
+      .prepare('SELECT token FROM referral_tokens WHERE client_id = ? AND demo_slug = ?')
+      .bind(me.id, SHARE_SLUG)
+      .first<{ token: string }>();
+    let token = existing?.token ?? '';
+    if (!token) {
+      token = randomToken(16);
+      await db
+        .prepare(
+          'INSERT OR IGNORE INTO referral_tokens (token, client_id, demo_slug) VALUES (?, ?, ?)',
+        )
+        .bind(token, me.id, SHARE_SLUG)
+        .run();
+      const minted = await db
+        .prepare('SELECT token FROM referral_tokens WHERE client_id = ? AND demo_slug = ?')
+        .bind(me.id, SHARE_SLUG)
+        .first<{ token: string }>();
+      if (!minted) {
+        return json({ ok: false, error: 'Could not create your link. Please try again.' }, 502);
+      }
+      token = minted.token;
+    }
+    const pricing = await db
+      .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ?')
+      .bind(me.id)
+      .first<{ discount_pct: number }>();
+    return json({
+      ok: true,
+      token,
+      url: `${GS_HOME}/?ref=${encodeURIComponent(token)}`,
+      discountPct: pricing?.discount_pct ?? 0,
+    });
+  } catch (err) {
+    console.error('Share-link mint failed:', err);
+    return json({ ok: false, error: 'Sharing is not configured yet.' }, 503);
+  }
 }
