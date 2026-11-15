@@ -11,7 +11,9 @@
 // (best-effort, after the email to Chris goes out — a database failure
 // never blocks the inquiry). A submission through a referral token gives
 // the lead 10% off; the first submission through a token sets the
-// referrer to 20% off and emails them from chris@graywebsolutions.com.
+// referrer's reward — 20% off a new site for prospects, 10% off future
+// enhancements for established clients — and emails them from
+// chris@graywebsolutions.com.
 
 interface D1Result<T = unknown> {
   results: T[];
@@ -149,15 +151,19 @@ async function sendReferrerEmail(
   referrerName: string,
   leadName: string,
   leadSite: string,
+  isEstablished: boolean,
 ): Promise<void> {
   const greeting = referrerName ? `Hi ${referrerName},` : 'Hi,';
   const leadBit = leadSite ? `${leadName} (${leadSite})` : leadName;
+  const rewardLine = isEstablished
+    ? 'Your 10% off future enhancements is locked in: the next time you ask for new features or upgrades to your site, you will get 10% off. And they get 10% off theirs.'
+    : 'Your 20% off is locked in: if you go with Gray Solutions for your website, you will get 20% off. And they get 10% off theirs.';
   const text = [
     greeting,
     '',
     `Good news — ${leadBit} reached out to Gray Solutions through the link you shared.`,
     '',
-    'Your 20% off is locked in: if you go with Gray Solutions for your website, you will get 20% off. And they get 10% off theirs.',
+    rewardLine,
     '',
     'Thanks for spreading the word.',
     '',
@@ -173,7 +179,9 @@ async function sendReferrerEmail(
     body: JSON.stringify({
       from: `Gray Solutions <${CHRIS_EMAIL}>`,
       to: [referrerEmail],
-      subject: 'Your Gray Solutions share link was used — 20% off your website',
+      subject: isEstablished
+        ? 'Your Gray Solutions share link was used — 10% off future enhancements'
+        : 'Your Gray Solutions share link was used — 20% off your website',
       text,
     }),
   });
@@ -219,7 +227,7 @@ async function recordSubmission(
     .run();
 
   let discount = input.discountVerified ? 10 : 0;
-  let firstUse: { tokenId: number; referrerId: number; referrerEmail: string; referrerName: string } | null = null;
+  let firstUse: { tokenId: number; referrerId: number; referrerEmail: string; referrerName: string; isEstablished: boolean } | null = null;
   if (input.referralToken) {
     const tok = await db
       .prepare('SELECT id, client_id, used FROM referral_tokens WHERE token = ?')
@@ -229,15 +237,16 @@ async function recordSubmission(
       discount = Math.max(discount, 10);
       if (!tok.used) {
         const referrer = await db
-          .prepare('SELECT id, email, contact_name, business_name FROM clients WHERE id = ?')
+          .prepare('SELECT id, email, contact_name, business_name, is_client FROM clients WHERE id = ?')
           .bind(tok.client_id)
-          .first<{ id: number; email: string; contact_name: string; business_name: string }>();
+          .first<{ id: number; email: string; contact_name: string; business_name: string; is_client: number }>();
         if (referrer) {
           firstUse = {
             tokenId: tok.id,
             referrerId: referrer.id,
             referrerEmail: referrer.email,
             referrerName: referrer.contact_name || referrer.business_name,
+            isEstablished: referrer.is_client === 1,
           };
         }
       }
@@ -263,16 +272,20 @@ async function recordSubmission(
       firstUse.referrerName,
       input.name,
       input.siteUrl,
+      firstUse.isEstablished,
     );
     await db
       .prepare('INSERT OR IGNORE INTO client_pricing (client_id) VALUES (?)')
       .bind(firstUse.referrerId)
       .run();
+    // Prospects earn 20% off a new site; established clients earn 10%
+    // off future enhancements.
+    const referrerPct = firstUse.isEstablished ? 10 : 20;
     await db
       .prepare(
-        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, 20), updated_at = datetime('now') WHERE client_id = ?`,
+        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
       )
-      .bind(firstUse.referrerId)
+      .bind(referrerPct, firstUse.referrerId)
       .run();
     await db
       .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
