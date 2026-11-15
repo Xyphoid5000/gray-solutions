@@ -143,10 +143,13 @@ async function copyShareLink() {
         <span>{{ p.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
         <span v-if="p.tierName"> &middot; {{ p.tierName }}</span>
         <span v-if="p.discountPct"> &middot; {{ p.discountPct }}% off</span>
-        <span v-if="p.quotedPriceCents !== null">
+        <span v-if="p.billed && p.quotedPriceCents !== null">
+          &middot; Charged {{ formatPrice(p.quotedPriceCents) }}</span
+        >
+        <span v-else-if="p.quotedPriceCents !== null">
           &middot; {{ formatPrice(p.quotedPriceCents) }}</span
         >
-        <span v-if="p.billed"> &middot; Billed</span>
+        <span v-else-if="p.billed"> &middot; Billed</span>
       </p>
       <p v-if="props.data.pricings.length === 0" class="client-pricing">No quote yet &mdash; Chris will follow up with one.</p>
     </section>
