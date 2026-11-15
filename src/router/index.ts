@@ -7,6 +7,7 @@ import PremisePage from '../views/PremisePage.vue';
 import CraftPage from '../views/CraftPage.vue';
 import ArcPage from '../views/ArcPage.vue';
 import PricingPage from '../views/PricingPage.vue';
+import DashboardPage from '../views/DashboardPage.vue';
 
 /** Home (/) is rendered directly by App.vue — the manuscript experience
     owns the root. This placeholder satisfies the route record; it never
@@ -30,6 +31,7 @@ const router = createRouter({
     { path: '/craft', name: 'craft', component: CraftPage },
     { path: '/arc', name: 'arc', component: ArcPage },
     { path: '/pricing', name: 'pricing', component: PricingPage },
+    { path: '/dashboard', name: 'dashboard', component: DashboardPage },
     // Unknown paths fall back to the manuscript, not a dead end.
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

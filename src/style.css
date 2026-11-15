@@ -2276,10 +2276,17 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   color: var(--ember);
   font-weight: 600;
 }
+.quote-line {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink);
+  font-weight: 600;
+}
 .contact-form input[type='text'],
 .contact-form input[type='email'],
 .contact-form input[type='tel'],
 .contact-form input[type='url'],
+.contact-form select,
 .contact-form textarea {
   width: 100%;
   background: rgba(255, 255, 255, 0.025);
@@ -2299,7 +2306,38 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   color: var(--faint);
 }
 .contact-form input:focus,
+.contact-form select:focus,
 .contact-form textarea:focus {
+  outline: none;
+  border-color: var(--ember);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(208, 138, 78, 0.15);
+}
+/* Dashboard forms share the contact form's field treatment. */
+.dashboard-form input[type='text'],
+.dashboard-form input[type='email'],
+.dashboard-form select,
+.dashboard-form textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.95rem 1.1rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+}
+.dashboard-form textarea {
+  resize: vertical;
+  min-height: 130px;
+}
+.dashboard-form ::placeholder {
+  color: var(--faint);
+}
+.dashboard-form input:focus,
+.dashboard-form select:focus,
+.dashboard-form textarea:focus {
   outline: none;
   border-color: var(--ember);
   background: rgba(255, 255, 255, 0.05);

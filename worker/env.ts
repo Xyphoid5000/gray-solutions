@@ -1,0 +1,47 @@
+// Shared Worker types and environment bindings.
+
+export interface D1Result<T = unknown> {
+  results: T[];
+  success: boolean;
+}
+
+export interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  first<T = unknown>(column?: string): Promise<T | null>;
+  all<T = unknown>(): Promise<D1Result<T>>;
+  run(): Promise<{
+    success: boolean;
+    meta?: { last_row_id?: number; changes?: number };
+  }>;
+}
+
+export interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+}
+
+export interface R2ObjectBody {
+  arrayBuffer(): Promise<ArrayBuffer>;
+  httpMetadata?: { contentType?: string };
+  size: number;
+}
+
+export interface R2Bucket {
+  put(
+    key: string,
+    value: ArrayBuffer,
+    options?: { httpMetadata?: { contentType?: string } },
+  ): Promise<unknown>;
+  get(key: string): Promise<R2ObjectBody | null>;
+}
+
+export interface Env {
+  ASSETS: Fetcher;
+  DB_CLIENTS?: D1Database;
+  RESEND_API_KEY?: string;
+  CONTACT_TO?: string;
+  CONTACT_FROM?: string;
+  /** Optional: image uploads stay disabled until the bucket exists. */
+  R2_UPLOADS?: R2Bucket;
+}
+
+export const CHRIS_EMAIL = 'chris@graywebsolutions.com';

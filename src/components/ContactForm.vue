@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { activeDiscountCode } from '../lib/discount';
+import {
+  FALLBACK_TIERS,
+  discountedPrice,
+  fetchPricingTiers,
+  formatPrice,
+  type PricingTier,
+} from '../lib/pricing';
 import { contactSubmitted } from '../lib/contact';
 import { useBonusStore } from '../stores/bonus';
 import { useReferralStore } from '../stores/referral';
@@ -26,6 +33,29 @@ const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
 const phoneInput = ref<HTMLInputElement | null>(null);
+const tiers = ref<PricingTier[]>(FALLBACK_TIERS);
+const selectedTierId = ref('');
+const discountText = ref('');
+
+onMounted(async () => {
+  tiers.value = await fetchPricingTiers();
+});
+
+/** Live discount for the price line: the referral discount, or a
+    discount code that matches the live code. The submit handler
+    re-validates the code itself — this is display only. */
+const codeMatches = computed(() => {
+  const live = activeDiscountCode.value.trim();
+  const typed = discountText.value.trim();
+  return !!live && !!typed && typed.toUpperCase() === live.toUpperCase();
+});
+const discountPct = computed(() => (referralActive.value || codeMatches.value ? 10 : 0));
+const selectedTier = computed(
+  () => tiers.value.find((t) => String(t.id) === selectedTierId.value) ?? null,
+);
+const finalPrice = computed(() =>
+  selectedTier.value ? discountedPrice(selectedTier.value.priceCents, discountPct.value) : null,
+);
 
 /** Once the visitor has found this visit's code (via the desk phone),
     the discount field fills itself in — no button needed. Never
@@ -36,6 +66,7 @@ function tryFillDiscount() {
   const code = activeDiscountCode.value;
   if (!code || !discountInput.value || discountInput.value.value) return;
   discountInput.value.value = code;
+  discountText.value = code;
 }
 watch(activeDiscountCode, tryFillDiscount, { immediate: true });
 watch(discountInput, tryFillDiscount);
@@ -129,6 +160,8 @@ async function submitContactForm(event: SubmitEvent) {
         discountLine,
         discountVerified,
         referralToken: referralActive.value ? referral.token : '',
+        tierId: selectedTierId.value ? Number(selectedTierId.value) : null,
+        projectType: 'install',
         company,
       }),
     });
@@ -141,6 +174,8 @@ async function submitContactForm(event: SubmitEvent) {
     contactSubmitted.value = true;
     form.reset();
     hasSite.value = '';
+    selectedTierId.value = '';
+    discountText.value = '';
   } catch (err) {
     formError.value = true;
     formStatus.value = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
@@ -212,6 +247,18 @@ async function submitContactForm(event: SubmitEvent) {
         placeholder="What does your business do, who is it for, and what should your website accomplish?"
       ></textarea>
     </label>
+    <label class="field">
+      <span>What kind of project is it? <em>(optional)</em></span>
+      <select name="pricing-tier" v-model="selectedTierId" aria-label="Pricing tier">
+        <option value="">Not sure yet</option>
+        <option v-for="tier in tiers" :key="tier.id" :value="String(tier.id)">
+          {{ tier.name }} — from {{ formatPrice(tier.priceCents) }}
+        </option>
+      </select>
+    </label>
+    <p v-if="selectedTier" class="quote-line">
+      Starting at {{ formatPrice(selectedTier.priceCents) }}<template v-if="discountPct"> — {{ formatPrice(finalPrice ?? 0) }} with your {{ discountPct }}% off</template>.
+    </p>
     <p v-if="referralActive" class="referral-note">
       {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}10% off your website, applied when you send this form.
     </p>
@@ -219,7 +266,7 @@ async function submitContactForm(event: SubmitEvent) {
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
-      <input ref="discountInput" name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" />
+      <input ref="discountInput" name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" @input="discountText = ($event.target as HTMLInputElement).value" />
       <small v-if="discountError" id="discount-error" class="discount-error" role="alert">{{ discountError }}</small>
       <span v-if="showPuzzleInfo" class="puzzle-info-text">
         <small>Somewhere on this site is a one time code for 10% off your website.</small>

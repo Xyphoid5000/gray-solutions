@@ -229,6 +229,7 @@ function retractCord(done: () => void) {
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
       <button type="button" @click="goDemos">Demos</button>
+      <button type="button" @click="goPath('/dashboard')">Client login</button>
     </div>
     <!-- Mobile hamburger. -->
     <button
@@ -253,6 +254,7 @@ function retractCord(done: () => void) {
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
       <button type="button" @click="goDemos">Demos</button>
+      <button type="button" @click="goPath('/dashboard')">Client login</button>
     </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
       <label class="a11y-toggle">
