@@ -293,6 +293,9 @@ h3 em {
   margin-top: 2rem;
   max-width: 38rem;
 }
+.dashboard-form .btn-solid {
+  margin-top: 1rem;
+}
 .dash-notice {
   color: var(--ember);
   font-weight: 600;
