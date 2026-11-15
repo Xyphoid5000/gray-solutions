@@ -4,7 +4,7 @@ import RequestList from './RequestList.vue';
 import { dashboardFetch, type DashboardMe } from '../lib/dashboard';
 import { formatPrice } from '../lib/pricing';
 
-const props = defineProps<{ data: DashboardMe }>();
+const props = defineProps<{ data: DashboardMe; preview?: boolean }>();
 const emit = defineEmits<{ refresh: [] }>();
 
 const changeDetails = ref('');
@@ -31,6 +31,7 @@ function onFile(kind: 'change' | 'feature', event: Event) {
 }
 
 async function submitRequest(kind: 'change' | 'feature') {
+  if (props.preview) return;
   const details = (kind === 'change' ? changeDetails.value : featureDetails.value).trim();
   const file = kind === 'change' ? changeFile.value : featureFile.value;
   if (!details) {
@@ -87,7 +88,7 @@ async function submitRequest(kind: 'change' | 'feature') {
 }
 
 async function getShareLink() {
-  if (shareBusy.value) return;
+  if (props.preview || shareBusy.value) return;
   shareError.value = '';
   shareBusy.value = true;
   try {
@@ -181,7 +182,7 @@ async function copyShareLink() {
             @change="onFile('change', $event)"
           />
         </label>
-        <button class="btn btn-solid" type="submit" :disabled="sending === 'change'">
+        <button class="btn btn-solid" type="submit" :disabled="sending === 'change' || props.preview">
           {{ sending === 'change' ? 'Sending…' : 'Send change request' }}
         </button>
       </form>
@@ -218,7 +219,7 @@ async function copyShareLink() {
             @change="onFile('feature', $event)"
           />
         </label>
-        <button class="btn btn-solid" type="submit" :disabled="sending === 'feature'">
+        <button class="btn btn-solid" type="submit" :disabled="sending === 'feature' || props.preview">
           {{ sending === 'feature' ? 'Sending…' : 'Send feature request' }}
         </button>
       </form>
@@ -250,7 +251,7 @@ async function copyShareLink() {
           {{ copied ? 'Copied!' : 'Copy' }}
         </button>
       </div>
-      <button v-else class="btn btn-solid" type="button" :disabled="shareBusy" @click="getShareLink">
+      <button v-else class="btn btn-solid" type="button" :disabled="shareBusy || props.preview" @click="getShareLink">
         {{ shareBusy ? 'Creating…' : 'Get my share link' }}
       </button>
     </section>
