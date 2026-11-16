@@ -17,14 +17,14 @@
 //
 // Every contact submission is also recorded in the client database
 // (best-effort, after the email to Chris goes out — a database failure
-// never blocks the inquiry). A submission through a referral token gives
-// the lead 10% off; the first submission through a token earns the
-// referrer 10 more points off — on their install if it isn't billed
-// yet, on future feature work if it is (established clients always
-// earn it on features, taking their feature discount to 25% off list).
-// Discounts are percents off list, added: a picked pricing tier quotes
-// straight into the pricing row at tier price minus the total percent
-// off.
+// never blocks the inquiry). A submission through a referral token or
+// the hidden on-site code gives the lead 10% off, kept in the
+// `discounts` table. Every fresh lead a token brings in earns the
+// referrer more off — 10 points for the first lead, 5 per lead after,
+// capped at 50% — and a discount-status email each time. The lead's
+// submission also creates (or refreshes) their install project in
+// `client_project`: a picked tier quotes at tier price minus the
+// lead's discount, capped at 25% for installs.
 
 import { json, clientIp } from './worker/http';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
@@ -32,10 +32,11 @@ import { handleFeatured, handleFeaturedImage } from './worker/featured';
 import {
   handlePricing,
   quotePriceCents,
-  effectiveDiscountPct,
+  clampDiscountPct,
+  applyLeadReward,
+  nextLeadIncrement,
   REFERRAL_PCT,
-  INSTALL_DISCOUNT_CAP,
-  FEATURE_DISCOUNT_CAP,
+  DISCOUNT_CAP_PCT,
 } from './worker/pricing';
 
 interface ContactPayload {
@@ -52,8 +53,6 @@ interface ContactPayload {
   referralToken?: string;
   /** Pricing tier the visitor picked, when they picked one. */
   tierId?: unknown;
-  /** 'install' for a new site; 'feature' for work on an existing site. */
-  projectType?: string;
   /** Honeypot — real users leave this empty. */
   company?: string;
 }
@@ -133,35 +132,34 @@ function businessNameFor(name: string, siteUrl: string): string {
   return name.slice(0, 200);
 }
 
-async function sendReferrerEmail(
+/** A referrer's discount-status email: their current total, how it
+    was earned, what the next referral earns, and their share link.
+    The lead is never named. This is the one discount email the
+    marketing Worker sends — it supersedes the old first-use-only
+    referrer email: every fresh lead earns one. The dashboard Worker
+    sends the same email when a project completion sets the 15%
+    floor. */
+async function sendDiscountStatusEmail(
   env: Env,
-  referrerEmail: string,
-  referrerName: string,
-  leadName: string,
-  leadSite: string,
-  reward: { type: 'install' | 'feature'; totalPct: number; isEstablished: boolean },
+  referrer: { email: string; contact_name: string; business_name: string },
+  newPct: number,
+  leadsCount: number,
+  token: string,
 ): Promise<void> {
-  const greeting = referrerName ? `Hi ${referrerName},` : 'Hi,';
-  const leadBit = leadSite ? `${leadName} (${leadSite})` : leadName;
-  let subject: string;
-  let rewardLine: string;
-  if (reward.isEstablished) {
-    subject = 'Your Gray Web Solutions share link was used — 25% off future feature work';
-    rewardLine = `Your discount on future feature work is now ${FEATURE_DISCOUNT_CAP}% off list: the 15% returning-client rate, plus 10% for the referral. And they get 10% off theirs.`;
-  } else if (reward.type === 'install') {
-    subject = 'Your Gray Web Solutions share link was used — 10% more off your website';
-    rewardLine = `That earns you 10% more off: your total discount is now ${reward.totalPct}% off your website. And they get 10% off theirs.`;
-  } else {
-    subject = 'Your Gray Web Solutions share link was used — 10% off future feature work';
-    rewardLine =
-      'Your install was already billed, so that earns you 10% off future feature work on your site instead. And they get 10% off theirs.';
-  }
+  const name = referrer.contact_name || referrer.business_name;
+  const greeting = name ? `Hi ${name},` : 'Hi,';
+  const nextLine =
+    newPct >= DISCOUNT_CAP_PCT
+      ? `You've reached the maximum discount of ${DISCOUNT_CAP_PCT}% off — thank you for spreading the word.`
+      : `Your next referral earns you ${nextLeadIncrement(leadsCount)}% more off, up to ${DISCOUNT_CAP_PCT}% off.`;
   const text = [
     greeting,
     '',
-    `Good news — ${leadBit} reached out to Gray Web Solutions through the link you shared.`,
+    'Good news — a new lead came in through the link you shared.',
     '',
-    rewardLine,
+    `Your total discount is now ${newPct}% off. ${nextLine}`,
+    '',
+    `Your share link: https://graywebsolutions.com/?ref=${token}`,
     '',
     'Thanks for spreading the word.',
     '',
@@ -176,15 +174,24 @@ async function sendReferrerEmail(
     },
     body: JSON.stringify({
       from: `Gray Web Solutions <${CHRIS_EMAIL}>`,
-      to: [referrerEmail],
-      subject,
+      to: [referrer.email],
+      subject: `Your Gray Web Solutions discount: ${newPct}% off`,
       text,
     }),
   });
   if (!res.ok) {
-    console.error('Referrer email failed:', res.status, await res.text().catch(() => ''));
-    throw new Error('Referrer email failed');
+    console.error('Discount email failed:', res.status, await res.text().catch(() => ''));
+    throw new Error('Discount email failed');
   }
+}
+
+/** A client_project id: a 7-character lowercase hex "short SHA",
+    like a short git hash — short enough to quote in email subjects
+    and reply-to addresses. */
+function newProjectId(): string {
+  const bytes = new Uint8Array(4);
+  crypto.getRandomValues(bytes);
+  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 7);
 }
 
 /** Records a contact submission in the client database. Best-effort:
@@ -200,7 +207,6 @@ async function recordSubmission(
     discountVerified: boolean;
     referralToken: string;
     tierId: number | null;
-    projectType: string;
   },
 ): Promise<void> {
   const email = input.email.toLowerCase();
@@ -220,148 +226,141 @@ async function recordSubmission(
     .first<{ id: number; is_client: number }>();
   if (!lead) return;
   await db
-    .prepare('INSERT OR IGNORE INTO client_pricing (client_id) VALUES (?)')
+    .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
     .bind(lead.id)
     .run();
 
-  let discount = input.discountVerified ? 10 : 0;
-  let firstUse: { tokenId: number; referrerId: number; referrerEmail: string; referrerName: string; isEstablished: boolean } | null = null;
+  // A valid token identifies the referrer. An unknown token confers
+  // nothing — only a real share link (or the verified on-site code)
+  // earns the lead 10%.
+  let tokenRow: { id: number; client_id: number; used: number } | null = null;
   if (input.referralToken) {
-    const tok = await db
+    tokenRow = await db
       .prepare('SELECT id, client_id, used FROM referral_tokens WHERE token = ?')
       .bind(input.referralToken)
       .first<{ id: number; client_id: number; used: number }>();
-    if (tok) {
-      discount = Math.max(discount, 10);
-      if (!tok.used) {
-        const referrer = await db
-          .prepare('SELECT id, email, contact_name, business_name, is_client FROM clients WHERE id = ?')
-          .bind(tok.client_id)
-          .first<{ id: number; email: string; contact_name: string; business_name: string; is_client: number }>();
-        if (referrer) {
-          firstUse = {
-            tokenId: tok.id,
-            referrerId: referrer.id,
-            referrerEmail: referrer.email,
-            referrerName: referrer.contact_name || referrer.business_name,
-            isEstablished: referrer.is_client === 1,
-          };
-        }
-      }
-    }
   }
-
-  // The lead's discount is for their new site — the install row
-  // only. A feature row they may already hold keeps its own terms.
-  if (discount > 0) {
+  if (tokenRow || input.discountVerified) {
     await db
       .prepare(
-        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = 'install'`,
+        `UPDATE discounts SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
       )
-      .bind(discount, lead.id)
+      .bind(REFERRAL_PCT, lead.id)
       .run();
   }
+  const leadDiscount = await db
+    .prepare('SELECT id, discount_pct FROM discounts WHERE client_id = ?')
+    .bind(lead.id)
+    .first<{ id: number; discount_pct: number }>();
 
-  // A picked tier quotes straight into the pricing row for this
-  // (client, project type): tier price minus the total percent off.
-  // The row stores the referral-earned portion only — the effective
-  // percent (with the established feature baseline) prices the quote
-  // but is never written back, so stored values stay inside the
-  // CHECK (0,10,20). Its own try/catch — on the pre-v3 schema (no
-  // composite key) the upsert fails, the discount recording above
-  // already landed, and the quote is simply skipped until the schema
-  // is upgraded.
-  if (input.tierId) {
-    try {
+  // The install project: every inquiry lands as one (or refreshes
+  // the open one). A picked tier quotes at tier price minus the
+  // lead's discount, capped at 25% for installs; no tier means an
+  // unquoted project for Chris to price by hand. An existing
+  // project is touched only while its status is 'new' or 'quoted'
+  // — in-flight or completed work is never clobbered, and a
+  // tier-less repeat submission never wipes a quote already
+  // recorded. Its own try/catch, so a project-table problem never
+  // blocks the referral reward below.
+  try {
+    let tierPrice: number | null = null;
+    if (input.tierId) {
       const tier = await db
         .prepare('SELECT price_cents FROM pricing_tiers WHERE id = ?')
         .bind(input.tierId)
         .first<{ price_cents: number }>();
-      if (tier) {
-        const current = await db
-          .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ? AND project_type = ?')
-          .bind(lead.id, input.projectType)
-          .first<{ discount_pct: number }>();
-        const stored = current ? current.discount_pct : discount;
-        const effective = effectiveDiscountPct(
-          input.projectType,
-          stored,
-          lead.is_client === 1,
-        );
-        const quoted = quotePriceCents(tier.price_cents, effective);
-        await db
-          .prepare(
-            `INSERT INTO client_pricing (client_id, project_type, tier_id, discount_pct, quoted_price_cents, billed)
-             VALUES (?, ?, ?, ?, ?, 0)
-             ON CONFLICT(client_id, project_type) DO UPDATE SET
-               tier_id = excluded.tier_id,
-               quoted_price_cents = excluded.quoted_price_cents,
-               billed = 0,
-               updated_at = datetime('now')`,
-          )
-          .bind(lead.id, input.projectType, input.tierId, stored, quoted)
-          .run();
-      }
-    } catch (err) {
-      console.error('Quote record skipped:', err);
+      if (tier) tierPrice = tier.price_cents;
     }
+    const existing = await db
+      .prepare(
+        `SELECT id, status FROM client_project WHERE client_id = ? AND type = 'install' ORDER BY rowid DESC LIMIT 1`,
+      )
+      .bind(lead.id)
+      .first<{ id: string; status: string }>();
+    if (!existing) {
+      const appliedPct = leadDiscount ? clampDiscountPct('install', leadDiscount.discount_pct) : 0;
+      const price = tierPrice === null ? null : quotePriceCents(tierPrice, appliedPct);
+      let created = false;
+      for (let attempt = 0; attempt < 3 && !created; attempt++) {
+        try {
+          await db
+            .prepare(
+              `INSERT INTO client_project (id, client_id, type, name, description, tier_id, price_cents, status, remaining_balance_cents, discount_id, request_id, completion_reward_applied)
+               VALUES (?, ?, 'install', 'Website install', '', ?, ?, 'new', ?, ?, NULL, 0)`,
+            )
+            .bind(newProjectId(), lead.id, tierPrice === null ? null : input.tierId, price, price, leadDiscount?.id ?? null)
+            .run();
+          created = true;
+        } catch (err) {
+          if (attempt === 2) throw err;
+        }
+      }
+    } else if ((existing.status === 'new' || existing.status === 'quoted') && tierPrice !== null) {
+      const appliedPct = leadDiscount ? clampDiscountPct('install', leadDiscount.discount_pct) : 0;
+      const price = quotePriceCents(tierPrice, appliedPct);
+      await db
+        .prepare(
+          `UPDATE client_project SET tier_id = ?, price_cents = ?, remaining_balance_cents = ?, discount_id = ?, updated_at = datetime('now') WHERE id = ?`,
+        )
+        .bind(input.tierId, price, price, leadDiscount?.id ?? null, existing.id)
+        .run();
+    }
+  } catch (err) {
+    console.error('Install project record skipped:', err);
   }
 
-  // The referrer's reward and the used-mark land only after their email
-  // goes out — if the send fails, the token stays unused and a later
-  // submission through it retries the notification. The reward is
-  // +10 points, capped: established referrers earn it on future
-  // feature work (25% off total with the baseline). Prospects earn it
-  // on their install if it isn't billed yet (10% + 10% = 20% total
-  // for token arrivals); a billed install banks it toward future
-  // features instead.
-  if (firstUse && env.RESEND_API_KEY) {
-    let rewardType: 'install' | 'feature' = 'feature';
-    let rewardTotal = FEATURE_DISCOUNT_CAP;
-    if (!firstUse.isEstablished) {
-      const install = await db
-        .prepare("SELECT discount_pct, billed FROM client_pricing WHERE client_id = ? AND project_type = 'install'")
-        .bind(firstUse.referrerId)
-        .first<{ discount_pct: number; billed: number }>();
-      if (install && install.billed === 1) {
-        rewardType = 'feature';
-        rewardTotal = REFERRAL_PCT;
-      } else {
-        rewardType = 'install';
-        rewardTotal = Math.min((install?.discount_pct ?? 0) + REFERRAL_PCT, INSTALL_DISCOUNT_CAP);
+  // The referrer's reward: one attribution per lead, recorded in
+  // referral_leads, so the ladder counts each lead exactly once no
+  // matter how often a token is used or a form re-submitted. The
+  // discount-status email goes out BEFORE the rows land — if the
+  // send fails, nothing is recorded and a later submission retries
+  // the notification. A client submitting through their own link
+  // keeps the 10% arrival discount but earns no referral reward.
+  if (tokenRow && env.RESEND_API_KEY) {
+    const attributed = await db
+      .prepare('SELECT id FROM referral_leads WHERE lead_client_id = ?')
+      .bind(lead.id)
+      .first<{ id: number }>();
+    if (!attributed) {
+      const referrer = await db
+        .prepare('SELECT id, email, contact_name, business_name FROM clients WHERE id = ?')
+        .bind(tokenRow.client_id)
+        .first<{ id: number; email: string; contact_name: string; business_name: string }>();
+      if (referrer && referrer.id !== lead.id) {
+        await db
+          .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
+          .bind(referrer.id)
+          .run();
+        const referrerDiscount = await db
+          .prepare('SELECT id, discount_pct, leads_count FROM discounts WHERE client_id = ?')
+          .bind(referrer.id)
+          .first<{ id: number; discount_pct: number; leads_count: number }>();
+        if (referrerDiscount) {
+          const reward = applyLeadReward(referrerDiscount.discount_pct, referrerDiscount.leads_count);
+          await sendDiscountStatusEmail(
+            env,
+            referrer,
+            reward.pct,
+            referrerDiscount.leads_count + 1,
+            input.referralToken,
+          );
+          await db
+            .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
+            .bind(referrer.id, lead.id, input.referralToken)
+            .run();
+          await db
+            .prepare(
+              `UPDATE discounts SET discount_pct = ?, leads_count = ?, updated_at = datetime('now') WHERE client_id = ?`,
+            )
+            .bind(reward.pct, referrerDiscount.leads_count + 1, referrer.id)
+            .run();
+          await db
+            .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
+            .bind(tokenRow.id)
+            .run();
+        }
       }
     }
-    await sendReferrerEmail(
-      env,
-      firstUse.referrerEmail,
-      firstUse.referrerName,
-      input.name,
-      input.siteUrl,
-      { type: rewardType, totalPct: rewardTotal, isEstablished: firstUse.isEstablished },
-    );
-    await db
-      .prepare('INSERT OR IGNORE INTO client_pricing (client_id, project_type) VALUES (?, ?)')
-      .bind(firstUse.referrerId, rewardType)
-      .run();
-    if (rewardType === 'install') {
-      await db
-        .prepare(
-          `UPDATE client_pricing SET discount_pct = MIN(discount_pct + ?, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = 'install'`,
-        )
-        .bind(REFERRAL_PCT, INSTALL_DISCOUNT_CAP, firstUse.referrerId)
-        .run();
-    } else {
-      await db
-        .prepare(
-          `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = 'feature'`,
-        )
-        .bind(REFERRAL_PCT, firstUse.referrerId)
-        .run();
-    }
-    await db
-      .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
-      .bind(firstUse.tokenId)
-      .run();
   }
 }
 
@@ -393,7 +392,6 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   const referralToken = (payload.referralToken ?? '').trim().slice(0, 128);
   const tierIdRaw = typeof payload.tierId === 'number' ? payload.tierId : NaN;
   const tierId = Number.isInteger(tierIdRaw) && tierIdRaw > 0 ? tierIdRaw : null;
-  const projectType = payload.projectType === 'feature' ? 'feature' : 'install';
 
   if (!name || !EMAIL_RE.test(email) || !comments) {
     return json({ ok: false, error: 'Please fill in your name, a valid email, and your project details.' }, 400);
@@ -467,7 +465,6 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
         discountVerified,
         referralToken,
         tierId,
-        projectType,
       });
     } catch (err) {
       console.error('Client record failed:', err);
