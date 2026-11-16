@@ -1253,7 +1253,7 @@ html[data-theme='dark'] .pile-num {
 /* The cover card wears its manuscript stamp where chapters wear numerals. */
 .pile-stamp {
   font-family: var(--serif);
-  font-size: 0.5rem;
+  font-size: 0.39rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1592,7 +1592,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 }
 .b-stamp {
   font-family: var(--serif);
-  font-size: clamp(0.95rem, 4.6vw, 1.25rem);
+  font-size: clamp(0.75rem, 3.6vw, 1rem);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
