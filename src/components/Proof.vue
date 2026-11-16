@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import ChapterHeading from './ChapterHeading.vue';
 import ProjectModal from './ProjectModal.vue';
 import { getProject, type Project } from '../lib/projects';
+import { loadFeaturedProjects } from '../lib/featured';
 
 const props = defineProps<{ active?: boolean }>();
 
@@ -12,23 +13,38 @@ const emit = defineEmits<{
 
 const stripRef = ref<HTMLElement | null>(null);
 
+/** Featured exhibits from the database (show_in_book rows). Null
+    until the lookup resolves — and null forever when it fails or
+    no client is featured yet — in which case the hardcoded
+    exhibits below render exactly as they always have. */
+const dbRows = ref<Project[] | null>(null);
+onMounted(async () => {
+  dbRows.value = await loadFeaturedProjects('book');
+});
+const dbMode = computed(() => dbRows.value !== null);
+const bookRows = computed(() => dbRows.value ?? []);
+/** The portfolio-itself panel sits after the featured rows; the
+    call-to-action panel sits after it. */
+const portfolioIndex = computed(() => (dbMode.value ? bookRows.value.length : 1));
+const panelCount = computed(() => (dbMode.value ? bookRows.value.length + 2 : 3));
+function panelLetter(i: number): string {
+  return String.fromCharCode(65 + i);
+}
+
 /** The project modal: one exhibit's full story on a paper sheet. */
 const activeProject = ref<Project | null>(null);
-function openProject(slug: string) {
-  const p = getProject(slug);
-  if (p) activeProject.value = p;
+function openProject(project: Project | undefined) {
+  if (project) activeProject.value = project;
 }
 
 /** Desktop pagination: one exhibit per view with prev/next stepping.
     Mobile keeps the swipe strip (its panels paginate as plain blocks). */
 const panelIndex = ref(0);
-const PANEL_COUNT = 3;
-const PANEL_LETTERS = ['A', 'B', 'C'];
 function prevPanel() {
   panelIndex.value = Math.max(0, panelIndex.value - 1);
 }
 function nextPanel() {
-  panelIndex.value = Math.min(PANEL_COUNT - 1, panelIndex.value + 1);
+  panelIndex.value = Math.min(panelCount.value - 1, panelIndex.value + 1);
 }
 
 /** Arrow keys step between exhibits — only while the projects strip is
@@ -51,7 +67,7 @@ function onKey(e: KeyboardEvent) {
   if (!strip) return;
   const r = strip.getBoundingClientRect();
   if (r.width === 0 || r.height === 0) return;
-  if (e.key === 'ArrowRight' && panelIndex.value < PANEL_COUNT - 1) {
+  if (e.key === 'ArrowRight' && panelIndex.value < panelCount.value - 1) {
     e.stopPropagation();
     nextPanel();
   } else if (e.key === 'ArrowLeft' && panelIndex.value > 0) {
@@ -76,6 +92,31 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
         happens when a business gets <em>a website with a plot.</em>
       </p>
       <div v-reveal ref="stripRef" class="proof-strip">
+        <!-- Featured exhibits from the database. When the list loads,
+             these replace the hardcoded Exhibit A below; the
+             portfolio panel and the call-to-action panel that
+             follow stay put. -->
+        <template v-if="dbMode">
+          <article
+            v-for="(p, i) in bookRows"
+            :key="p.slug"
+            class="proof-panel"
+            :class="{ 'is-current': panelIndex === i }"
+          >
+            <div>
+              <span class="proof-index">Exhibit {{ panelLetter(i) }}</span>
+              <h3>{{ p.name }}</h3>
+              <p>{{ p.description }}</p>
+              <ul class="proof-tags">
+                <li v-for="t in p.tech" :key="t">{{ t }}</li>
+              </ul>
+              <button class="btn btn-ghost proof-details" @click="openProject(p)">
+                View details <span class="arrow" aria-hidden="true">&rarr;</span>
+              </button>
+            </div>
+          </article>
+        </template>
+        <template v-else>
         <article class="proof-panel" :class="{ 'is-current': panelIndex === 0 }">
           <div>
             <span class="proof-index">Exhibit A</span>
@@ -92,14 +133,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
               <li>Vue 3</li>
               <li>GSAP</li>
             </ul>
-            <button class="btn btn-ghost proof-details" @click="openProject('burning-river')">
+            <button class="btn btn-ghost proof-details" @click="openProject(getProject('burning-river'))">
               View details <span class="arrow" aria-hidden="true">&rarr;</span>
             </button>
           </div>
         </article>
-        <article class="proof-panel" :class="{ 'is-current': panelIndex === 1 }">
+        </template>
+        <article class="proof-panel" :class="{ 'is-current': panelIndex === portfolioIndex }">
           <div>
-            <span class="proof-index">Exhibit B</span>
+            <span class="proof-index">Exhibit {{ panelLetter(portfolioIndex) }}</span>
             <h3>This very website</h3>
             <p>
               You&rsquo;re turning the pages of the portfolio itself &mdash;
@@ -112,14 +154,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
               <li>TypeScript</li>
               <li>GSAP</li>
             </ul>
-            <button class="btn btn-ghost proof-details" @click="openProject('gray-solutions')">
+            <button class="btn btn-ghost proof-details" @click="openProject(getProject('gray-solutions'))">
               View details <span class="arrow" aria-hidden="true">&rarr;</span>
             </button>
           </div>
         </article>
-        <article class="proof-panel cta-panel" :class="{ 'is-current': panelIndex === 2 }">
+        <article class="proof-panel cta-panel" :class="{ 'is-current': panelIndex === panelCount - 1 }">
           <div>
-            <span class="proof-index">Exhibit C</span>
+            <span class="proof-index">Exhibit {{ panelLetter(panelCount - 1) }}</span>
             <h3>Your business here.</h3>
             <p>
               Every portfolio needs a blank page. <em>This one&rsquo;s
@@ -142,12 +184,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey, true));
             &larr; Prev
           </button>
           <span class="proof-page-count" aria-live="polite">
-            Exhibit {{ PANEL_LETTERS[panelIndex] }} &middot; {{ panelIndex + 1 }} of {{ PANEL_COUNT }}
+            Exhibit {{ panelLetter(panelIndex) }} &middot; {{ panelIndex + 1 }} of {{ panelCount }}
           </span>
           <button
             type="button"
             class="proof-page-btn"
-            :disabled="panelIndex === PANEL_COUNT - 1"
+            :disabled="panelIndex === panelCount - 1"
             @click="nextPanel"
             aria-label="Next project"
           >

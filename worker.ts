@@ -10,6 +10,10 @@
 // looks a share-link token up in the shared client database
 // (gray-solutions-db, bound as DB_CLIENTS) and marks it opened.
 // GET /api/pricing returns the pricing tiers from the same database.
+// GET /api/featured returns the featured client sites (the
+// client_features table) for the book and the projects page, and
+// GET /api/featured-image?key= serves a featured site's screenshot
+// from R2 — only keys the table references.
 //
 // Every contact submission is also recorded in the client database
 // (best-effort, after the email to Chris goes out — a database failure
@@ -24,6 +28,7 @@
 
 import { json, clientIp } from './worker/http';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
+import { handleFeatured, handleFeaturedImage } from './worker/featured';
 import {
   handlePricing,
   quotePriceCents,
@@ -489,6 +494,12 @@ export default {
     }
     if (url.pathname === '/api/pricing') {
       return handlePricing(request, env);
+    }
+    if (url.pathname === '/api/featured') {
+      return handleFeatured(request, env);
+    }
+    if (url.pathname === '/api/featured-image') {
+      return handleFeaturedImage(request, env);
     }
     // The dashboard moved to its own subdomain. Old /dashboard URLs —
     // including emailed magic links, which carry ?token= — redirect

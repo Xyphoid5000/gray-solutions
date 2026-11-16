@@ -20,6 +20,11 @@
 -- pricing_tiers gained is_public + the Free tier (2026-11-15):
 -- Free ($0) is dashboard-only — the public pricing endpoint
 -- filters it out. Upgrading: run sql/migrate-tiers-free.sql.
+--
+-- client_features (2026-11-16): one row per client Chris picks to
+-- feature — the book and the projects page read these rows.
+-- Upgrading: run sql/migrate-client-features.sql (it also seeds
+-- the current clients).
 
 CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -135,6 +140,34 @@ CREATE TABLE IF NOT EXISTS magic_tokens (
   expires_at TEXT NOT NULL,
   used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS client_features (
+  id INTEGER PRIMARY KEY,
+  -- One row per featured client, created only when Chris picks the
+  -- client in admin — nothing creates rows automatically. Deleting
+  -- the client removes the feature row with it.
+  client_id INTEGER NOT NULL UNIQUE REFERENCES clients(id) ON DELETE CASCADE,
+  -- Display name on the book and projects page.
+  name TEXT NOT NULL DEFAULT '',
+  -- R2 object key for the site screenshot, uploaded in admin. NULL
+  -- until an image is uploaded; the site renders without one.
+  image_key TEXT,
+  -- The client's own switch (their dashboard): 1 links the feature
+  -- to their live site, 0 shows it unlinked. Opt-in — featuring a
+  -- site never links it until the client toggles the link on.
+  show_link INTEGER NOT NULL DEFAULT 0 CHECK (show_link IN (0, 1)),
+  -- Comma-separated tech tags.
+  tags TEXT NOT NULL DEFAULT '',
+  -- The book chapter's panel copy.
+  booktext TEXT NOT NULL DEFAULT '',
+  -- The projects page copy.
+  pagetext TEXT NOT NULL DEFAULT '',
+  -- 1 = the site appears in the book (about three, plus the
+  -- portfolio itself); 0 = projects page only.
+  show_in_book INTEGER NOT NULL DEFAULT 0 CHECK (show_in_book IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_referral_tokens_token ON referral_tokens(token);
