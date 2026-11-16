@@ -210,8 +210,9 @@ CREATE TABLE IF NOT EXISTS client_project (
   client_id INTEGER NOT NULL REFERENCES clients(id),
   -- 'install' = the first project, a new site build; 'feature' =
   -- new capability on an existing site; 'upgrade' = moving the
-  -- site to a higher tier.
-  type TEXT NOT NULL CHECK (type IN ('install', 'feature', 'upgrade')),
+  -- site to a higher tier; 'change' = a free small change on an
+  -- existing site.
+  type TEXT NOT NULL CHECK (type IN ('install', 'feature', 'upgrade', 'change')),
   -- Display name, e.g. 'Website install'. Admin-editable.
   name TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
