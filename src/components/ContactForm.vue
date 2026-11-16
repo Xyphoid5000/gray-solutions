@@ -71,6 +71,16 @@ function tryFillDiscount() {
 watch(activeDiscountCode, tryFillDiscount, { immediate: true });
 watch(discountInput, tryFillDiscount);
 
+/** A referral token replaces the discount code: when one is active the
+    code field hides entirely, and anything already typed into it is
+    cleared so a stale code is never submitted. */
+watch(referralActive, (isActive) => {
+  if (isActive) {
+    discountText.value = '';
+    discountError.value = '';
+  }
+});
+
 /** Reveal the hint, freezing whatever the bonus state is right now —
     it never updates after this. Bonus already on: point at the first
     draft. Otherwise: point at turning the document around. */
@@ -262,7 +272,7 @@ async function submitContactForm(event: SubmitEvent) {
     <p v-if="referralActive" class="referral-note">
       {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}10% off your website, applied when you send this form.
     </p>
-    <label class="field">
+    <label v-if="!referralActive" class="field">
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
