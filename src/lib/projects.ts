@@ -57,11 +57,11 @@ export const PROJECTS: Project[] = [
   },
   {
     slug: 'gray-solutions',
-    name: 'Gray Solutions — this very website',
+    name: 'Gray Web Solutions — this very website',
     kicker: 'The portfolio itself',
     url: 'https://graywebsolutions.com/',
     image: '/projects/gray-solutions.jpg',
-    imageAlt: 'Gray Solutions portfolio website on a laptop screen',
+    imageAlt: 'Gray Web Solutions portfolio website on a laptop screen',
     description:
       'The portfolio is the pitch. You open a manuscript, bind it into a book, and shelve it — cover, chapters, page turns and all. No templates, no themes.',
     tech: ['Vue 3', 'TypeScript', 'Vite', 'GSAP', 'Three.js'],

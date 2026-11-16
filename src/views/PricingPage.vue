@@ -39,7 +39,7 @@ onMounted(async () => {
           </li>
         </ul>
         <p v-reveal class="lede pricing-note">
-          Already have a Gray Solutions site? New features price from
+          Already have a Gray Web Solutions site? New features price from
           the same tiers at a returning-client rate.
         </p>
         <p v-reveal class="pricing-cta">

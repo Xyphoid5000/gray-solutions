@@ -193,7 +193,7 @@ async function submitContactForm(event: SubmitEvent) {
             <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </span>
-        <p class="contact-success-title">Thank you for choosing Gray Solutions.</p>
+        <p class="contact-success-title">Thank you for choosing Gray Web Solutions.</p>
         <p class="contact-success-sub">Your message has been sent. Chris will follow up with you within 3 days to discuss your project.</p>
         <button type="button" class="contact-modal-close" @click="sent = false">
           Done

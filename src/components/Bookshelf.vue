@@ -63,7 +63,7 @@ const newRight = NEW_BOOKS.slice(3);
 /** The extra books only exist where there's room — large screens. */
 const showExtraBooks = computed(() => useDeviceStore().isDesktop);
 
-/** Sandwich mode: every book becomes a topping. The Gray Solutions
+/** Sandwich mode: every book becomes a topping. The Gray Web Solutions
     book is the patty — the main event. */
 interface SandwichLayer {
   book: ShelfBook | 'ours';
@@ -105,7 +105,7 @@ function toggleBook(book: ShelfBook) {
   else selectedBook.value = book;
 }
 
-/** Gray Solutions: tap shows its 3D version, tap again dismisses.
+/** Gray Web Solutions: tap shows its 3D version, tap again dismisses.
     The "Open the book" button (not the book itself) opens it. */
 function toggleOurs() {
   if (selectedBook.value === 'ours') selectedBook.value = null;
@@ -533,12 +533,12 @@ onUnmounted(() => window.removeEventListener('keydown', onShelfKey));
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Gray Solutions: clickable when bound + interactive. */
+/* Gray Web Solutions: clickable when bound + interactive. */
 .bs-ours.is-interactive {
   cursor: pointer;
   opacity: 1;
 }
-/* Open button appears when Gray Solutions is floating. */
+/* Open button appears when Gray Web Solutions is floating. */
 .bs-open {
   position: absolute;
   left: 50%;
@@ -772,7 +772,7 @@ html[data-theme='light'] .bs-reopen {
 html[data-theme='dark'] .bookshelf-hero {
   filter: brightness(0.82);
 }
-/* Gray Solutions front cover G. mark. */
+/* Gray Web Solutions front cover G. mark. */
 .bs-front-mark {
   font-family: var(--serif);
   font-size: 2.2rem;

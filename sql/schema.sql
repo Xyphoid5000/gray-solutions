@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS clients (
   business_name TEXT NOT NULL,
   contact_name TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
-  -- 1 once they've agreed to use Gray Solutions.
+  -- 1 once they've agreed to use Gray Web Solutions.
   is_client INTEGER NOT NULL DEFAULT 0,
   -- Link shown in their client dashboard: their live site, or their
   -- demo on demos.graywebsolutions.com while it's still a preview.

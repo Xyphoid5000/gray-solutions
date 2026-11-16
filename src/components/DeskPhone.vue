@@ -3,7 +3,7 @@
  * The desk phone, now tappable. Tap it to pick it up: it's PIN-locked
  * (the UV ink hides the code in four plain sentences). Three wrong
  * tries locks it for the session. Unlock it for Snake and Contacts —
- * calling Gray Solutions reveals the 10%-off code, and if the match
+ * calling Gray Web Solutions reveals the 10%-off code, and if the match
  * guy has quit, his contact appears so you can hire him back.
  */
 import { computed, inject, ref, onMounted, onUnmounted, nextTick, type Ref } from 'vue';
@@ -416,7 +416,7 @@ function startCall(c: Contact) {
   screen.value = 'call';
   if (callTimer !== null) clearTimeout(callTimer);
   if (c.special === 'gray') {
-    // Gray Solutions always answers. The code is minted once per visit.
+    // Gray Web Solutions always answers. The code is minted once per visit.
     callTimer = window.setTimeout(() => {
       if (!activeDiscountCode.value) activeDiscountCode.value = makeCode();
       callStatus.value = 'connected';

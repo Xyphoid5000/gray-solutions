@@ -56,7 +56,7 @@ const THEME_COLORS = {
  */
 export const useSettingsStore = defineStore('settings', () => {
   /** Site name — prominent brand spots read this instead of the literal. */
-  const siteName = ref('Gray Solutions');
+  const siteName = ref('Gray Web Solutions');
   /** Page background color override — null means the theme decides. */
   const bgColor = ref<string | null>(null);
   /** Main text color override — null means the theme decides. */
@@ -76,7 +76,7 @@ export const useSettingsStore = defineStore('settings', () => {
 
   function setSiteName(v: string) {
     const clean = v.trim().slice(0, 40);
-    siteName.value = clean || 'Gray Solutions';
+    siteName.value = clean || 'Gray Web Solutions';
   }
   /** The logo mark follows the site name's first letter. */
   const logoMark = computed(() => {
@@ -108,7 +108,7 @@ export const useSettingsStore = defineStore('settings', () => {
     sandwich.value = !sandwich.value;
   }
   function resetAll() {
-    siteName.value = 'Gray Solutions';
+    siteName.value = 'Gray Web Solutions';
     bgColor.value = null;
     textColor.value = null;
     accent.value = null;
@@ -122,7 +122,7 @@ export const useSettingsStore = defineStore('settings', () => {
   /** True when any setting differs from its default — drives the
       floating settings shortcut on the main screen. */
   const isModified = computed(() =>
-    siteName.value !== 'Gray Solutions' ||
+    siteName.value !== 'Gray Web Solutions' ||
     bgColor.value !== null ||
     textColor.value !== null ||
     mode.value !== 'auto' ||

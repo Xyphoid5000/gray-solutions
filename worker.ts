@@ -141,27 +141,27 @@ async function sendReferrerEmail(
   let subject: string;
   let rewardLine: string;
   if (reward.isEstablished) {
-    subject = 'Your Gray Solutions share link was used — 25% off future feature work';
+    subject = 'Your Gray Web Solutions share link was used — 25% off future feature work';
     rewardLine = `Your discount on future feature work is now ${FEATURE_DISCOUNT_CAP}% off list: the 15% returning-client rate, plus 10% for the referral. And they get 10% off theirs.`;
   } else if (reward.type === 'install') {
-    subject = 'Your Gray Solutions share link was used — 10% more off your website';
+    subject = 'Your Gray Web Solutions share link was used — 10% more off your website';
     rewardLine = `That earns you 10% more off: your total discount is now ${reward.totalPct}% off your website. And they get 10% off theirs.`;
   } else {
-    subject = 'Your Gray Solutions share link was used — 10% off future feature work';
+    subject = 'Your Gray Web Solutions share link was used — 10% off future feature work';
     rewardLine =
       'Your install was already billed, so that earns you 10% off future feature work on your site instead. And they get 10% off theirs.';
   }
   const text = [
     greeting,
     '',
-    `Good news — ${leadBit} reached out to Gray Solutions through the link you shared.`,
+    `Good news — ${leadBit} reached out to Gray Web Solutions through the link you shared.`,
     '',
     rewardLine,
     '',
     'Thanks for spreading the word.',
     '',
     '— Chris',
-    'Gray Solutions',
+    'Gray Web Solutions',
   ].join('\n');
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -170,7 +170,7 @@ async function sendReferrerEmail(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: `Gray Solutions <${CHRIS_EMAIL}>`,
+      from: `Gray Web Solutions <${CHRIS_EMAIL}>`,
       to: [referrerEmail],
       subject,
       text,
@@ -432,7 +432,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: `Gray Solutions <${from}>`,
+      from: `Gray Web Solutions <${from}>`,
       to: [to],
       reply_to: email,
       subject: `Website inquiry from ${name}`,

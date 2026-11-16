@@ -1,7 +1,7 @@
 <!--
   Wax seal: glossy bright-red wax, raised rim, drippy organic edge, embossed G.
   Bonus-only indicator. Used on the manuscript's front page (CoverHero) and
-  pressed over the G on the bound Gray Solutions book's front cover (Book.vue
+  pressed over the G on the bound Gray Web Solutions book's front cover (Book.vue
   shelf overlay). Only one instance is ever in the DOM at a time — the
   manuscript shows while unbound, the bound book only after binding — so the
   SVG ids stay collision-free.
