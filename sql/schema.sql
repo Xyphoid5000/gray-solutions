@@ -16,6 +16,10 @@
 -- client's referral reward lands as a new feature row and never
 -- touches their install row. Upgrading: run
 -- sql/migrate-v2-to-v3.sql (it COPIES the rows — do not DROP).
+--
+-- pricing_tiers gained is_public + the Free tier (2026-11-15):
+-- Free ($0) is dashboard-only — the public pricing endpoint
+-- filters it out. Upgrading: run sql/migrate-tiers-free.sql.
 
 CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,16 +54,23 @@ CREATE TABLE IF NOT EXISTS pricing_tiers (
   -- contact form read these rows — change a price here and the
   -- site follows.
   price_cents INTEGER NOT NULL CHECK (price_cents >= 0),
-  description TEXT NOT NULL DEFAULT ''
+  description TEXT NOT NULL DEFAULT '',
+  -- 1 = listed on the public pricing page and contact form; 0 =
+  -- dashboard-only (the Free tier).
+  is_public INTEGER NOT NULL DEFAULT 1 CHECK (is_public IN (0, 1))
 );
 
 -- The three tiers, approved 2026-11-15. One-time prices, no monthly
 -- fee. A feature on an established site prices from the same tiers
 -- at the returning-client rate (x0.85, applied by the Worker).
-INSERT OR IGNORE INTO pricing_tiers (id, name, price_cents, description) VALUES
-  (1, 'Static page', 80000, 'A custom-designed, hand-coded site with no backend.'),
-  (2, 'Web application', 220000, 'A static site plus backend features — forms that save, logins, updatable content.'),
-  (3, 'Payment processing', 300000, 'A web application with payment processing — checkout and invoices, built in.');
+-- Free ($0, dashboard-only) marks no-cost builds; an established
+-- client's row with no quoted rate is assumed free (see the
+-- dashboard Worker).
+INSERT OR IGNORE INTO pricing_tiers (id, name, price_cents, description, is_public) VALUES
+  (1, 'Static page', 80000, 'A custom-designed, hand-coded site with no backend.', 1),
+  (2, 'Web application', 220000, 'A static site plus backend features — forms that save, logins, updatable content.', 1),
+  (3, 'Payment processing', 300000, 'A web application with payment processing — checkout and invoices, built in.', 1),
+  (4, 'Free', 0, 'A free build — no charge.', 0);
 
 CREATE TABLE IF NOT EXISTS client_pricing (
   -- One row per (client, project type): the install row carries the
