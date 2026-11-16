@@ -17,16 +17,21 @@
 //
 // Every contact submission is also recorded in the client database
 // (best-effort, after the email to Chris goes out — a database failure
-// never blocks the inquiry). A submission through a referral token or
-// the hidden on-site code gives the lead 10% off, kept in the
-// `discounts` table. Every fresh lead a token brings in earns the
-// referrer more off — 10 points for the first lead, 5 per lead after,
+// never blocks the inquiry). The form is for NEW inquiries only: an
+// email that already has an account is rejected with a 409, before
+// anything is sent or recorded — existing clients use their
+// dashboard. A submission through a referral token or the hidden
+// on-site code gives the lead 10% off, kept in the `discounts`
+// table. Every fresh lead a token brings in earns the referrer
+// more off — 10 points for the first lead, 5 per lead after,
 // capped at 50% — and a discount-status email each time. The lead's
-// submission also creates (or refreshes) their install project in
+// submission also creates their install project in
 // `client_project`: a picked tier quotes at tier price minus the
-// lead's discount, capped at 25% for installs.
+// lead's discount, capped at 25% for installs. The contact form
+// can pre-check an email through GET /api/contact/check-email,
+// which answers whether the email already has an account.
 
-import { json, clientIp } from './worker/http';
+import { json, clientIp, makeThrottle } from './worker/http';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
 import { handleFeatured, handleFeaturedImage } from './worker/featured';
 import {
@@ -58,6 +63,48 @@ interface ContactPayload {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Whether the email already has a client row — an account. The
+    email column is COLLATE NOCASE, so the match is
+    case-insensitive. */
+async function emailHasAccount(db: D1Database, email: string): Promise<boolean> {
+  const row = await db
+    .prepare('SELECT 1 FROM clients WHERE email = ? LIMIT 1')
+    .bind(email)
+    .first();
+  return row !== null;
+}
+
+// Email-check throttle: 10 checks / 15 min / IP — generous for
+// blur-triggered checks, tight enough to blunt enumeration.
+const checkEmailThrottle = makeThrottle(10, 15 * 60 * 1000);
+
+/** GET /api/contact/check-email?email= — the contact form's
+    pre-check: does this email already have an account? Anything
+    inconclusive (no DB binding, a lookup failure, throttling)
+    fails open toward "no account", so the form lets the submit
+    through and the /api/contact handler — which enforces the same
+    rule authoritatively — decides. */
+async function handleCheckEmail(request: Request, env: Env): Promise<Response> {
+  const email = (new URL(request.url).searchParams.get('email') ?? '').trim();
+  if (!EMAIL_RE.test(email)) {
+    return json({ ok: false, error: 'A valid email is required.' }, 400);
+  }
+  const ip = clientIp(request);
+  if (checkEmailThrottle.blocked(ip)) {
+    return json({ ok: false, error: 'Too many requests.' }, 429);
+  }
+  checkEmailThrottle.record(ip);
+  if (!env.DB_CLIENTS) {
+    return json({ ok: true, exists: false });
+  }
+  try {
+    return json({ ok: true, exists: await emailHasAccount(env.DB_CLIENTS, email) });
+  } catch (err) {
+    console.error('Email check failed:', err);
+    return json({ ok: true, exists: false });
+  }
+}
 
 // Referral-lookup throttle: per-isolate in-memory map, 30 lookups /
 // 15 min / IP. Tokens are unguessable, so this only blunts scanning.
@@ -253,15 +300,14 @@ async function recordSubmission(
     .bind(lead.id)
     .first<{ id: number; discount_pct: number }>();
 
-  // The install project: every inquiry lands as one (or refreshes
-  // the open one). A picked tier quotes at tier price minus the
-  // lead's discount, capped at 25% for installs; no tier means an
-  // unquoted project for Chris to price by hand. An existing
-  // project is touched only while its status is 'new' or 'quoted'
-  // — in-flight or completed work is never clobbered, and a
-  // tier-less repeat submission never wipes a quote already
-  // recorded. Its own try/catch, so a project-table problem never
-  // blocks the referral reward below.
+  // The install project: every inquiry lands as one. A picked tier
+  // quotes at tier price minus the lead's discount, capped at 25%
+  // for installs; no tier means an unquoted project for Chris to
+  // price by hand. Insert-only: the /api/contact handler rejects
+  // emails that already have an account, so this client has no
+  // install project yet — a repeat submission never reaches here.
+  // Its own try/catch, so a project-table problem never blocks
+  // the referral reward below.
   try {
     let tierPrice: number | null = null;
     if (input.tierId) {
@@ -271,39 +317,22 @@ async function recordSubmission(
         .first<{ price_cents: number }>();
       if (tier) tierPrice = tier.price_cents;
     }
-    const existing = await db
-      .prepare(
-        `SELECT id, status FROM client_project WHERE client_id = ? AND type = 'install' ORDER BY rowid DESC LIMIT 1`,
-      )
-      .bind(lead.id)
-      .first<{ id: string; status: string }>();
-    if (!existing) {
-      const appliedPct = leadDiscount ? clampDiscountPct('install', leadDiscount.discount_pct) : 0;
-      const price = tierPrice === null ? null : quotePriceCents(tierPrice, appliedPct);
-      let created = false;
-      for (let attempt = 0; attempt < 3 && !created; attempt++) {
-        try {
-          await db
-            .prepare(
-              `INSERT INTO client_project (id, client_id, type, name, description, tier_id, price_cents, status, remaining_balance_cents, discount_id, request_id, completion_reward_applied)
-               VALUES (?, ?, 'install', 'Website install', '', ?, ?, 'new', ?, ?, NULL, 0)`,
-            )
-            .bind(newProjectId(), lead.id, tierPrice === null ? null : input.tierId, price, price, leadDiscount?.id ?? null)
-            .run();
-          created = true;
-        } catch (err) {
-          if (attempt === 2) throw err;
-        }
+    const appliedPct = leadDiscount ? clampDiscountPct('install', leadDiscount.discount_pct) : 0;
+    const price = tierPrice === null ? null : quotePriceCents(tierPrice, appliedPct);
+    let created = false;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      try {
+        await db
+          .prepare(
+            `INSERT INTO client_project (id, client_id, type, name, description, tier_id, price_cents, status, remaining_balance_cents, discount_id, request_id, completion_reward_applied)
+             VALUES (?, ?, 'install', 'Website install', '', ?, ?, 'new', ?, ?, NULL, 0)`,
+          )
+          .bind(newProjectId(), lead.id, tierPrice === null ? null : input.tierId, price, price, leadDiscount?.id ?? null)
+          .run();
+        created = true;
+      } catch (err) {
+        if (attempt === 2) throw err;
       }
-    } else if ((existing.status === 'new' || existing.status === 'quoted') && tierPrice !== null) {
-      const appliedPct = leadDiscount ? clampDiscountPct('install', leadDiscount.discount_pct) : 0;
-      const price = quotePriceCents(tierPrice, appliedPct);
-      await db
-        .prepare(
-          `UPDATE client_project SET tier_id = ?, price_cents = ?, remaining_balance_cents = ?, discount_id = ?, updated_at = datetime('now') WHERE id = ?`,
-        )
-        .bind(input.tierId, price, price, leadDiscount?.id ?? null, existing.id)
-        .run();
     }
   } catch (err) {
     console.error('Install project record skipped:', err);
@@ -311,11 +340,11 @@ async function recordSubmission(
 
   // The referrer's reward: one attribution per lead, recorded in
   // referral_leads, so the ladder counts each lead exactly once no
-  // matter how often a token is used or a form re-submitted. The
-  // discount-status email goes out BEFORE the rows land — if the
-  // send fails, nothing is recorded and a later submission retries
-  // the notification. A client submitting through their own link
-  // keeps the 10% arrival discount but earns no referral reward.
+  // matter how often a token is used. The discount-status email
+  // goes out BEFORE the rows land — if the send fails, nothing is
+  // recorded and a later submission retries the notification. A
+  // client submitting through their own link keeps the 10%
+  // arrival discount but earns no referral reward.
   if (tokenRow && env.RESEND_API_KEY) {
     const attributed = await db
       .prepare('SELECT id FROM referral_leads WHERE lead_client_id = ?')
@@ -395,6 +424,21 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
 
   if (!name || !EMAIL_RE.test(email) || !comments) {
     return json({ ok: false, error: 'Please fill in your name, a valid email, and your project details.' }, 400);
+  }
+
+  // The form is for new inquiries: an email that already has an
+  // account belongs in the dashboard. Enforced here, before the
+  // email goes out or anything is recorded. A lookup failure fails
+  // open — the inquiry still sends, and recording stays
+  // best-effort as ever.
+  if (env.DB_CLIENTS) {
+    try {
+      if (await emailHasAccount(env.DB_CLIENTS, email)) {
+        return json({ ok: false, error: 'An account already exists for this email.' }, 409);
+      }
+    } catch (err) {
+      console.error('Account check failed:', err);
+    }
   }
 
   const to = env.CONTACT_TO || CHRIS_EMAIL;
@@ -482,6 +526,12 @@ export default {
         return json({ ok: false, error: 'Method not allowed.' }, 405);
       }
       return handleContact(request, env);
+    }
+    if (url.pathname === '/api/contact/check-email') {
+      if (request.method !== 'GET') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      return handleCheckEmail(request, env);
     }
     if (url.pathname === '/api/referral') {
       if (request.method !== 'GET') {

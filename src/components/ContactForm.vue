@@ -32,6 +32,11 @@ const showHint = ref(false);
 const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
+const emailInput = ref<HTMLInputElement | null>(null);
+/** True when the typed email already has an account — the form
+    blocks submission and points at the dashboard instead. */
+const emailExists = ref(false);
+let emailCheckTimer: ReturnType<typeof setTimeout> | undefined;
 const phoneInput = ref<HTMLInputElement | null>(null);
 const tiers = ref<PricingTier[]>(FALLBACK_TIERS);
 const selectedTierId = ref('');
@@ -87,6 +92,37 @@ watch(referralActive, (isActive) => {
 function revealHint() {
   hintSeesBonus.value = bonus.enabled;
   showHint.value = true;
+}
+
+const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Asks the Worker whether the email already has an account.
+    Returns null on any failure — the caller fails open and lets
+    the submit go through; the Worker's 409 is authoritative. */
+async function checkEmailAccount(email: string): Promise<boolean | null> {
+  try {
+    const res = await fetch(`/api/contact/check-email?email=${encodeURIComponent(email)}`);
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => ({}))) as { exists?: unknown };
+    return data.exists === true;
+  } catch {
+    return null;
+  }
+}
+
+/** On blur (debounced), check whether the typed email already has
+    an account. The result only applies if the field still holds
+    the checked email — a stale answer never flags a new address. */
+function onEmailBlur() {
+  const email = (emailInput.value?.value ?? '').trim();
+  if (emailCheckTimer) clearTimeout(emailCheckTimer);
+  if (!EMAIL_FORMAT_RE.test(email)) return;
+  emailCheckTimer = setTimeout(async () => {
+    const exists = await checkEmailAccount(email);
+    if (exists === true && (emailInput.value?.value ?? '').trim() === email) {
+      emailExists.value = true;
+    }
+  }, 300);
 }
 
 /** Progressive US phone formatting: (xxx) xxx-xxxx. Digits only, max 10. */
@@ -154,6 +190,17 @@ async function submitContactForm(event: SubmitEvent) {
     }
   }
 
+  // An email that already has an account belongs in the dashboard,
+  // not this form. The pre-submit check fails open — the Worker
+  // enforces the same rule and answers 409.
+  if (EMAIL_FORMAT_RE.test(email)) {
+    const exists = await checkEmailAccount(email);
+    if (exists === true) {
+      emailExists.value = true;
+      return;
+    }
+  }
+
   formError.value = false;
   formStatus.value = 'Sending…';
   try {
@@ -176,6 +223,13 @@ async function submitContactForm(event: SubmitEvent) {
       }),
     });
     const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    if (res.status === 409) {
+      // Authoritative answer: the email already has an account.
+      // The inline note carries the message; clear "Sending…".
+      emailExists.value = true;
+      formStatus.value = '';
+      return;
+    }
     if (!res.ok || !data.ok) {
       throw new Error(data.error || 'Something went wrong sending your message.');
     }
@@ -186,6 +240,7 @@ async function submitContactForm(event: SubmitEvent) {
     hasSite.value = '';
     selectedTierId.value = '';
     discountText.value = '';
+    emailExists.value = false;
   } catch (err) {
     formError.value = true;
     formStatus.value = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
@@ -222,7 +277,8 @@ async function submitContactForm(event: SubmitEvent) {
     <div class="contact-row contact-row-2">
       <label class="field">
         <span>Email</span>
-        <input name="email" type="email" autocomplete="email" required placeholder="you@example.com" />
+        <input ref="emailInput" name="email" type="email" autocomplete="email" required placeholder="you@example.com" @blur="onEmailBlur" @input="emailExists = false" />
+        <small v-if="emailExists" class="email-exists-note" role="alert">Looks like there's already an account with this email — <a href="https://dashboard.graywebsolutions.com" target="_blank" rel="noopener">sign in to your dashboard</a> to pick up where you left off.</small>
       </label>
       <label class="field">
         <span>Phone <em>(optional)</em></span>
