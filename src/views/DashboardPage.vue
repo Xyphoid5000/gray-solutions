@@ -5,6 +5,7 @@ import ChapterHeading from '../components/ChapterHeading.vue';
 import AdminDashboard from '../components/AdminDashboard.vue';
 import ClientDashboard from '../components/ClientDashboard.vue';
 import {
+  ADMIN_EMAIL,
   clearDashboardToken,
   dashboardFetch,
   getDashboardToken,
@@ -17,8 +18,11 @@ const router = useRouter();
 const state = ref<'loading' | 'login' | 'sent' | 'ready'>('loading');
 const error = ref('');
 const email = ref('');
+const password = ref('');
 const sending = ref(false);
 const me = ref<DashboardMe | null>(null);
+// The admin email gets password sign-in; everyone else gets a magic link.
+const isAdminEmail = computed(() => email.value.trim().toLowerCase() === ADMIN_EMAIL);
 // Admin preview: the id of the client whose dashboard is being viewed
 // as the client sees it. The id (not the object) is stored so the
 // preview always renders the freshest data after a refresh.
@@ -113,6 +117,46 @@ async function requestLink() {
   }
 }
 
+async function signInWithPassword() {
+  sending.value = true;
+  error.value = '';
+  try {
+    const res = await fetch('/api/auth/password', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: email.value.trim(), password: password.value }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      token?: unknown;
+      error?: string;
+    };
+    if (!res.ok || data.ok !== true || typeof data.token !== 'string') {
+      error.value = data.error || 'Could not sign in.';
+      return;
+    }
+    password.value = '';
+    setDashboardToken(data.token);
+    if (await loadMe()) {
+      state.value = 'ready';
+    } else {
+      state.value = 'login';
+    }
+  } catch {
+    error.value = 'Could not reach the sign-in service. Try again.';
+  } finally {
+    sending.value = false;
+  }
+}
+
+async function onSubmit() {
+  if (isAdminEmail.value) {
+    await signInWithPassword();
+  } else {
+    await requestLink();
+  }
+}
+
 async function refresh() {
   await loadMe();
 }
@@ -138,18 +182,31 @@ function signOut() {
           <p class="lede">Checking your sign-in&hellip;</p>
         </div>
         <div v-else-if="state === 'login'">
-          <p class="lede">
+          <p v-if="isAdminEmail" class="lede">Enter your password to sign in.</p>
+          <p v-else class="lede">
             Enter your email and I&rsquo;ll send you a sign-in link
             &mdash; no password needed.
           </p>
-          <form class="dashboard-form" @submit.prevent="requestLink">
+          <form class="dashboard-form" @submit.prevent="onSubmit">
             <label class="field">
               <span>Email</span>
               <input v-model="email" name="email" type="email" required placeholder="you@example.com" />
             </label>
+            <label v-if="isAdminEmail" class="field">
+              <span>Password</span>
+              <input
+                v-model="password"
+                name="password"
+                type="password"
+                required
+                autocomplete="current-password"
+                placeholder="Your admin password"
+              />
+            </label>
             <p v-if="error" class="dash-error" role="alert">{{ error }}</p>
             <button class="btn btn-solid" type="submit" :disabled="sending">
-              {{ sending ? 'Sending…' : 'Send my sign-in link' }}
+              <template v-if="isAdminEmail">{{ sending ? 'Signing in…' : 'Sign in' }}</template>
+              <template v-else>{{ sending ? 'Sending…' : 'Send my sign-in link' }}</template>
             </button>
           </form>
         </div>

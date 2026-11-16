@@ -34,6 +34,19 @@ export async function sha256Hex(value: string): Promise<string> {
     .join('');
 }
 
+/** Constant-time string comparison for secrets — never use ===
+    on a password or token, where the early exit leaks position. */
+export function timingSafeEqual(a: string, b: string): boolean {
+  const aBytes = enc.encode(a);
+  const bBytes = enc.encode(b);
+  const len = Math.max(aBytes.length, bBytes.length);
+  let diff = aBytes.length ^ bBytes.length;
+  for (let i = 0; i < len; i++) {
+    diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0);
+  }
+  return diff === 0;
+}
+
 async function hmacKey(secret: string): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     'raw',

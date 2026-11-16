@@ -22,7 +22,7 @@
 import { json, clientIp } from './worker/http';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
 import { handlePricing, quotePriceCents } from './worker/pricing';
-import { handleMagicLink, handleVerify, authenticateSession } from './worker/auth';
+import { handleMagicLink, handlePassword, handleVerify, authenticateSession } from './worker/auth';
 import {
   handleMe,
   handleCreateRequest,
@@ -30,6 +30,7 @@ import {
   handleSetBilled,
   handleRequestImage,
   handleMintShareToken,
+  handleLockIn,
 } from './worker/dashboard';
 
 interface ContactPayload {
@@ -455,6 +456,9 @@ export default {
     if (url.pathname === '/api/auth/magic-link') {
       return handleMagicLink(request, env);
     }
+    if (url.pathname === '/api/auth/password') {
+      return handlePassword(request, env);
+    }
     if (url.pathname === '/api/auth/verify') {
       return handleVerify(request, env);
     }
@@ -477,6 +481,16 @@ export default {
         return json({ ok: false, error: 'Sign in to get a share link.' }, 401);
       }
       return handleMintShareToken(request, env, session);
+    }
+    if (url.pathname === '/api/lock-in') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      const session = await authenticateSession(request, env);
+      if (!session) {
+        return json({ ok: false, error: 'Sign in to lock in.' }, 401);
+      }
+      return handleLockIn(request, env, session);
     }
     if (url.pathname === '/api/requests') {
       if (request.method !== 'POST') {

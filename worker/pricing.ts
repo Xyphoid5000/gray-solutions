@@ -14,6 +14,8 @@ export interface PricingTier {
   name: string;
   priceCents: number;
   description: string;
+  /** False for dashboard-only tiers (Free) — forms never offer them. */
+  isPublic: boolean;
 }
 
 /** The final quoted price: tier price, feature rate when it applies,
@@ -28,26 +30,27 @@ export function quotePriceCents(
 }
 
 export async function listTiers(db: D1Database, publicOnly = false): Promise<PricingTier[]> {
-  const base = 'SELECT id, name, price_cents, description FROM pricing_tiers';
+  const base = 'SELECT id, name, price_cents, description, is_public FROM pricing_tiers';
   const sql = publicOnly ? `${base} WHERE is_public = 1 ORDER BY id` : `${base} ORDER BY id`;
   try {
-    const res = await db.prepare(sql).all<{ id: number; name: string; price_cents: number; description: string }>();
+    const res = await db.prepare(sql).all<{ id: number; name: string; price_cents: number; description: string; is_public: number }>();
     return res.results.map((r) => ({
       id: r.id,
       name: r.name,
       priceCents: r.price_cents,
       description: r.description ?? '',
+      isPublic: r.is_public === 1,
     }));
   } catch (err) {
-    if (!publicOnly) throw err;
     // Pre-migration schema (no is_public column): every tier that
     // exists is public, so the unfiltered list is the right answer.
-    const res = await db.prepare(`${base} ORDER BY id`).all<{ id: number; name: string; price_cents: number; description: string }>();
+    const res = await db.prepare('SELECT id, name, price_cents, description FROM pricing_tiers ORDER BY id').all<{ id: number; name: string; price_cents: number; description: string }>();
     return res.results.map((r) => ({
       id: r.id,
       name: r.name,
       priceCents: r.price_cents,
       description: r.description ?? '',
+      isPublic: true,
     }));
   }
 }

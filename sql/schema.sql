@@ -28,6 +28,12 @@ CREATE TABLE IF NOT EXISTS clients (
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   -- 1 once they've agreed to use Gray Solutions.
   is_client INTEGER NOT NULL DEFAULT 0,
+  -- Link shown in their client dashboard: their live site, or their
+  -- demo on demos.graywebsolutions.com while it's still a preview.
+  site_url TEXT,
+  -- Demo slug this client record is linked to (demos Worker sets it
+  -- when the prospect provides their info at the demo gate).
+  demo_slug TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

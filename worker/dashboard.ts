@@ -6,7 +6,7 @@
 // without images.
 
 import { json, readJson, makeThrottle, clientIp } from './http';
-import type { D1Database, Env } from './env';
+import { CHRIS_EMAIL, type D1Database, type Env } from './env';
 import type { Session } from './auth';
 import { randomToken } from './crypto';
 import { listTiers } from './pricing';
@@ -22,6 +22,39 @@ interface ClientRow {
   contact_name: string;
   email: string;
   is_client: number;
+  site_url: string | null;
+}
+
+/** Client selects, with a pre-migration fallback: site_url doesn't
+    exist until the column migration runs, and the dashboards must
+    keep working until then — they just show no link. */
+async function allClients(db: D1Database): Promise<ClientRow[]> {
+  try {
+    const res = await db
+      .prepare('SELECT id, business_name, contact_name, email, is_client, site_url FROM clients ORDER BY business_name')
+      .all<ClientRow>();
+    return res.results;
+  } catch {
+    const res = await db
+      .prepare('SELECT id, business_name, contact_name, email, is_client FROM clients ORDER BY business_name')
+      .all<ClientRow>();
+    return res.results.map((c) => ({ ...c, site_url: null }));
+  }
+}
+
+async function oneClient(db: D1Database, email: string): Promise<ClientRow | null> {
+  try {
+    return await db
+      .prepare('SELECT id, business_name, contact_name, email, is_client, site_url FROM clients WHERE email = ?')
+      .bind(email.toLowerCase())
+      .first<ClientRow>();
+  } catch {
+    const row = await db
+      .prepare('SELECT id, business_name, contact_name, email, is_client FROM clients WHERE email = ?')
+      .bind(email.toLowerCase())
+      .first<ClientRow>();
+    return row ? { ...row, site_url: null } : null;
+  }
 }
 
 interface PricingRow {
@@ -130,9 +163,7 @@ export async function handleMe(
     const freeTierName = tiers.find((t) => t.priceCents === 0)?.name ?? 'Free';
 
     if (session.role === 'admin') {
-      const clientsRes = await db
-        .prepare('SELECT id, business_name, contact_name, email, is_client FROM clients ORDER BY business_name')
-        .all<ClientRow>();
+      const clientRows = await allClients(db);
       const pricingRes = await db
         .prepare('SELECT client_id, project_type, tier_id, discount_pct, quoted_price_cents, billed FROM client_pricing')
         .all<PricingRow>();
@@ -145,17 +176,18 @@ export async function handleMe(
         rows.push(p);
         pricingByClient.set(p.client_id, rows);
       }
-      const namesById = new Map(clientsRes.results.map((c) => [c.id, c.business_name]));
+      const namesById = new Map(clientRows.map((c) => [c.id, c.business_name]));
       return json({
         ok: true,
         role: 'admin',
         email: session.email,
-        clients: clientsRes.results.map((c) => ({
+        clients: clientRows.map((c) => ({
           id: c.id,
           businessName: c.business_name,
           contactName: c.contact_name,
           email: c.email,
           isClient: c.is_client === 1,
+          siteUrl: c.site_url ?? null,
           pricings: shapePricings(pricingByClient.get(c.id) ?? [], tierNames, c.is_client === 1, freeTierName),
         })),
         requests: requestsRes.results.map((r) =>
@@ -166,10 +198,7 @@ export async function handleMe(
       });
     }
 
-    const client = await db
-      .prepare('SELECT id, business_name, contact_name, email, is_client FROM clients WHERE email = ?')
-      .bind(session.email.toLowerCase())
-      .first<ClientRow>();
+    const client = await oneClient(db, session.email);
     if (!client) {
       return json({
         ok: true,
@@ -200,6 +229,7 @@ export async function handleMe(
         contactName: client.contact_name,
         email: client.email,
         isClient: client.is_client === 1,
+        siteUrl: client.site_url ?? null,
       },
       pricings: shapePricings(pricingRes.results, tierNames, client.is_client === 1, freeTierName),
       requests: requestsRes.results.map((r) => shapeRequest(r, client.business_name, tierNames)),
@@ -515,4 +545,64 @@ export async function handleMintShareToken(
     console.error('Share-link mint failed:', err);
     return json({ ok: false, error: 'Sharing is not configured yet.' }, 503);
   }
+}
+
+// "Lock it in": a prospect's dashboard button for moving forward.
+// It only emails Chris — it never flips is_client, which stays a
+// hand-set flag. Chris confirms the client himself after talking
+// to them, and the request forms unlock from there.
+const lockInThrottle = makeThrottle(5, 15 * 60 * 1000);
+
+export async function handleLockIn(
+  request: Request,
+  env: Env,
+  session: Session,
+): Promise<Response> {
+  if (request.method !== 'POST') {
+    return json({ ok: false, error: 'Method not allowed.' }, 405);
+  }
+  if (session.role !== 'client') {
+    return json({ ok: false, error: 'Only client accounts can lock in.' }, 403);
+  }
+  if (!env.DB_CLIENTS || !env.RESEND_API_KEY) {
+    return json({ ok: false, error: 'Lock-in is not configured yet.' }, 503);
+  }
+  const ip = clientIp(request);
+  if (lockInThrottle.blocked(ip)) {
+    return json({ ok: false, error: 'Too many requests. Try again in a few minutes.' }, 429);
+  }
+  lockInThrottle.record(ip);
+
+  const client = await oneClient(env.DB_CLIENTS, session.email);
+  if (!client) {
+    return json({ ok: false, error: 'No client record for this email yet.' }, 403);
+  }
+  if (client.is_client === 1) {
+    return json({ ok: false, error: 'Your site is already confirmed.' }, 403);
+  }
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `Gray Solutions <${CHRIS_EMAIL}>`,
+      to: [CHRIS_EMAIL],
+      reply_to: client.email,
+      subject: `Lock it in: ${client.business_name}`,
+      text: [
+        `${client.contact_name || client.business_name} (${client.email}) locked in from their client dashboard — they want to move forward with ${client.business_name}.`,
+        '',
+        'Set is_client = 1 for their row when you have confirmed them, and the request forms unlock on their dashboard.',
+        '',
+        '— Gray Solutions dashboard',
+      ].join('\n'),
+    }),
+  });
+  if (!res.ok) {
+    console.error('Lock-in email failed:', res.status, await res.text().catch(() => ''));
+    return json({ ok: false, error: 'Could not send the lock-in. Try again.' }, 502);
+  }
+  return json({ ok: true });
 }
