@@ -73,6 +73,11 @@ async function setBilled(clientId: number, projectType: string, billed: boolean)
           <span class="dash-badge">{{ c.isClient ? 'Current' : 'Prospective' }}</span>
         </div>
         <p class="client-meta">{{ c.contactName }} &mdash; {{ c.email }}</p>
+        <p v-if="c.siteUrl" class="client-site">
+          <a :href="c.siteUrl" target="_blank" rel="noopener"
+            >View site <span aria-hidden="true">&nearr;</span></a
+          >
+        </p>
         <div v-for="p in c.pricings" :key="p.projectType" class="client-pricing-row">
           <p class="client-pricing">
             <span>{{ p.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
@@ -190,6 +195,10 @@ h2 {
 .client-meta {
   margin: 0.4rem 0 0;
   color: var(--muted);
+  font-size: 0.9rem;
+}
+.client-site {
+  margin: 0.4rem 0 0;
   font-size: 0.9rem;
 }
 .client-pricing {

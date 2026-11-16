@@ -40,6 +40,9 @@ export interface Env {
   RESEND_API_KEY?: string;
   CONTACT_TO?: string;
   CONTACT_FROM?: string;
+  /** Admin password sign-in — set by Chris in the dashboard. Clients
+      keep magic links; only chris@ can use the password path. */
+  ADMIN_PASSWORD?: string;
   /** Optional: image uploads stay disabled until the bucket exists. */
   R2_UPLOADS?: R2Bucket;
 }

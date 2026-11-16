@@ -1,18 +1,20 @@
-// Dashboard sign-in: email + magic link, no passwords. A link is
-// single-use and expires after 15 minutes; only the hash is stored.
-// Verifying a link issues an HMAC-signed session token (30 days).
-// Chris's own email signs in as admin; every other client email
-// signs in as a client scoped to its own record.
+// Dashboard sign-in: clients use an email + magic link, no passwords.
+// A link is single-use and expires after 15 minutes; only the hash is
+// stored. Chris signs in with a password instead (the ADMIN_PASSWORD
+// secret, set in the dashboard) — same 30-day HMAC-signed session
+// either way. Chris's own email signs in as admin; every other client
+// email signs in as a client scoped to its own record.
 
 import { json, readJson, makeThrottle, clientIp } from './http';
 import { CHRIS_EMAIL, type Env } from './env';
-import { randomToken, sha256Hex, signSession, verifySession } from './crypto';
+import { randomToken, sha256Hex, signSession, verifySession, timingSafeEqual } from './crypto';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAGIC_LINK_TTL_MS = 15 * 60 * 1000;
 const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 const magicThrottle = makeThrottle(5, 15 * 60 * 1000);
+const passwordThrottle = makeThrottle(5, 15 * 60 * 1000);
 
 export interface Session {
   email: string;
@@ -98,6 +100,39 @@ export async function handleMagicLink(request: Request, env: Env): Promise<Respo
     }
   }
   return json({ ok: true });
+}
+
+/** Admin password sign-in — chris@ only, checked against the
+    ADMIN_PASSWORD secret. A wrong email and a wrong password get
+    the same answer, so the endpoint never confirms which half
+    failed. Issues the same 30-day session a magic link would. */
+export async function handlePassword(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') {
+    return json({ ok: false, error: 'Method not allowed.' }, 405);
+  }
+  if (!env.RESEND_API_KEY || !env.ADMIN_PASSWORD) {
+    return json({ ok: false, error: 'Password sign-in is not configured yet.' }, 503);
+  }
+  const ip = clientIp(request);
+  if (passwordThrottle.blocked(ip)) {
+    return json({ ok: false, error: 'Too many sign-in attempts. Try again in a few minutes.' }, 429);
+  }
+  passwordThrottle.record(ip);
+
+  const body = await readJson(request);
+  const email = String(body.email ?? '')
+    .trim()
+    .toLowerCase();
+  const password = String(body.password ?? '');
+  if (email !== CHRIS_EMAIL || !timingSafeEqual(password, env.ADMIN_PASSWORD)) {
+    return json({ ok: false, error: 'Incorrect email or password.' }, 401);
+  }
+  const session = await signSession(env.RESEND_API_KEY, {
+    email: CHRIS_EMAIL,
+    role: 'admin',
+    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+  });
+  return json({ ok: true, token: session, role: 'admin', email: CHRIS_EMAIL });
 }
 
 export async function handleVerify(request: Request, env: Env): Promise<Response> {

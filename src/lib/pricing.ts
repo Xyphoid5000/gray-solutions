@@ -7,6 +7,8 @@ export interface PricingTier {
   name: string;
   priceCents: number;
   description: string;
+  /** False for dashboard-only tiers (Free) — forms never offer them. */
+  isPublic: boolean;
 }
 
 export const FALLBACK_TIERS: PricingTier[] = [
@@ -15,18 +17,21 @@ export const FALLBACK_TIERS: PricingTier[] = [
     name: 'Static page',
     priceCents: 80000,
     description: 'A custom-designed, hand-coded site with no backend.',
+    isPublic: true,
   },
   {
     id: 2,
     name: 'Web application',
     priceCents: 220000,
     description: 'A static site plus backend features — forms that save, logins, updatable content.',
+    isPublic: true,
   },
   {
     id: 3,
     name: 'Payment processing',
     priceCents: 300000,
     description: 'A web application with payment processing — checkout and invoices, built in.',
+    isPublic: true,
   },
 ];
 

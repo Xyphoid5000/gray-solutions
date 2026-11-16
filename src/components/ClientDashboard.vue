@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import RequestList from './RequestList.vue';
 import { dashboardFetch, type DashboardMe } from '../lib/dashboard';
 import { formatPrice } from '../lib/pricing';
 
 const props = defineProps<{ data: DashboardMe; preview?: boolean }>();
 const emit = defineEmits<{ refresh: [] }>();
+
+// Forms never offer dashboard-only tiers (Free) — only public ones.
+const formTiers = computed(() => props.data.tiers.filter((t) => t.isPublic !== false));
 
 const changeDetails = ref('');
 const featureDetails = ref('');
@@ -22,6 +25,9 @@ const shareBusy = ref(false);
 const shareError = ref('');
 const copied = ref(false);
 const shareLinkInput = ref<HTMLInputElement | null>(null);
+const lockInBusy = ref(false);
+const lockInDone = ref(false);
+const lockInError = ref('');
 let copiedTimer = 0;
 
 function onFile(kind: 'change' | 'feature', event: Event) {
@@ -121,6 +127,25 @@ async function copyShareLink() {
     shareLinkInput.value?.select();
   }
 }
+
+async function lockIn() {
+  if (props.preview || lockInBusy.value || lockInDone.value) return;
+  lockInError.value = '';
+  lockInBusy.value = true;
+  try {
+    const result = await dashboardFetch('/api/lock-in', { method: 'POST' });
+    if (!result.res.ok || result.data.ok !== true) {
+      lockInError.value =
+        typeof result.data.error === 'string' ? result.data.error : 'Could not lock in. Try again.';
+      return;
+    }
+    lockInDone.value = true;
+  } catch {
+    lockInError.value = 'Could not reach the server. Try again.';
+  } finally {
+    lockInBusy.value = false;
+  }
+}
 </script>
 
 <template>
@@ -139,6 +164,11 @@ async function copyShareLink() {
     <section aria-label="My info">
       <h2>{{ props.data.client.businessName }}</h2>
       <p class="client-meta">{{ props.data.client.contactName }} &mdash; {{ props.data.client.email }}</p>
+      <p v-if="props.data.client.siteUrl" class="client-site">
+        <a :href="props.data.client.siteUrl" target="_blank" rel="noopener"
+          >View your site <span aria-hidden="true">&nearr;</span></a
+        >
+      </p>
       <p v-for="p in props.data.pricings" :key="p.projectType" class="client-pricing">
         <span>{{ p.projectType === 'feature' ? 'Feature' : 'Install' }}</span>
         <span v-if="p.tierName"> &middot; {{ p.tierName }}</span>
@@ -198,7 +228,7 @@ async function copyShareLink() {
           <span>Pricing tier</span>
           <select v-model="featureTierId" required aria-label="Pricing tier for the feature">
             <option value="">Pick a tier</option>
-            <option v-for="tier in props.data.tiers" :key="tier.id" :value="String(tier.id)">
+            <option v-for="tier in formTiers" :key="tier.id" :value="String(tier.id)">
               {{ tier.name }} — from {{ formatPrice(tier.priceCents) }}
             </option>
           </select>
@@ -226,9 +256,25 @@ async function copyShareLink() {
         </button>
       </form>
     </section>
-    <p v-else class="lede">
-      Your site isn&rsquo;t live yet &mdash; the request forms unlock once it is.
-    </p>
+    <section v-else aria-label="Lock it in">
+      <h2>Ready when you are</h2>
+      <p class="lede">
+        Your site isn&rsquo;t live yet &mdash; the request forms unlock once it is.
+      </p>
+      <p v-if="lockInDone" class="dash-notice" role="status">
+        Locked in &mdash; Chris will follow up within 3 days to move things forward.
+      </p>
+      <p v-if="lockInError" class="dash-error" role="alert">{{ lockInError }}</p>
+      <button
+        v-if="!lockInDone"
+        class="btn btn-solid"
+        type="button"
+        :disabled="lockInBusy || props.preview"
+        @click="lockIn"
+      >
+        {{ lockInBusy ? 'Locking in…' : 'Lock it in' }}
+      </button>
+    </section>
     <section aria-label="Share Gray Solutions">
       <h2>Share Gray Solutions</h2>
       <p v-if="props.data.client.isClient" class="form-help">
@@ -283,6 +329,9 @@ h3 em {
   margin: 0.4rem 0 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+.client-site {
+  margin: 0.6rem 0 0;
 }
 .client-pricing {
   margin: 0.6rem 0 0;

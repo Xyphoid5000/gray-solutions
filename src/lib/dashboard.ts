@@ -6,6 +6,9 @@
 
 import type { PricingTier } from './pricing';
 
+/** The admin email — the login form offers password sign-in for it. */
+export const ADMIN_EMAIL = 'chris@graywebsolutions.com';
+
 export interface DashboardPricing {
   projectType: string;
   tierId: number | null;
@@ -21,6 +24,8 @@ export interface DashboardClient {
   contactName: string;
   email: string;
   isClient: boolean;
+  /** Link to their live site or demo — null until Chris sets it. */
+  siteUrl: string | null;
   /** One row per project type — install first, then feature. */
   pricings: DashboardPricing[];
 }
