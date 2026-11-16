@@ -228,7 +228,7 @@ CREATE TABLE IF NOT EXISTS client_project (
   -- In order: new, designing, quoted, in_progress, pending_payment
   -- (a downpayment is required before the site ships),
   -- pending_approval, complete.
-  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'designing', 'quoted', 'in_progress', 'pending_payment', 'pending_approval', 'complete')),
+  status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'designing', 'quoted', 'in_progress', 'pending_payment', 'pending_approval', 'complete', 'declined')),
   -- What the client still owes, in cents. NULL = unset. Updated by
   -- hand until a payment system lands.
   remaining_balance_cents INTEGER,
