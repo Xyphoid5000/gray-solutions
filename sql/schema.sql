@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS clients (
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
   -- 1 once they've agreed to use Gray Web Solutions.
   is_client INTEGER NOT NULL DEFAULT 0,
+  -- 1 for the permanent test client: hidden from the admin list
+  -- unless testing mode is on.
+  is_test INTEGER NOT NULL DEFAULT 0,
   -- Link shown in their client dashboard: their live site, or their
   -- demo on demos.graywebsolutions.com while it's still a preview.
   site_url TEXT,
