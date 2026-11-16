@@ -3,9 +3,10 @@
 -- cannot alter a CHECK in place, so this rebuilds the table.
 -- Safe to run whether or not migrate-add-change-type.sql ran: it
 -- rebuilds from whatever client_project currently holds.
--- project_comments is dropped and recreated by this script; it
--- holds no rows at this point in history.
+-- project_comments rows are preserved via a backup table.
 
+DROP TABLE IF EXISTS project_comments_backup;
+CREATE TABLE project_comments_backup AS SELECT id, project_id, comment_owner, comment_text, image_key, created_at, read_at FROM project_comments;
 DROP TABLE IF EXISTS project_comments;
 ALTER TABLE client_project RENAME TO client_project_old;
 CREATE TABLE client_project (
@@ -37,4 +38,7 @@ CREATE TABLE project_comments (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   read_at TEXT
 );
+INSERT INTO project_comments (id, project_id, comment_owner, comment_text, image_key, created_at, read_at)
+SELECT id, project_id, comment_owner, comment_text, image_key, created_at, read_at FROM project_comments_backup;
+DROP TABLE project_comments_backup;
 CREATE INDEX idx_project_comments_project ON project_comments(project_id);
