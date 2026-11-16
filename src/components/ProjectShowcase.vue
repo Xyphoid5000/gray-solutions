@@ -9,7 +9,9 @@ defineProps<{ project: Project }>();
 
 <template>
   <article class="project-showcase" :aria-label="project.name">
-    <div class="laptop-photo" role="img" :aria-label="project.imageAlt">
+    <!-- Featured rows without an uploaded image render without the
+         laptop block — no broken image, no placeholder art. -->
+    <div v-if="project.image" class="laptop-photo" role="img" :aria-label="project.imageAlt">
       <img class="laptop-photo-frame" src="/projects/laptop-frame.svg" alt="" />
       <img class="laptop-photo-shot" :src="project.image" :alt="''" loading="lazy" />
     </div>
@@ -21,8 +23,8 @@ defineProps<{ project: Project }>();
       <ul class="proof-tags project-tech">
         <li v-for="t in project.tech" :key="t">{{ t }}</li>
       </ul>
-      <h4 class="project-subhead">How the story was written</h4>
-      <p class="project-story">{{ project.story }}</p>
+      <h4 v-if="project.story" class="project-subhead">How the story was written</h4>
+      <p v-if="project.story" class="project-story">{{ project.story }}</p>
     </div>
   </article>
 </template>
