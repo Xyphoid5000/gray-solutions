@@ -27,16 +27,29 @@ export function quotePriceCents(
   return Math.round(base * (1 - discountPct / 100));
 }
 
-export async function listTiers(db: D1Database): Promise<PricingTier[]> {
-  const res = await db
-    .prepare('SELECT id, name, price_cents, description FROM pricing_tiers ORDER BY id')
-    .all<{ id: number; name: string; price_cents: number; description: string }>();
-  return res.results.map((r) => ({
-    id: r.id,
-    name: r.name,
-    priceCents: r.price_cents,
-    description: r.description ?? '',
-  }));
+export async function listTiers(db: D1Database, publicOnly = false): Promise<PricingTier[]> {
+  const base = 'SELECT id, name, price_cents, description FROM pricing_tiers';
+  const sql = publicOnly ? `${base} WHERE is_public = 1 ORDER BY id` : `${base} ORDER BY id`;
+  try {
+    const res = await db.prepare(sql).all<{ id: number; name: string; price_cents: number; description: string }>();
+    return res.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      priceCents: r.price_cents,
+      description: r.description ?? '',
+    }));
+  } catch (err) {
+    if (!publicOnly) throw err;
+    // Pre-migration schema (no is_public column): every tier that
+    // exists is public, so the unfiltered list is the right answer.
+    const res = await db.prepare(`${base} ORDER BY id`).all<{ id: number; name: string; price_cents: number; description: string }>();
+    return res.results.map((r) => ({
+      id: r.id,
+      name: r.name,
+      priceCents: r.price_cents,
+      description: r.description ?? '',
+    }));
+  }
 }
 
 const pricingThrottle = makeThrottle(30, 15 * 60 * 1000);
@@ -54,7 +67,8 @@ export async function handlePricing(request: Request, env: Env): Promise<Respons
   }
   pricingThrottle.record(ip);
   try {
-    return json({ ok: true, tiers: await listTiers(env.DB_CLIENTS) });
+    // Public endpoint: dashboard-only tiers (Free) stay out.
+    return json({ ok: true, tiers: await listTiers(env.DB_CLIENTS, true) });
   } catch (err) {
     console.error('Pricing lookup failed:', err);
     return json({ ok: false, error: 'Pricing is not configured yet.' }, 503);

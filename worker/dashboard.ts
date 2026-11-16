@@ -55,12 +55,28 @@ function shapePricing(p: PricingRow, tierNames: Map<number, string>) {
   };
 }
 
-/** Install first, then feature — the order both dashboards show. */
-function shapePricings(rows: PricingRow[], tierNames: Map<number, string>) {
+/** Install first, then feature — the order both dashboards show.
+    An established client's row with no quoted rate is assumed free:
+    it shows the Free tier at $0. A prospect's unquoted row stays
+    unquoted — "no quote yet", never $0. */
+function shapePricings(
+  rows: PricingRow[],
+  tierNames: Map<number, string>,
+  isClient: boolean,
+  freeTierName: string,
+) {
   return rows
     .slice()
     .sort((a, b) => Number(a.project_type !== 'install') - Number(b.project_type !== 'install'))
-    .map((p) => shapePricing(p, tierNames));
+    .map((p) => {
+      const assumedFree = isClient && p.quoted_price_cents === null;
+      const shaped = shapePricing(p, tierNames);
+      return {
+        ...shaped,
+        tierName: shaped.tierName ?? (assumedFree ? freeTierName : null),
+        quotedPriceCents: shaped.quotedPriceCents ?? (assumedFree ? 0 : null),
+      };
+    });
 }
 
 function shapeRequest(
@@ -109,6 +125,9 @@ export async function handleMe(
   try {
     const tiers = await listTiers(db).catch(() => []);
     const tierNames = new Map(tiers.map((t) => [t.id, t.name]));
+    // The $0 tier's name, for the assumed-free display — 'Free'
+    // when the tier row doesn't exist yet.
+    const freeTierName = tiers.find((t) => t.priceCents === 0)?.name ?? 'Free';
 
     if (session.role === 'admin') {
       const clientsRes = await db
@@ -137,7 +156,7 @@ export async function handleMe(
           contactName: c.contact_name,
           email: c.email,
           isClient: c.is_client === 1,
-          pricings: shapePricings(pricingByClient.get(c.id) ?? [], tierNames),
+          pricings: shapePricings(pricingByClient.get(c.id) ?? [], tierNames, c.is_client === 1, freeTierName),
         })),
         requests: requestsRes.results.map((r) =>
           shapeRequest(r, namesById.get(r.client_id) ?? '', tierNames),
@@ -182,7 +201,7 @@ export async function handleMe(
         email: client.email,
         isClient: client.is_client === 1,
       },
-      pricings: shapePricings(pricingRes.results, tierNames),
+      pricings: shapePricings(pricingRes.results, tierNames, client.is_client === 1, freeTierName),
       requests: requestsRes.results.map((r) => shapeRequest(r, client.business_name, tierNames)),
       tiers,
       uploadsEnabled,
