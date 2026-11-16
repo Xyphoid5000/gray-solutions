@@ -10,6 +10,7 @@ import { computed, inject, ref, onMounted, onUnmounted, nextTick, type Ref } fro
 import { activeDiscountCode } from '../lib/discount';
 import { useModalA11y } from '../composables/useModalA11y';
 import { useSettingsStore } from '../stores/settings';
+import { useReferralStore } from '../stores/referral';
 import { useBonusStore } from '../stores/bonus';
 import { useDeviceStore } from '../stores/device';
 import GamesMenu from './phone/GamesMenu.vue';
@@ -56,6 +57,7 @@ function onLedColor(e: Event) {
 }
 
 const settings = useSettingsStore();
+const referral = useReferralStore();
 const bonus = useBonusStore();
 /** Phone UI state lives in the bonus store so it survives view changes —
     the desk button, corner button, and held phone all share it. */
@@ -746,8 +748,11 @@ onUnmounted(() => {
           <p v-if="callStatus === 'calling'" class="call-status">Calling…</p>
           <div v-else-if="callStatus === 'connected' && callContact?.special === 'gray'" class="call-code">
             <p class="call-thanks">Thanks for calling {{ settings.siteName }}!</p>
-            <p class="call-code-value">{{ activeDiscountCode }}</p>
-            <p class="call-code-note">Mention it in the contact form for <strong>10% off</strong> your new website.</p>
+            <p v-if="referral.active" class="call-code-note">I love your curiosity and puzzle skills, but you're already set to get your 10% off discount!</p>
+            <template v-else>
+              <p class="call-code-value">{{ activeDiscountCode }}</p>
+              <p class="call-code-note">Mention it in the contact form for <strong>10% off</strong> your new website.</p>
+            </template>
           </div>
           <p v-else-if="callStatus === 'connected'" class="call-status">
             {{
