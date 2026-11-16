@@ -2270,6 +2270,17 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   color: #e5484d;
   font-weight: 600;
 }
+.email-exists-note {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--ember);
+  font-weight: 600;
+}
+.email-exists-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .referral-note {
   font-size: 0.9rem;
   line-height: 1.5;
