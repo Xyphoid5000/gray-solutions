@@ -40,9 +40,9 @@ export async function handleMagicLink(request: Request, env: Env): Promise<Respo
     return json({ ok: false, error: 'Enter a valid email address.' }, 400);
   }
 
-  // Only clients on file (or Chris) get a link — but the response is
-  // identical either way, so the endpoint never confirms whether an
-  // email has an account.
+  // The email must belong to a client on file (or Chris) — otherwise
+  // say so, instead of leaving the requester waiting for an email
+  // that will never arrive.
   let token: string | null = null;
   try {
     const isChris = email === CHRIS_EMAIL;
@@ -51,15 +51,16 @@ export async function handleMagicLink(request: Request, env: Env): Promise<Respo
       : await env.DB_CLIENTS.prepare('SELECT id FROM clients WHERE email = ?')
           .bind(email)
           .first<{ id: number }>();
-    if (isChris || row) {
-      token = randomToken(32);
-      const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MS).toISOString();
-      await env.DB_CLIENTS.prepare(
-        'INSERT INTO magic_tokens (email, token_hash, expires_at) VALUES (?, ?, ?)',
-      )
-        .bind(email, await sha256Hex(token), expiresAt)
-        .run();
+    if (!isChris && !row) {
+      return json({ ok: false, error: "We can't find a matching record for that email." }, 404);
     }
+    token = randomToken(32);
+    const expiresAt = new Date(Date.now() + MAGIC_LINK_TTL_MS).toISOString();
+    await env.DB_CLIENTS.prepare(
+      'INSERT INTO magic_tokens (email, token_hash, expires_at) VALUES (?, ?, ?)',
+    )
+      .bind(email, await sha256Hex(token), expiresAt)
+      .run();
   } catch (err) {
     console.error('Magic-link setup failed:', err);
     return json({ ok: false, error: 'Sign-in is not configured yet.' }, 503);
