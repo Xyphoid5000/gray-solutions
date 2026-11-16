@@ -9,7 +9,7 @@ import { json, readJson, makeThrottle, clientIp } from './http';
 import { CHRIS_EMAIL, type D1Database, type Env } from './env';
 import type { Session } from './auth';
 import { randomToken } from './crypto';
-import { listTiers } from './pricing';
+import { listTiers, effectiveDiscountPct } from './pricing';
 
 const MAX_DETAILS = 4000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -91,7 +91,9 @@ function shapePricing(p: PricingRow, tierNames: Map<number, string>) {
 /** Install first, then feature — the order both dashboards show.
     An established client's row with no quoted rate is assumed free:
     it shows the Free tier at $0. A prospect's unquoted row stays
-    unquoted — "no quote yet", never $0. */
+    unquoted — "no quote yet", never $0. The discount shown is the
+    EFFECTIVE one: feature rows of established clients include the
+    15% baseline (25% with a referral reward). */
 function shapePricings(
   rows: PricingRow[],
   tierNames: Map<number, string>,
@@ -106,6 +108,7 @@ function shapePricings(
       const shaped = shapePricing(p, tierNames);
       return {
         ...shaped,
+        discountPct: effectiveDiscountPct(p.project_type, p.discount_pct, isClient),
         tierName: shaped.tierName ?? (assumedFree ? freeTierName : null),
         quotedPriceCents: shaped.quotedPriceCents ?? (assumedFree ? 0 : null),
       };

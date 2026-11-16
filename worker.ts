@@ -12,16 +12,24 @@
 // Every contact submission is also recorded in the client database
 // (best-effort, after the email to Chris goes out — a database failure
 // never blocks the inquiry). A submission through a referral token gives
-// the lead 10% off; the first submission through a token sets the
-// referrer's reward — 20% off a new site for prospects, 10% off future
-// enhancements for established clients — and emails them from
-// chris@graywebsolutions.com. A picked pricing tier quotes straight
-// into the pricing row: tier price, feature rate when it applies,
-// then the effective discount.
+// the lead 10% off; the first submission through a token earns the
+// referrer 10 more points off — on their install if it isn't billed
+// yet, on future feature work if it is (established clients always
+// earn it on features, taking their feature discount to 25% off list).
+// Discounts are percents off list, added: a picked pricing tier quotes
+// straight into the pricing row at tier price minus the total percent
+// off.
 
 import { json, clientIp } from './worker/http';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
-import { handlePricing, quotePriceCents } from './worker/pricing';
+import {
+  handlePricing,
+  quotePriceCents,
+  effectiveDiscountPct,
+  REFERRAL_PCT,
+  INSTALL_DISCOUNT_CAP,
+  FEATURE_DISCOUNT_CAP,
+} from './worker/pricing';
 import { handleMagicLink, handlePassword, handleVerify, authenticateSession } from './worker/auth';
 import {
   handleMe,
@@ -134,13 +142,23 @@ async function sendReferrerEmail(
   referrerName: string,
   leadName: string,
   leadSite: string,
-  isEstablished: boolean,
+  reward: { type: 'install' | 'feature'; totalPct: number; isEstablished: boolean },
 ): Promise<void> {
   const greeting = referrerName ? `Hi ${referrerName},` : 'Hi,';
   const leadBit = leadSite ? `${leadName} (${leadSite})` : leadName;
-  const rewardLine = isEstablished
-    ? 'Your 10% off future enhancements is locked in: the next time you ask for new features or upgrades to your site, you will get 10% off. And they get 10% off theirs.'
-    : 'Your 20% off is locked in: if you go with Gray Solutions for your website, you will get 20% off. And they get 10% off theirs.';
+  let subject: string;
+  let rewardLine: string;
+  if (reward.isEstablished) {
+    subject = 'Your Gray Solutions share link was used — 25% off future feature work';
+    rewardLine = `Your discount on future feature work is now ${FEATURE_DISCOUNT_CAP}% off list: the 15% returning-client rate, plus 10% for the referral. And they get 10% off theirs.`;
+  } else if (reward.type === 'install') {
+    subject = 'Your Gray Solutions share link was used — 10% more off your website';
+    rewardLine = `That earns you 10% more off: your total discount is now ${reward.totalPct}% off your website. And they get 10% off theirs.`;
+  } else {
+    subject = 'Your Gray Solutions share link was used — 10% off future feature work';
+    rewardLine =
+      'Your install was already billed, so that earns you 10% off future feature work on your site instead. And they get 10% off theirs.';
+  }
   const text = [
     greeting,
     '',
@@ -162,9 +180,7 @@ async function sendReferrerEmail(
     body: JSON.stringify({
       from: `Gray Solutions <${CHRIS_EMAIL}>`,
       to: [referrerEmail],
-      subject: isEstablished
-        ? 'Your Gray Solutions share link was used — 10% off future enhancements'
-        : 'Your Gray Solutions share link was used — 20% off your website',
+      subject,
       text,
     }),
   });
@@ -202,9 +218,9 @@ async function recordSubmission(
     .bind(businessName, input.name, email)
     .run();
   const lead = await db
-    .prepare('SELECT id FROM clients WHERE email = ?')
+    .prepare('SELECT id, is_client FROM clients WHERE email = ?')
     .bind(email)
-    .first<{ id: number }>();
+    .first<{ id: number; is_client: number }>();
   if (!lead) return;
   await db
     .prepare('INSERT OR IGNORE INTO client_pricing (client_id) VALUES (?)')
@@ -250,13 +266,14 @@ async function recordSubmission(
   }
 
   // A picked tier quotes straight into the pricing row for this
-  // (client, project type): tier price, feature rate when it
-  // applies, then the effective discount — the row's own discount,
-  // so a feature quote for an established client applies their
-  // reward. Its own try/catch — on the pre-v3 schema (no composite
-  // key) the upsert fails, the discount recording above already
-  // landed, and the quote is simply skipped until the schema is
-  // upgraded.
+  // (client, project type): tier price minus the total percent off.
+  // The row stores the referral-earned portion only — the effective
+  // percent (with the established feature baseline) prices the quote
+  // but is never written back, so stored values stay inside the
+  // CHECK (0,10,20). Its own try/catch — on the pre-v3 schema (no
+  // composite key) the upsert fails, the discount recording above
+  // already landed, and the quote is simply skipped until the schema
+  // is upgraded.
   if (input.tierId) {
     try {
       const tier = await db
@@ -268,8 +285,13 @@ async function recordSubmission(
           .prepare('SELECT discount_pct FROM client_pricing WHERE client_id = ? AND project_type = ?')
           .bind(lead.id, input.projectType)
           .first<{ discount_pct: number }>();
-        const effective = current ? current.discount_pct : discount;
-        const quoted = quotePriceCents(tier.price_cents, input.projectType, effective);
+        const stored = current ? current.discount_pct : discount;
+        const effective = effectiveDiscountPct(
+          input.projectType,
+          stored,
+          lead.is_client === 1,
+        );
+        const quoted = quotePriceCents(tier.price_cents, effective);
         await db
           .prepare(
             `INSERT INTO client_pricing (client_id, project_type, tier_id, discount_pct, quoted_price_cents, billed)
@@ -280,7 +302,7 @@ async function recordSubmission(
                billed = 0,
                updated_at = datetime('now')`,
           )
-          .bind(lead.id, input.projectType, input.tierId, effective, quoted)
+          .bind(lead.id, input.projectType, input.tierId, stored, quoted)
           .run();
       }
     } catch (err) {
@@ -290,32 +312,55 @@ async function recordSubmission(
 
   // The referrer's reward and the used-mark land only after their email
   // goes out — if the send fails, the token stays unused and a later
-  // submission through it retries the notification.
+  // submission through it retries the notification. The reward is
+  // +10 points, capped: established referrers earn it on future
+  // feature work (25% off total with the baseline). Prospects earn it
+  // on their install if it isn't billed yet (10% + 10% = 20% total
+  // for token arrivals); a billed install banks it toward future
+  // features instead.
   if (firstUse && env.RESEND_API_KEY) {
+    let rewardType: 'install' | 'feature' = 'feature';
+    let rewardTotal = FEATURE_DISCOUNT_CAP;
+    if (!firstUse.isEstablished) {
+      const install = await db
+        .prepare("SELECT discount_pct, billed FROM client_pricing WHERE client_id = ? AND project_type = 'install'")
+        .bind(firstUse.referrerId)
+        .first<{ discount_pct: number; billed: number }>();
+      if (install && install.billed === 1) {
+        rewardType = 'feature';
+        rewardTotal = REFERRAL_PCT;
+      } else {
+        rewardType = 'install';
+        rewardTotal = Math.min((install?.discount_pct ?? 0) + REFERRAL_PCT, INSTALL_DISCOUNT_CAP);
+      }
+    }
     await sendReferrerEmail(
       env,
       firstUse.referrerEmail,
       firstUse.referrerName,
       input.name,
       input.siteUrl,
-      firstUse.isEstablished,
+      { type: rewardType, totalPct: rewardTotal, isEstablished: firstUse.isEstablished },
     );
-    // Prospects earn 20% off a new site (their install row);
-    // established clients earn 10% off future enhancements — a new
-    // feature row with no tier and no quote, leaving their install
-    // row (and its billed flag) untouched.
-    const referrerPct = firstUse.isEstablished ? 10 : 20;
-    const rewardType = firstUse.isEstablished ? 'feature' : 'install';
     await db
       .prepare('INSERT OR IGNORE INTO client_pricing (client_id, project_type) VALUES (?, ?)')
       .bind(firstUse.referrerId, rewardType)
       .run();
-    await db
-      .prepare(
-        `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = ?`,
-      )
-      .bind(referrerPct, firstUse.referrerId, rewardType)
-      .run();
+    if (rewardType === 'install') {
+      await db
+        .prepare(
+          `UPDATE client_pricing SET discount_pct = MIN(discount_pct + ?, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = 'install'`,
+        )
+        .bind(REFERRAL_PCT, INSTALL_DISCOUNT_CAP, firstUse.referrerId)
+        .run();
+    } else {
+      await db
+        .prepare(
+          `UPDATE client_pricing SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ? AND project_type = 'feature'`,
+        )
+        .bind(REFERRAL_PCT, firstUse.referrerId)
+        .run();
+    }
     await db
       .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
       .bind(firstUse.tokenId)

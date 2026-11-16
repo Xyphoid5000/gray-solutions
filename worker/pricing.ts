@@ -6,8 +6,39 @@
 import { json, makeThrottle, clientIp } from './http';
 import type { D1Database, Env } from './env';
 
-/** A feature on an established client's site prices at 85% of the tier. */
-export const FEATURE_RATE = 0.85;
+/** Discounts are percents off the LIST price, added — never
+    multiplied. An established client's feature work starts at 15%
+    off; a referral reward adds 10 points, for 25% off total.
+    First-time customers start at 0 (10% if they arrived through a
+    referral token) and add 10 points by generating a lead before
+    billing, for 20% off total.
+    The database stores only the referral-earned portion on feature
+    rows (0 or 10) — the 15% baseline is derived here, so flipping a
+    client to established needs no row update and old rows read
+    correctly. Stored values stay inside the CHECK (0,10,20). */
+export const ESTABLISHED_FEATURE_BASE_PCT = 15;
+export const REFERRAL_PCT = 10;
+export const INSTALL_DISCOUNT_CAP = 20;
+export const FEATURE_DISCOUNT_CAP = 25;
+
+/** The discount a row actually confers: the stored value, plus the
+    15% established baseline on feature rows of established clients
+    (capped at 25%). Install rows have no baseline. */
+export function effectiveDiscountPct(
+  projectType: string,
+  storedPct: number,
+  isClient: boolean,
+): number {
+  if (projectType === 'feature' && isClient) {
+    return Math.min(FEATURE_DISCOUNT_CAP, ESTABLISHED_FEATURE_BASE_PCT + storedPct);
+  }
+  return storedPct;
+}
+
+/** The final quoted price: tier price minus the total percent off. */
+export function quotePriceCents(tierPriceCents: number, effectivePct: number): number {
+  return Math.round(tierPriceCents * (1 - effectivePct / 100));
+}
 
 export interface PricingTier {
   id: number;
@@ -16,17 +47,6 @@ export interface PricingTier {
   description: string;
   /** False for dashboard-only tiers (Free) — forms never offer them. */
   isPublic: boolean;
-}
-
-/** The final quoted price: tier price, feature rate when it applies,
-    then the discount. Rounded to the cent. */
-export function quotePriceCents(
-  tierPriceCents: number,
-  projectType: string,
-  discountPct: number,
-): number {
-  const base = projectType === 'feature' ? tierPriceCents * FEATURE_RATE : tierPriceCents;
-  return Math.round(base * (1 - discountPct / 100));
 }
 
 export async function listTiers(db: D1Database, publicOnly = false): Promise<PricingTier[]> {

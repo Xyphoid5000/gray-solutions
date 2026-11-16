@@ -35,9 +35,6 @@ export const FALLBACK_TIERS: PricingTier[] = [
   },
 ];
 
-/** A feature on an established client's site prices at 85% of the tier. */
-export const FEATURE_RATE = 0.85;
-
 export function formatPrice(cents: number): string {
   return `$${Math.round(cents / 100).toLocaleString('en-US')}`;
 }

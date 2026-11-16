@@ -10,6 +10,18 @@ const emit = defineEmits<{ refresh: [] }>();
 // Forms never offer dashboard-only tiers (Free) — only public ones.
 const formTiers = computed(() => props.data.tiers.filter((t) => t.isPublic !== false));
 
+// Feature prices show what this client actually pays: the tier price
+// minus their total percent off. The API returns the effective
+// discount on the feature row (15% baseline + 10% referral = 25%);
+// with no feature row yet, the 15% returning-client baseline still
+// applies — the feature form only renders for established clients.
+const featureDiscountPct = computed(
+  () => props.data.pricings.find((p) => p.projectType === 'feature')?.discountPct ?? 15,
+);
+function featurePrice(tier: { priceCents: number }): string {
+  return formatPrice(Math.round(tier.priceCents * (1 - featureDiscountPct.value / 100)));
+}
+
 const changeDetails = ref('');
 const featureDetails = ref('');
 const featureTierId = ref('');
@@ -229,7 +241,7 @@ async function lockIn() {
           <select v-model="featureTierId" required aria-label="Pricing tier for the feature">
             <option value="">Pick a tier</option>
             <option v-for="tier in formTiers" :key="tier.id" :value="String(tier.id)">
-              {{ tier.name }} — from {{ formatPrice(tier.priceCents) }}
+              {{ tier.name }} — from {{ featurePrice(tier) }}
             </option>
           </select>
         </label>
@@ -278,12 +290,12 @@ async function lockIn() {
     <section aria-label="Share Gray Solutions">
       <h2>Share Gray Solutions</h2>
       <p v-if="props.data.client.isClient" class="form-help">
-        Know a business that needs a site? Send them your link &mdash; they get 10% off, and you
-        get 10% off future enhancements when they reach out.
+        Know a business that needs a site? Send them your link &mdash; they get 10% off, and your
+        feature discount goes to 25% off when they reach out.
       </p>
       <p v-else class="form-help">
         Know a business that needs a site? Send them your link &mdash; they get 10% off, and you
-        get 20% off your site when they reach out.
+        get 10% more off your site when they reach out.
       </p>
       <p v-if="shareError" class="dash-error" role="alert">{{ shareError }}</p>
       <div v-if="shareUrl" class="share-row">
