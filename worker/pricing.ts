@@ -7,32 +7,46 @@ import { json, makeThrottle, clientIp } from './http';
 import type { D1Database, Env } from './env';
 
 /** Discounts are percents off the LIST price, added — never
-    multiplied. An established client's feature work starts at 15%
-    off; a referral reward adds 10 points, for 25% off total.
-    First-time customers start at 0 (10% if they arrived through a
-    referral token) and add 10 points by generating a lead before
-    billing, for 20% off total.
-    The database stores only the referral-earned portion on feature
-    rows (0 or 10) — the 15% baseline is derived here, so flipping a
-    client to established needs no row update and old rows read
-    correctly. Stored values stay inside the CHECK (0,10,20). */
-export const ESTABLISHED_FEATURE_BASE_PCT = 15;
+    multiplied — and they live in the `discounts` table: one row per
+    client holding their total earned percent and how many leads
+    they have generated. The ladder: a lead who arrives through a
+    referral token (or the hidden on-site code) starts at 10%; a
+    client's first generated lead adds 10 points; each lead after
+    that adds 5; the total never passes 50%. A completed-and-paid
+    project sets a 15% floor (the dashboard Worker applies that —
+    never a reduction: a larger earned total is never lowered to
+    it). Quote-time caps apply per project type: installs cap at
+    25%, feature and upgrade work at 50%. */
 export const REFERRAL_PCT = 10;
-export const INSTALL_DISCOUNT_CAP = 20;
-export const FEATURE_DISCOUNT_CAP = 25;
+export const FIRST_LEAD_PCT = 10;
+export const FURTHER_LEAD_PCT = 5;
+export const DISCOUNT_CAP_PCT = 50;
+export const INSTALL_DISCOUNT_CAP = 25;
+export const FEATURE_DISCOUNT_CAP = 50;
 
-/** The discount a row actually confers: the stored value, plus the
-    15% established baseline on feature rows of established clients
-    (capped at 25%). Install rows have no baseline. */
-export function effectiveDiscountPct(
-  projectType: string,
-  storedPct: number,
-  isClient: boolean,
-): number {
-  if (projectType === 'feature' && isClient) {
-    return Math.min(FEATURE_DISCOUNT_CAP, ESTABLISHED_FEATURE_BASE_PCT + storedPct);
-  }
-  return storedPct;
+/** The percent a quote may actually apply: the earned total,
+    clamped to the cap for the project type. Unknown types price
+    like an install (the conservative cap). */
+export function clampDiscountPct(projectType: string, earnedPct: number): number {
+  const cap = projectType === 'feature' || projectType === 'upgrade' ? FEATURE_DISCOUNT_CAP : INSTALL_DISCOUNT_CAP;
+  return Math.max(0, Math.min(cap, earnedPct));
+}
+
+/** What one more generated lead earns: 10 points for the first
+    lead, 5 for every lead after that. */
+export function nextLeadIncrement(leadsCount: number): number {
+  return leadsCount <= 0 ? FIRST_LEAD_PCT : FURTHER_LEAD_PCT;
+}
+
+/** The referrer's new total after one fresh lead: the increment
+    for that lead, capped at 50%. Returns the new total and the
+    points actually added (0 once the cap is reached). */
+export function applyLeadReward(
+  currentPct: number,
+  leadsCount: number,
+): { pct: number; increment: number } {
+  const pct = Math.min(DISCOUNT_CAP_PCT, currentPct + nextLeadIncrement(leadsCount));
+  return { pct, increment: pct - currentPct };
 }
 
 /** The final quoted price: tier price minus the total percent off. */
