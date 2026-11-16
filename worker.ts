@@ -1,6 +1,8 @@
 // Cloudflare Worker entry: serves the static site, plus the contact-form
-// API, the referral-token API, the pricing API, and the client/admin
-// dashboard APIs (magic-link sign-in, requests, billing).
+// API, the referral-token API, and the pricing API. The client/admin
+// dashboard lives on its own subdomain (dashboard.graywebsolutions.com,
+// served by the dashboard-template Worker) — /dashboard paths redirect
+// there, preserving the query string so old magic links keep working.
 //
 // Non-API requests fall through to the static assets (same behavior as the
 // dashboard-managed assets-only setup). POST /api/contact sends the inquiry
@@ -30,16 +32,6 @@ import {
   INSTALL_DISCOUNT_CAP,
   FEATURE_DISCOUNT_CAP,
 } from './worker/pricing';
-import { handleMagicLink, handlePassword, handleVerify, authenticateSession } from './worker/auth';
-import {
-  handleMe,
-  handleCreateRequest,
-  handleUpdateRequest,
-  handleSetBilled,
-  handleRequestImage,
-  handleMintShareToken,
-  handleLockIn,
-} from './worker/dashboard';
 
 interface ContactPayload {
   name?: string;
@@ -498,88 +490,15 @@ export default {
     if (url.pathname === '/api/pricing') {
       return handlePricing(request, env);
     }
-    if (url.pathname === '/api/auth/magic-link') {
-      return handleMagicLink(request, env);
-    }
-    if (url.pathname === '/api/auth/password') {
-      return handlePassword(request, env);
-    }
-    if (url.pathname === '/api/auth/verify') {
-      return handleVerify(request, env);
-    }
-    if (url.pathname === '/api/dashboard/me') {
-      if (request.method !== 'GET') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      const session = await authenticateSession(request, env);
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to view the dashboard.' }, 401);
-      }
-      return handleMe(request, env, session);
-    }
-    if (url.pathname === '/api/referral-token') {
-      if (request.method !== 'POST') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      const session = await authenticateSession(request, env);
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to get a share link.' }, 401);
-      }
-      return handleMintShareToken(request, env, session);
-    }
-    if (url.pathname === '/api/lock-in') {
-      if (request.method !== 'POST') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      const session = await authenticateSession(request, env);
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to lock in.' }, 401);
-      }
-      return handleLockIn(request, env, session);
-    }
-    if (url.pathname === '/api/requests') {
-      if (request.method !== 'POST') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      const session = await authenticateSession(request, env);
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to submit a request.' }, 401);
-      }
-      return handleCreateRequest(request, env, session);
-    }
-    const requestMatch = /^\/api\/requests\/(\d+)$/.exec(url.pathname);
-    if (requestMatch) {
-      if (request.method !== 'PATCH') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      const session = await authenticateSession(request, env);
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to update requests.' }, 401);
-      }
-      return handleUpdateRequest(request, env, session, Number(requestMatch[1]));
-    }
-    const billedMatch = /^\/api\/clients\/(\d+)\/billed$/.exec(url.pathname);
-    if (billedMatch) {
-      if (request.method !== 'PATCH') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      const session = await authenticateSession(request, env);
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to update billing.' }, 401);
-      }
-      return handleSetBilled(request, env, session, Number(billedMatch[1]));
-    }
-    if (url.pathname === '/api/request-image') {
-      if (request.method !== 'GET') {
-        return json({ ok: false, error: 'Method not allowed.' }, 405);
-      }
-      // Image links open in a new tab, so the session token travels
-      // as a query param here — the one endpoint that allows it.
-      const session = await authenticateSession(request, env, { allowQueryToken: true });
-      if (!session) {
-        return json({ ok: false, error: 'Sign in to view images.' }, 401);
-      }
-      return handleRequestImage(request, env, session);
+    // The dashboard moved to its own subdomain. Old /dashboard URLs —
+    // including emailed magic links, which carry ?token= — redirect
+    // there with the path and query intact (same DB, same HMAC key on
+    // the new Worker, so the tokens still verify).
+    if (url.pathname === '/dashboard' || url.pathname.startsWith('/dashboard/')) {
+      return Response.redirect(
+        `https://dashboard.graywebsolutions.com${url.pathname}${url.search}`,
+        302,
+      );
     }
     return env.ASSETS.fetch(request);
   },

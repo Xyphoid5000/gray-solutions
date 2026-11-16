@@ -42,6 +42,15 @@ function goDemos() {
   const w = window.open('https://demos.graywebsolutions.com', '_blank');
   if (w) w.opener = null;
 }
+/** The client dashboard lives on its own subdomain, like the demos —
+    a new tab, the portfolio stays open. Same opener-severing form as
+    goDemos. */
+function goDashboard() {
+  menuOpen.value = false;
+  desktopMenuOpen.value = false;
+  const w = window.open('https://dashboard.graywebsolutions.com', '_blank');
+  if (w) w.opener = null;
+}
 
 /** The cord lives here but only while bonus content is on. It mounts
     with everything hidden inside the G. emblem (the G is its housing —
@@ -229,7 +238,7 @@ function retractCord(done: () => void) {
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
       <button type="button" @click="goDemos">Demos</button>
-      <button type="button" @click="goPath('/dashboard')">Client login</button>
+      <button type="button" @click="goDashboard">Client login</button>
     </div>
     <!-- Mobile hamburger. -->
     <button
@@ -254,7 +263,7 @@ function retractCord(done: () => void) {
       <button type="button" @click="goContact">Contact me</button>
       <button type="button" @click="goPath('/about')">About me</button>
       <button type="button" @click="goDemos">Demos</button>
-      <button type="button" @click="goPath('/dashboard')">Client login</button>
+      <button type="button" @click="goDashboard">Client login</button>
     </div>
       <!-- Hidden accessibility toggle: forces off animations for WCAG 2 compliance. -->
       <label class="a11y-toggle">
