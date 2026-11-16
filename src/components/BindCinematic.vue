@@ -679,7 +679,7 @@ html[data-theme='dark'] .bind-stack :deep(.pile-page) {
     inset 0 0 40px rgba(0, 0, 0, 0.5);
 }
 /* The finished cover, matching the bound book on the home page:
-   G. mark, Gray Solutions., tagline, byline. */
+   G. mark, Gray Web Solutions., tagline, byline. */
 .bind-cover-frame {
   flex: 1;
   margin: 13px;

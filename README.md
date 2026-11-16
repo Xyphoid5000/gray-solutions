@@ -1,6 +1,6 @@
-# Gray Solutions
+# Gray Web Solutions
 
-The home of **Gray Solutions** — Chris Gray's studio for custom websites and
+The home of **Gray Web Solutions** — Chris Gray's studio for custom websites and
 digital experiences. A dark, cinematic single-page site: a scroll-driven
 Three.js + GSAP intro ("you've been standing on the logo the entire time,"
 told backwards) that lands on a fast, premium homepage.

@@ -186,7 +186,7 @@ defineExpose({ rotateBy });
         <span v-if="tagline" class="book3d-front-tag">{{ tagline }}</span>
         <span v-if="author" class="book3d-front-author">{{ author }}</span>
       </span>
-      <!-- Back cover: synopsis, or bonus toggle for Gray Solutions. -->
+      <!-- Back cover: synopsis, or bonus toggle for Gray Web Solutions. -->
       <span class="book3d-back">
         <span v-if="showBonusToggle" class="book3d-bonus">
           <span class="book3d-bonus-label">Bonus content</span>
@@ -329,7 +329,7 @@ defineExpose({ rotateBy });
   line-height: 1;
   position: relative;
 }
-/* Wax seal pressed over the G. on the Gray Solutions book (bonus on). */
+/* Wax seal pressed over the G. on the Gray Web Solutions book (bonus on). */
 .wax-seal--book3d {
   position: absolute;
   left: 50%;
@@ -398,7 +398,7 @@ defineExpose({ rotateBy });
   color: rgba(232, 205, 150, 0.85);
   line-height: 1.5;
 }
-/* Bonus toggle on the Gray Solutions back cover. */
+/* Bonus toggle on the Gray Web Solutions back cover. */
 .book3d-bonus {
   display: flex;
   flex-direction: column;
