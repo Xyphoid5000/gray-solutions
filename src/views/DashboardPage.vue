@@ -199,6 +199,9 @@ function signOut() {
 .dashboard-form {
   max-width: 32rem;
 }
+.dashboard-form .btn-solid {
+  margin-top: 1rem;
+}
 .dash-top {
   display: flex;
   align-items: center;
