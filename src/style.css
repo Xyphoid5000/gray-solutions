@@ -307,8 +307,8 @@ a {
 }
 .nav-inner {
   height: 100%;
-  width: min(var(--wrap), 100% - 3rem);
-  margin-inline: auto;
+  width: 100%;
+  padding-inline: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3616,7 +3616,7 @@ html[data-theme='dark'] .page-tab {
 .nav-dropdown-menu {
   position: absolute;
   top: 100%;
-  right: 1rem;
+  right: 1.5rem;
   min-width: 12rem;
   background: var(--bg, #14100a);
   border: 1px solid rgba(208, 138, 78, 0.2);
