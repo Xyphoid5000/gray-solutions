@@ -27,6 +27,33 @@ export function randomToken(bytes = 32): string {
   return base64url(buf);
 }
 
+/** PBKDF2 iteration count for password hashes. 100000 is the
+    Workerd WebCrypto cap — never exceed it (Node accepts higher
+    counts, so a Node test will not catch an over-cap value). The
+    dashboard Worker verifies these hashes and rejects anything
+    over the cap, so this number is part of the shared format. */
+export const PASSWORD_HASH_ITERATIONS = 100000;
+
+/** Hashes a password for dashboard sign-in, in the format the
+    dashboard Worker verifies:
+    `pbkdf2$<iterations>$<salt-b64url>$<hash-b64url>` — PBKDF2
+    with SHA-256, a 16-byte random salt, and a 32-byte derived
+    key; base64url without padding. Verification lives on the
+    dashboard side; this Worker only ever creates hashes. */
+export async function hashPassword(password: string): Promise<string> {
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, [
+    'deriveBits',
+  ]);
+  const derived = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: salt as BufferSource, iterations: PASSWORD_HASH_ITERATIONS, hash: 'SHA-256' },
+    key,
+    256,
+  );
+  return `pbkdf2$${PASSWORD_HASH_ITERATIONS}$${base64url(salt)}$${base64url(new Uint8Array(derived))}`;
+}
+
 export async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', enc.encode(value));
   return [...new Uint8Array(digest)]

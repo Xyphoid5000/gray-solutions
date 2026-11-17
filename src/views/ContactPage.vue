@@ -15,8 +15,8 @@ import { manuscriptBound } from '../lib/manuscript';
         />
         <p v-reveal class="contact-sub">
           Tell me about your business, your goals, and where your website
-          stands today. Everything below is wrapped into one email —
-          straight to my inbox.
+          stands today. Create your login below, and we&rsquo;ll pick up
+          the conversation in your dashboard.
         </p>
         <div v-reveal>
           <ContactForm :is-bound="manuscriptBound" />

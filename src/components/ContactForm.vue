@@ -33,6 +33,15 @@ const hintSeesBonus = ref(false);
 const discountError = ref('');
 const discountInput = ref<HTMLInputElement | null>(null);
 const emailInput = ref<HTMLInputElement | null>(null);
+/** Password validation message (too short, or the two fields
+    don't match) — the Worker enforces the same rules. */
+const passwordError = ref('');
+/** The email from the signup that just succeeded — the success
+    modal links to the dashboard with it prefilled. */
+const submittedEmail = ref('');
+const dashboardSigninUrl = computed(
+  () => `https://dashboard.graywebsolutions.com?email=${encodeURIComponent(submittedEmail.value)}`,
+);
 /** True when the typed email already has an account — the form
     blocks submission and points at the dashboard instead. */
 const emailExists = ref(false);
@@ -174,6 +183,21 @@ async function submitContactForm(event: SubmitEvent) {
   const comments = String(formData.get('comments') ?? '').trim();
   const discount = String(formData.get('discount-code') ?? '').trim();
   const company = String(formData.get('company') ?? '').trim();
+  // Passwords are never trimmed: spaces are part of the password.
+  const password = String(formData.get('password') ?? '');
+  const confirmPassword = String(formData.get('confirm-password') ?? '');
+
+  // The login: at least 8 characters, and the two fields must
+  // match. The Worker enforces the same rules server-side.
+  passwordError.value = '';
+  if (password.length < 8) {
+    passwordError.value = 'Your password must be at least 8 characters.';
+    return;
+  }
+  if (password !== confirmPassword) {
+    passwordError.value = "Your passwords don't match.";
+    return;
+  }
 
   // A code only counts if it matches the one currently on the phone.
   discountError.value = '';
@@ -202,7 +226,7 @@ async function submitContactForm(event: SubmitEvent) {
   }
 
   formError.value = false;
-  formStatus.value = 'Sending…';
+  formStatus.value = 'Creating your login…';
   try {
     const res = await fetch('/api/contact', {
       method: 'POST',
@@ -214,18 +238,19 @@ async function submitContactForm(event: SubmitEvent) {
         hasSite: hasSite.value,
         siteUrl,
         comments,
+        password,
+        confirmPassword,
         discountLine,
         discountVerified,
         referralToken: referralActive.value ? referral.token : '',
         tierId: selectedTierId.value ? Number(selectedTierId.value) : null,
-        projectType: 'install',
         company,
       }),
     });
     const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
     if (res.status === 409) {
       // Authoritative answer: the email already has an account.
-      // The inline note carries the message; clear "Sending…".
+      // The inline note carries the message; clear the status line.
       emailExists.value = true;
       formStatus.value = '';
       return;
@@ -233,13 +258,15 @@ async function submitContactForm(event: SubmitEvent) {
     if (!res.ok || !data.ok) {
       throw new Error(data.error || 'Something went wrong sending your message.');
     }
-    formStatus.value = 'Got it — I read every note myself and reply within a couple of days.';
+    formStatus.value = 'Your login is created — sign in to your dashboard to follow the conversation.';
+    submittedEmail.value = email;
     sent.value = true;
     contactSubmitted.value = true;
     form.reset();
     hasSite.value = '';
     selectedTierId.value = '';
     discountText.value = '';
+    passwordError.value = '';
     emailExists.value = false;
   } catch (err) {
     formError.value = true;
@@ -258,8 +285,11 @@ async function submitContactForm(event: SubmitEvent) {
             <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </span>
-        <p class="contact-success-title">Thank you for choosing Gray Web Solutions.</p>
-        <p class="contact-success-sub">Your message has been sent. Chris will follow up with you within 3 days to discuss your project.</p>
+        <p class="contact-success-title">Your login is ready.</p>
+        <p class="contact-success-sub">Your message has been sent. Chris will follow up with you within 3 days to discuss your project — sign in to your dashboard to follow the conversation.</p>
+        <a class="contact-modal-close" :href="dashboardSigninUrl">
+          Sign in to your dashboard
+        </a>
         <button type="button" class="contact-modal-close" @click="sent = false">
           Done
         </button>
@@ -285,6 +315,18 @@ async function submitContactForm(event: SubmitEvent) {
         <input ref="phoneInput" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" @input="onPhoneInput" />
       </label>
     </div>
+    <div class="contact-row contact-row-2">
+      <label class="field">
+        <span>Password</span>
+        <input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters" aria-describedby="password-error" @input="passwordError = ''" />
+      </label>
+      <label class="field">
+        <span>Confirm password</span>
+        <input name="confirm-password" type="password" autocomplete="new-password" required minlength="8" placeholder="Same password again" aria-describedby="password-error" @input="passwordError = ''" />
+      </label>
+    </div>
+    <small v-if="passwordError" id="password-error" class="field-error" role="alert">{{ passwordError }}</small>
+    <small v-else class="field-hint">You'll use this email and password to sign in to your dashboard.</small>
     <fieldset class="field">
       <legend>Do you have an existing website?</legend>
       <div class="radio-row">
@@ -326,7 +368,7 @@ async function submitContactForm(event: SubmitEvent) {
       Starting at {{ formatPrice(selectedTier.priceCents) }}<template v-if="discountPct"> — {{ formatPrice(finalPrice ?? 0) }} with your {{ discountPct }}% off</template>.
     </p>
     <p v-if="referralActive" class="referral-note">
-      {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}10% off your website, applied when you send this form.
+      {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}10% off your website, applied when you create your login.
     </p>
     <label v-if="!referralActive" class="field">
       <span>Discount code <em>(if you found one)</em>
@@ -342,7 +384,7 @@ async function submitContactForm(event: SubmitEvent) {
     </label>
     <div class="contact-submit">
       <button class="btn btn-solid" type="submit">
-        Send it over <span class="arrow" aria-hidden="true">&rarr;</span>
+        Create my login <span class="arrow" aria-hidden="true">&rarr;</span>
       </button>
       <small aria-live="polite" :class="{ 'form-error': formError }">{{ formStatus || 'I read every note myself and reply within a couple of days.' }}</small>
     </div>

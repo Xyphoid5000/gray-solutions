@@ -2270,6 +2270,17 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
   color: #e5484d;
   font-weight: 600;
 }
+.field-error {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #e5484d;
+  font-weight: 600;
+}
+.field-hint {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  opacity: 0.75;
+}
 .email-exists-note {
   font-size: 0.85rem;
   line-height: 1.5;
@@ -3724,6 +3735,9 @@ html[data-theme='dark'] .page-tab {
   color: #1a1510;
   border: none;
   border-radius: 999px;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
