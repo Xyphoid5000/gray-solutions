@@ -33,14 +33,31 @@
 -- Upgrading: run sql/migrate-client-projects.sql (it copies
 -- client_pricing rows — do not DROP client_pricing until Phase 2
 -- is verified live).
+--
+-- Onboarding signup (2026-11-16): clients gains status +
+-- requested_tier_id, discussion_comments holds the pre-project
+-- conversation, and comment_notifications covers discussion
+-- threads too. Upgrading: run sql/migrate-onboarding.sql.
 
 CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   business_name TEXT NOT NULL,
   contact_name TEXT NOT NULL DEFAULT '',
   email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  -- PBKDF2 hash for dashboard password sign-in, in
+  -- `pbkdf2$<iter>$<salt-b64url>$<hash-b64url>` format. NULL until
+  -- a password is set (older rows, demo-gate rows). The dashboard
+  -- Worker owns verification; the signup form writes it.
+  password_hash TEXT,
   -- 1 once they've agreed to use Gray Web Solutions.
   is_client INTEGER NOT NULL DEFAULT 0,
+  -- Lifecycle: 'onboarding' from signup until Chris moves the
+  -- client forward, 'prospective' for leads without an account
+  -- decision yet, 'current' once established. Dual-write rule:
+  -- every writer that sets status also sets is_client =
+  -- (status = 'current'), and vice versa — is_client reads keep
+  -- working untouched.
+  status TEXT NOT NULL DEFAULT 'prospective' CHECK (status IN ('onboarding', 'prospective', 'current')),
   -- 1 for the permanent test client: hidden from the admin list
   -- unless testing mode is on.
   is_test INTEGER NOT NULL DEFAULT 0,
@@ -50,6 +67,9 @@ CREATE TABLE IF NOT EXISTS clients (
   -- Demo slug this client record is linked to (demos Worker sets it
   -- when the prospect provides their info at the demo gate).
   demo_slug TEXT,
+  -- The tier the visitor picked at signup. NULL when they picked
+  -- none ("not sure yet") — the requested tier, not a quote.
+  requested_tier_id INTEGER REFERENCES pricing_tiers(id),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -264,6 +284,37 @@ CREATE TABLE IF NOT EXISTS project_comments (
 );
 
 CREATE INDEX IF NOT EXISTS idx_project_comments_project ON project_comments(project_id);
+
+-- Discussion comments: the pre-project conversation with a client
+-- — the thread that starts at signup, before any project exists.
+-- The signup form seeds the first row with the visitor's project
+-- details; the dashboards carry the thread from there.
+CREATE TABLE IF NOT EXISTS discussion_comments (
+  id INTEGER PRIMARY KEY,
+  client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  -- The commenter's email address (chris@ or the client's).
+  comment_owner TEXT NOT NULL,
+  comment_text TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  -- When the counterparty read it. NULL = unread; the owner never
+  -- needs to read their own comment.
+  read_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_discussion_comments_client ON discussion_comments(client_id);
+
+-- Comment notifications: one row per (thread, recipient) holding
+-- when the last notification email went out, so a thread with
+-- several unread comments sends one email, not one per comment.
+-- thread_id is the project id, the request id, or the client id
+-- for a discussion thread.
+CREATE TABLE IF NOT EXISTS comment_notifications (
+  thread_kind TEXT NOT NULL CHECK (thread_kind IN ('project', 'request', 'discussion')),
+  thread_id TEXT NOT NULL,
+  recipient_email TEXT NOT NULL,
+  last_sent_at TEXT NOT NULL,
+  PRIMARY KEY (thread_kind, thread_id, recipient_email)
+);
 
 -- Referral leads: one row per lead a client's sharing brought in.
 -- lead_client_id is UNIQUE: one attribution per lead, so the

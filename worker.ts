@@ -15,29 +15,29 @@
 // GET /api/featured-image?key= serves a featured site's screenshot
 // from R2 — only keys the table references.
 //
-// Every contact submission is also recorded in the client database
-// (best-effort, after the email to Chris goes out — a database failure
-// never blocks the inquiry). The form is for NEW inquiries only: an
-// email that already has an account is rejected with a 409, before
-// anything is sent or recorded — existing clients use their
-// dashboard. A submission through a referral token or the hidden
-// on-site code gives the lead 10% off, kept in the `discounts`
-// table. Every fresh lead a token brings in earns the referrer
-// more off — 10 points for the first lead, 5 per lead after,
-// capped at 50% — and a discount-status email each time. The lead's
-// submission also creates their install project in
-// `client_project`: a picked tier quotes at tier price minus the
-// lead's discount, capped at 25% for installs. The contact form
-// can pre-check an email through GET /api/contact/check-email,
-// which answers whether the email already has an account.
+// Every signup is also recorded in the client database — the
+// account row is created BEFORE the email to Chris goes out, so
+// a signup that can't create an account never looks like it
+// succeeded. The form is for NEW signups only: an email that
+// already has an account is rejected with a 409, before anything
+// is sent or recorded — existing clients use their dashboard.
+// A submission through a referral token or the hidden on-site
+// code gives the lead 10% off, kept in the `discounts` table.
+// Every fresh lead a token brings in earns the referrer more
+// off — 10 points for the first lead, 5 per lead after, capped
+// at 50% — and a discount-status email each time. The signup
+// seeds the discussion thread with the visitor's message; no
+// project is created — projects come later, from the dashboard
+// conversation. The form can pre-check an email through
+// GET /api/contact/check-email, which answers whether the email
+// already has an account.
 
 import { json, clientIp, makeThrottle } from './worker/http';
+import { hashPassword } from './worker/crypto';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
 import { handleFeatured, handleFeaturedImage } from './worker/featured';
 import {
   handlePricing,
-  quotePriceCents,
-  clampDiscountPct,
   applyLeadReward,
   nextLeadIncrement,
   REFERRAL_PCT,
@@ -51,6 +51,11 @@ interface ContactPayload {
   hasSite?: string;
   siteUrl?: string;
   comments?: string;
+  /** The password for the new dashboard login. Never logged,
+      never emailed — only its hash is stored. */
+  password?: string;
+  /** Must match `password`; checked client- and server-side. */
+  confirmPassword?: string;
   discountLine?: string;
   /** True when the visitor's discount code matched the live code. */
   discountVerified?: boolean;
@@ -232,18 +237,14 @@ async function sendDiscountStatusEmail(
   }
 }
 
-/** A client_project id: a 7-character lowercase hex "short SHA",
-    like a short git hash — short enough to quote in email subjects
-    and reply-to addresses. */
-function newProjectId(): string {
-  const bytes = new Uint8Array(4);
-  crypto.getRandomValues(bytes);
-  return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 7);
-}
-
-/** Records a contact submission in the client database. Best-effort:
-    throws nothing — callers log and continue, because the email to
-    Chris already went out. */
+/** Records a signup in the client database. The client INSERT is
+    required: it throws on failure, and the caller answers 503
+    without sending the inquiry email — a signup with no account
+    must never look like it succeeded. Everything after the
+    insert is best-effort, each step in its own try/catch: the
+    account exists and the inquiry email carries the full
+    message, so a discounts, referral, or discussion failure is
+    logged and the signup still succeeds. */
 async function recordSubmission(
   env: Env,
   db: D1Database,
@@ -251,147 +252,138 @@ async function recordSubmission(
     name: string;
     email: string;
     siteUrl: string;
+    comments: string;
+    passwordHash: string;
     discountVerified: boolean;
     referralToken: string;
-    tierId: number | null;
+    requestedTierId: number | null;
   },
 ): Promise<void> {
   const email = input.email.toLowerCase();
   const businessName = businessNameFor(input.name, input.siteUrl);
+  // Plain INSERT, no ON CONFLICT: the handler already rejected
+  // emails with an account, so a conflict here is a race — it
+  // throws, and the caller answers 409. Dual-write: status and
+  // is_client are set together, always ('onboarding' ⇔ 0).
   await db
     .prepare(
-      `INSERT INTO clients (business_name, contact_name, email) VALUES (?, ?, ?)
-       ON CONFLICT(email) DO UPDATE SET
-         contact_name = CASE WHEN contact_name = '' THEN excluded.contact_name ELSE contact_name END,
-         updated_at = datetime('now')`,
+      `INSERT INTO clients (business_name, contact_name, email, status, is_client, password_hash, requested_tier_id)
+       VALUES (?, ?, ?, 'onboarding', 0, ?, ?)`,
     )
-    .bind(businessName, input.name, email)
+    .bind(businessName, input.name, email, input.passwordHash, input.requestedTierId)
     .run();
   const lead = await db
     .prepare('SELECT id, is_client FROM clients WHERE email = ?')
     .bind(email)
     .first<{ id: number; is_client: number }>();
-  if (!lead) return;
-  await db
-    .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
-    .bind(lead.id)
-    .run();
+  if (!lead) throw new Error('Signup record not found after insert');
 
   // A valid token identifies the referrer. An unknown token confers
   // nothing — only a real share link (or the verified on-site code)
   // earns the lead 10%.
   let tokenRow: { id: number; client_id: number; used: number } | null = null;
-  if (input.referralToken) {
-    tokenRow = await db
-      .prepare('SELECT id, client_id, used FROM referral_tokens WHERE token = ?')
-      .bind(input.referralToken)
-      .first<{ id: number; client_id: number; used: number }>();
-  }
-  if (tokenRow || input.discountVerified) {
-    await db
-      .prepare(
-        `UPDATE discounts SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
-      )
-      .bind(REFERRAL_PCT, lead.id)
-      .run();
-  }
-  const leadDiscount = await db
-    .prepare('SELECT id, discount_pct FROM discounts WHERE client_id = ?')
-    .bind(lead.id)
-    .first<{ id: number; discount_pct: number }>();
-
-  // The install project: every inquiry lands as one. A picked tier
-  // quotes at tier price minus the lead's discount, capped at 25%
-  // for installs; no tier means an unquoted project for Chris to
-  // price by hand. Insert-only: the /api/contact handler rejects
-  // emails that already have an account, so this client has no
-  // install project yet — a repeat submission never reaches here.
-  // Its own try/catch, so a project-table problem never blocks
-  // the referral reward below.
   try {
-    let tierPrice: number | null = null;
-    if (input.tierId) {
-      const tier = await db
-        .prepare('SELECT price_cents FROM pricing_tiers WHERE id = ?')
-        .bind(input.tierId)
-        .first<{ price_cents: number }>();
-      if (tier) tierPrice = tier.price_cents;
+    await db
+      .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
+      .bind(lead.id)
+      .run();
+    if (input.referralToken) {
+      tokenRow = await db
+        .prepare('SELECT id, client_id, used FROM referral_tokens WHERE token = ?')
+        .bind(input.referralToken)
+        .first<{ id: number; client_id: number; used: number }>();
     }
-    const appliedPct = leadDiscount ? clampDiscountPct('install', leadDiscount.discount_pct) : 0;
-    const price = tierPrice === null ? null : quotePriceCents(tierPrice, appliedPct);
-    let created = false;
-    for (let attempt = 0; attempt < 3 && !created; attempt++) {
-      try {
-        await db
-          .prepare(
-            `INSERT INTO client_project (id, client_id, type, name, description, tier_id, price_cents, status, remaining_balance_cents, discount_id, request_id, completion_reward_applied)
-             VALUES (?, ?, 'install', 'Website install', '', ?, ?, 'new', ?, ?, NULL, 0)`,
-          )
-          .bind(newProjectId(), lead.id, tierPrice === null ? null : input.tierId, price, price, leadDiscount?.id ?? null)
-          .run();
-        created = true;
-      } catch (err) {
-        if (attempt === 2) throw err;
-      }
+    if (tokenRow || input.discountVerified) {
+      await db
+        .prepare(
+          `UPDATE discounts SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
+        )
+        .bind(REFERRAL_PCT, lead.id)
+        .run();
     }
   } catch (err) {
-    console.error('Install project record skipped:', err);
+    console.error('Signup discount record skipped:', err);
   }
 
   // The referrer's reward: one attribution per lead, recorded in
   // referral_leads, so the ladder counts each lead exactly once no
   // matter how often a token is used. The discount-status email
   // goes out BEFORE the rows land — if the send fails, nothing is
-  // recorded and a later submission retries the notification. A
-  // client submitting through their own link keeps the 10%
-  // arrival discount but earns no referral reward.
-  if (tokenRow && env.RESEND_API_KEY) {
-    const attributed = await db
-      .prepare('SELECT id FROM referral_leads WHERE lead_client_id = ?')
-      .bind(lead.id)
-      .first<{ id: number }>();
-    if (!attributed) {
-      const referrer = await db
-        .prepare('SELECT id, email, contact_name, business_name FROM clients WHERE id = ?')
-        .bind(tokenRow.client_id)
-        .first<{ id: number; email: string; contact_name: string; business_name: string }>();
-      if (referrer && referrer.id !== lead.id) {
-        await db
-          .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
-          .bind(referrer.id)
-          .run();
-        const referrerDiscount = await db
-          .prepare('SELECT id, discount_pct, leads_count FROM discounts WHERE client_id = ?')
-          .bind(referrer.id)
-          .first<{ id: number; discount_pct: number; leads_count: number }>();
-        if (referrerDiscount) {
-          const reward = applyLeadReward(referrerDiscount.discount_pct, referrerDiscount.leads_count);
-          await sendDiscountStatusEmail(
-            env,
-            referrer,
-            reward.pct,
-            referrerDiscount.leads_count + 1,
-            input.referralToken,
-          );
+  // recorded. A client submitting through their own link keeps
+  // the 10% arrival discount but earns no referral reward.
+  try {
+    if (tokenRow && env.RESEND_API_KEY) {
+      const attributed = await db
+        .prepare('SELECT id FROM referral_leads WHERE lead_client_id = ?')
+        .bind(lead.id)
+        .first<{ id: number }>();
+      if (!attributed) {
+        const referrer = await db
+          .prepare('SELECT id, email, contact_name, business_name FROM clients WHERE id = ?')
+          .bind(tokenRow.client_id)
+          .first<{ id: number; email: string; contact_name: string; business_name: string }>();
+        if (referrer && referrer.id !== lead.id) {
           await db
-            .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
-            .bind(referrer.id, lead.id, input.referralToken)
+            .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
+            .bind(referrer.id)
             .run();
-          await db
-            .prepare(
-              `UPDATE discounts SET discount_pct = ?, leads_count = ?, updated_at = datetime('now') WHERE client_id = ?`,
-            )
-            .bind(reward.pct, referrerDiscount.leads_count + 1, referrer.id)
-            .run();
-          await db
-            .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
-            .bind(tokenRow.id)
-            .run();
+          const referrerDiscount = await db
+            .prepare('SELECT id, discount_pct, leads_count FROM discounts WHERE client_id = ?')
+            .bind(referrer.id)
+            .first<{ id: number; discount_pct: number; leads_count: number }>();
+          if (referrerDiscount) {
+            const reward = applyLeadReward(referrerDiscount.discount_pct, referrerDiscount.leads_count);
+            await sendDiscountStatusEmail(
+              env,
+              referrer,
+              reward.pct,
+              referrerDiscount.leads_count + 1,
+              input.referralToken,
+            );
+            await db
+              .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
+              .bind(referrer.id, lead.id, input.referralToken)
+              .run();
+            await db
+              .prepare(
+                `UPDATE discounts SET discount_pct = ?, leads_count = ?, updated_at = datetime('now') WHERE client_id = ?`,
+              )
+              .bind(reward.pct, referrerDiscount.leads_count + 1, referrer.id)
+              .run();
+            await db
+              .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
+              .bind(tokenRow.id)
+              .run();
+          }
         }
       }
     }
+  } catch (err) {
+    console.error('Referrer reward skipped:', err);
+  }
+
+  // The discussion thread starts here: the visitor's project
+  // details become the first comment, owned by their email. A
+  // missing table (the onboarding migration hasn't run) never
+  // fails the signup — the inquiry email carries the same
+  // message to Chris.
+  try {
+    await db
+      .prepare(
+        'INSERT INTO discussion_comments (client_id, comment_owner, comment_text) VALUES (?, ?, ?)',
+      )
+      .bind(lead.id, email, input.comments)
+      .run();
+  } catch (err) {
+    console.error('Discussion seed skipped:', err);
   }
 }
+
+/** The setup message for signup when the account schema isn't in
+    place yet (no database binding, or the onboarding migration
+    hasn't run): the visitor did nothing wrong, and no account
+    was created. */
+const SIGNUP_SETUP_ERROR = 'Account sign-up is not set up yet. Please try again later.';
 
 async function handleContact(request: Request, env: Env): Promise<Response> {
   if (!env.RESEND_API_KEY) {
@@ -421,41 +413,87 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   const referralToken = (payload.referralToken ?? '').trim().slice(0, 128);
   const tierIdRaw = typeof payload.tierId === 'number' ? payload.tierId : NaN;
   const tierId = Number.isInteger(tierIdRaw) && tierIdRaw > 0 ? tierIdRaw : null;
+  // Passwords are never trimmed: leading/trailing spaces are part
+  // of the password the visitor chose.
+  const password = payload.password ?? '';
+  const confirmPassword = payload.confirmPassword ?? '';
 
   if (!name || !EMAIL_RE.test(email) || !comments) {
     return json({ ok: false, error: 'Please fill in your name, a valid email, and your project details.' }, 400);
   }
+  if (password.length < 8) {
+    return json({ ok: false, error: 'Your password must be at least 8 characters.' }, 400);
+  }
+  if (password !== confirmPassword) {
+    return json({ ok: false, error: "Your passwords don't match." }, 400);
+  }
 
-  // The form is for new inquiries: an email that already has an
-  // account belongs in the dashboard. Enforced here, before the
-  // email goes out or anything is recorded. A lookup failure fails
-  // open — the inquiry still sends, and recording stays
-  // best-effort as ever.
-  if (env.DB_CLIENTS) {
-    try {
-      if (await emailHasAccount(env.DB_CLIENTS, email)) {
-        return json({ ok: false, error: 'An account already exists for this email.' }, 409);
-      }
-    } catch (err) {
-      console.error('Account check failed:', err);
+  // Signup needs the database: without it no account can be
+  // created, and sending the inquiry email would pretend one
+  // was. The 409 check below is authoritative for emails that
+  // already have an account; a lookup failure fails open toward
+  // attempting the insert, and a duplicate there surfaces as a
+  // UNIQUE error, answered 409.
+  const db = env.DB_CLIENTS;
+  if (!db) {
+    return json({ ok: false, error: SIGNUP_SETUP_ERROR }, 503);
+  }
+  try {
+    if (await emailHasAccount(db, email)) {
+      return json({ ok: false, error: 'An account already exists for this email.' }, 409);
     }
+  } catch (err) {
+    console.error('Account check failed:', err);
   }
 
   const to = env.CONTACT_TO || CHRIS_EMAIL;
   const from = env.CONTACT_FROM || 'website@graywebsolutions.com';
 
   // Name the picked tier in the inquiry email when the tier table
-  // exists; a missing table just omits the line.
+  // exists; a missing table just omits the line. The requested
+  // tier is recorded only when the tier actually exists.
   let tierLine = '';
-  if (tierId && env.DB_CLIENTS) {
+  let requestedTierId: number | null = null;
+  if (tierId) {
     try {
-      const tier = await env.DB_CLIENTS.prepare('SELECT name FROM pricing_tiers WHERE id = ?')
+      const tier = await db.prepare('SELECT name FROM pricing_tiers WHERE id = ?')
         .bind(tierId)
         .first<{ name: string }>();
-      if (tier) tierLine = `Pricing tier: ${tier.name}`;
+      if (tier) {
+        tierLine = `Pricing tier: ${tier.name}`;
+        requestedTierId = tierId;
+      }
     } catch {
-      /* pre-v2 schema — omit the line */
+      /* pre-v2 schema — omit the line, record no tier */
     }
+  }
+
+  // The account is created BEFORE the inquiry email goes out: a
+  // signup that can't create an account (the onboarding migration
+  // hasn't run, the insert fails) answers 503 with nothing
+  // written and no email sent as if it succeeded.
+  const passwordHash = await hashPassword(password);
+  try {
+    await recordSubmission(env, db, {
+      name,
+      email,
+      siteUrl,
+      comments,
+      passwordHash,
+      discountVerified,
+      referralToken,
+      requestedTierId,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : '';
+    if (/UNIQUE constraint failed/i.test(message)) {
+      return json({ ok: false, error: 'An account already exists for this email.' }, 409);
+    }
+    console.error('Signup record failed:', err);
+    if (/no such (column|table)/i.test(message)) {
+      return json({ ok: false, error: SIGNUP_SETUP_ERROR }, 503);
+    }
+    return json({ ok: false, error: 'Something went wrong creating your account. Please try again.' }, 503);
   }
 
   const text = [
@@ -466,6 +504,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     discountLine,
     tierLine,
     referralToken ? `Referral token: ${referralToken}` : '',
+    'Onboarding signup — an account was created for this email (status: onboarding).',
     '',
     comments,
   ]
@@ -498,23 +537,9 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     return json({ ok: false, error: 'Something went wrong sending your message. Please try again.' }, 502);
   }
 
-  // Record the inquiry in the client database. Failures here never
-  // fail the submission — the email above already went out.
-  if (env.DB_CLIENTS) {
-    try {
-      await recordSubmission(env, env.DB_CLIENTS, {
-        name,
-        email,
-        siteUrl,
-        discountVerified,
-        referralToken,
-        tierId,
-      });
-    } catch (err) {
-      console.error('Client record failed:', err);
-    }
-  }
-
+  // No session is minted here: the success screen links to the
+  // dashboard, where the visitor signs in with the login they
+  // just created.
   return json({ ok: true });
 }
 
