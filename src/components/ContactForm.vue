@@ -306,13 +306,13 @@ async function submitContactForm(event: SubmitEvent) {
     </div>
     <div class="contact-row contact-row-2">
       <label class="field">
+        <span>Phone <em>(optional)</em></span>
+        <input ref="phoneInput" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" @input="onPhoneInput" />
+      </label>
+      <label class="field">
         <span>Email</span>
         <input ref="emailInput" name="email" type="email" autocomplete="email" required placeholder="you@example.com" @blur="onEmailBlur" @input="emailExists = false" />
         <small v-if="emailExists" class="email-exists-note" role="alert">Looks like there's already an account with this email — <a href="https://dashboard.graywebsolutions.com" target="_blank" rel="noopener">sign in to your dashboard</a> to pick up where you left off.</small>
-      </label>
-      <label class="field">
-        <span>Phone <em>(optional)</em></span>
-        <input ref="phoneInput" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" @input="onPhoneInput" />
       </label>
     </div>
     <div class="contact-row contact-row-2">

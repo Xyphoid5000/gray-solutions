@@ -2308,6 +2308,7 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .contact-form input[type='email'],
 .contact-form input[type='tel'],
 .contact-form input[type='url'],
+.contact-form input[type='password'],
 .contact-form select,
 .contact-form textarea {
   width: 100%;
