@@ -258,10 +258,10 @@ async function recordSubmission(
   // is_client are set together, always ('onboarding' ⇔ 0).
   await db
     .prepare(
-      `INSERT INTO clients (business_name, contact_name, email, status, is_client, password_hash, requested_tier_id)
-       VALUES (?, ?, ?, 'onboarding', 0, ?, ?)`,
+      `INSERT INTO clients (business_name, contact_name, email, phone, status, is_client, password_hash, requested_tier_id)
+       VALUES (?, ?, ?, ?, 'onboarding', 0, ?, ?)`,
     )
-    .bind(input.businessName, input.name, email, input.passwordHash, input.requestedTierId)
+    .bind(input.businessName, input.name, email, input.phone || null, input.passwordHash, input.requestedTierId)
     .run();
   const lead = await db
     .prepare('SELECT id, is_client FROM clients WHERE email = ?')
