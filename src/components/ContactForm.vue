@@ -175,6 +175,7 @@ async function submitContactForm(event: SubmitEvent) {
   const form = event.currentTarget as HTMLFormElement;
   const formData = new FormData(form);
   const name = String(formData.get('name') ?? '').trim();
+  const businessName = String(formData.get('business-name') ?? '').trim();
   const email = String(formData.get('email') ?? '').trim();
   const phone = String(formData.get('phone') ?? '').trim();
   const site = String(formData.get('site-url') ?? '').trim();
@@ -233,6 +234,7 @@ async function submitContactForm(event: SubmitEvent) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         name,
+        businessName,
         email,
         phone,
         hasSite: hasSite.value,
@@ -298,10 +300,14 @@ async function submitContactForm(event: SubmitEvent) {
   </Teleport>
   <form class="contact-form" @submit.prevent="submitContactForm">
     <input name="company" type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true" />
-    <div class="contact-row">
+    <div class="contact-row contact-row-2">
       <label class="field">
         <span>Name</span>
         <input name="name" type="text" autocomplete="name" required placeholder="Your name" />
+      </label>
+      <label class="field">
+        <span>Company name</span>
+        <input name="business-name" type="text" autocomplete="organization" required placeholder="Your business name" />
       </label>
     </div>
     <div class="contact-row contact-row-2">

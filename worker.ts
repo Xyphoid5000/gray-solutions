@@ -46,6 +46,8 @@ import {
 
 interface ContactPayload {
   name?: string;
+  /** The company name, stored as the client's business_name. */
+  businessName?: string;
   email?: string;
   phone?: string;
   hasSite?: string;
@@ -172,18 +174,6 @@ async function handleReferral(request: Request, env: Env): Promise<Response> {
   return json({ ok: true, valid: true, referrer: row.businessName, discountPct: 10 });
 }
 
-function businessNameFor(name: string, siteUrl: string): string {
-  if (siteUrl) {
-    try {
-      const host = new URL(siteUrl).hostname.replace(/^www\./, '');
-      if (host) return host.slice(0, 200);
-    } catch {
-      /* fall through to the contact name */
-    }
-  }
-  return name.slice(0, 200);
-}
-
 /** A referrer's discount-status email: their current total, how it
     was earned, what the next referral earns, and their share link.
     The lead is never named. This is the one discount email the
@@ -250,7 +240,9 @@ async function recordSubmission(
   db: D1Database,
   input: {
     name: string;
+    businessName: string;
     email: string;
+    phone: string;
     siteUrl: string;
     comments: string;
     passwordHash: string;
@@ -260,7 +252,6 @@ async function recordSubmission(
   },
 ): Promise<void> {
   const email = input.email.toLowerCase();
-  const businessName = businessNameFor(input.name, input.siteUrl);
   // Plain INSERT, no ON CONFLICT: the handler already rejected
   // emails with an account, so a conflict here is a race — it
   // throws, and the caller answers 409. Dual-write: status and
@@ -270,7 +261,7 @@ async function recordSubmission(
       `INSERT INTO clients (business_name, contact_name, email, status, is_client, password_hash, requested_tier_id)
        VALUES (?, ?, ?, 'onboarding', 0, ?, ?)`,
     )
-    .bind(businessName, input.name, email, input.passwordHash, input.requestedTierId)
+    .bind(input.businessName, input.name, email, input.passwordHash, input.requestedTierId)
     .run();
   const lead = await db
     .prepare('SELECT id, is_client FROM clients WHERE email = ?')
@@ -363,16 +354,24 @@ async function recordSubmission(
   }
 
   // The discussion thread starts here: the visitor's project
-  // details become the first comment, owned by their email. A
-  // missing table (the onboarding migration hasn't run) never
-  // fails the signup — the inquiry email carries the same
-  // message to Chris.
+  // details become the first comment, owned by their email, with
+  // their existing site and phone number (when given) as a header
+  // so the context travels with the conversation. A missing table
+  // (the onboarding migration hasn't run) never fails the
+  // signup — the inquiry email carries the same message to Chris.
+  const header = [
+    input.siteUrl ? `Existing website: ${input.siteUrl}` : '',
+    input.phone ? `Phone: ${input.phone}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const seedText = header ? `${header}\n\n${input.comments}` : input.comments;
   try {
     await db
       .prepare(
         'INSERT INTO discussion_comments (client_id, comment_owner, comment_text) VALUES (?, ?, ?)',
       )
-      .bind(lead.id, email, input.comments)
+      .bind(lead.id, email, seedText)
       .run();
   } catch (err) {
     console.error('Discussion seed skipped:', err);
@@ -403,6 +402,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   }
 
   const name = (payload.name ?? '').trim();
+  const businessName = (payload.businessName ?? '').trim().slice(0, 200);
   const email = (payload.email ?? '').trim();
   const phone = (payload.phone ?? '').trim();
   const hasSite = payload.hasSite === 'yes';
@@ -418,8 +418,8 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   const password = payload.password ?? '';
   const confirmPassword = payload.confirmPassword ?? '';
 
-  if (!name || !EMAIL_RE.test(email) || !comments) {
-    return json({ ok: false, error: 'Please fill in your name, a valid email, and your project details.' }, 400);
+  if (!name || !businessName || !EMAIL_RE.test(email) || !comments) {
+    return json({ ok: false, error: 'Please fill in your name, company name, a valid email, and your project details.' }, 400);
   }
   if (password.length < 8) {
     return json({ ok: false, error: 'Your password must be at least 8 characters.' }, 400);
@@ -476,7 +476,9 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   try {
     await recordSubmission(env, db, {
       name,
+      businessName,
       email,
+      phone,
       siteUrl,
       comments,
       passwordHash,
@@ -498,6 +500,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
 
   const text = [
     `Name: ${name}`,
+    `Company: ${businessName}`,
     `Email: ${email}`,
     `Phone: ${phone || '—'}`,
     `Existing site: ${hasSite ? `Yes — ${siteUrl || '—'}` : 'No'}`,
