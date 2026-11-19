@@ -45,6 +45,14 @@ export interface Env {
   ADMIN_PASSWORD?: string;
   /** Optional: image uploads stay disabled until the bucket exists. */
   R2_UPLOADS?: R2Bucket;
+  /** Shared secret this Worker sends when it asks the dashboard
+      Worker to push a new-lead notification (POST /api/push/notify).
+      A runtime secret, set in the dashboard — the SAME value must
+      be set on the dashboard Worker. Without it, no push is attempted. */
+  INTERNAL_PUSH_SECRET?: string;
+  /** Dashboard base URL for the new-lead push call. Defaults to
+      https://dashboard.graywebsolutions.com when unset. */
+  DASHBOARD_PUSH_URL?: string;
 }
 
 export const CHRIS_EMAIL = 'chris@graywebsolutions.com';
