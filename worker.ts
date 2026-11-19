@@ -540,6 +540,38 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     return json({ ok: false, error: 'Something went wrong sending your message. Please try again.' }, 502);
   }
 
+  // New-lead push: tell the dashboard Worker to notify the admin
+  // right now, the same moment the inquiry email lands. The dashboard
+  // Worker owns the push subscriptions and the VAPID key; this Worker
+  // just calls its internal notify endpoint with the shared secret.
+  // Best-effort and never blocks the signup: a missing secret, a
+  // failed call, or a not-yet-deployed endpoint just logs.
+  try {
+    const secret = (env.INTERNAL_PUSH_SECRET ?? '').trim();
+    if (secret) {
+      const pushUrl =
+        (env.DASHBOARD_PUSH_URL ?? 'https://dashboard.graywebsolutions.com').replace(/\/$/, '') +
+        '/api/push/notify';
+      const pushRes = await fetch(pushUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${secret}`,
+        },
+        body: JSON.stringify({
+          title: `New lead: ${businessName}`,
+          body: `${name} — ${tierLine || 'website inquiry'}`,
+          url: '/dashboard',
+        }),
+      });
+      if (!pushRes.ok) {
+        console.error('New-lead push failed:', pushRes.status);
+      }
+    }
+  } catch (err) {
+    console.error('New-lead push failed:', err);
+  }
+
   // No session is minted here: the success screen links to the
   // dashboard, where the visitor signs in with the login they
   // just created.
