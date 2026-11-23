@@ -284,20 +284,9 @@ function onBindShelf() {
 /** Header nav: CONTACT ME lands on the contact form (or the socials once
     the form has been submitted and retired); the brand goes home. */
 function onNavContact() {
-  // Off the home page the book isn't mounted — plain navigation.
-  if (!isHome.value) {
-    goContactRoad();
-    return;
-  }
-  if ((office.view === 'desk')) {
-    if (!manuscriptBound.value && bindCinematic.value) {
-      runBinding();
-      return;
-    }
-    closeBookToSection('contact');
-  } else {
-    goContactRoad();
-  }
+  // Contact always jumps straight there — no binding cinematic, no
+  // paper page-turn. The book keeps its cinematics everywhere else.
+  goContactRoad();
 }
 function onNavHome() {
   // Off the home page, the brand just goes home.

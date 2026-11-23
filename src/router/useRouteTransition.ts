@@ -23,6 +23,8 @@ export function useRouteTransition() {
       router.push({ path: '/about', hash: '#socials' });
       return;
     }
+    // Straight to the contact page — no paper page-turn on this road.
+    skipTransition();
     if (route.path !== '/contact') router.push('/contact');
     else window.scrollTo({ top: 0, behavior: 'smooth' });
   }

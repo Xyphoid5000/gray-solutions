@@ -16,24 +16,34 @@
 // from R2 — only keys the table references.
 //
 // Every signup is also recorded in the client database — the
-// account row is created BEFORE the email to Chris goes out, so
-// a signup that can't create an account never looks like it
-// succeeded. The form is for NEW signups only: an email that
-// already has an account is rejected with a 409, before anything
-// is sent or recorded — existing clients use their dashboard.
-// A submission through a referral token or the hidden on-site
-// code gives the lead 10% off, kept in the `discounts` table.
-// Every fresh lead a token brings in earns the referrer more
-// off — 10 points for the first lead, 5 per lead after, capped
-// at 50% — and a discount-status email each time. The signup
-// seeds the discussion thread with the visitor's message; no
-// project is created — projects come later, from the dashboard
-// conversation. The form can pre-check an email through
-// GET /api/contact/check-email, which answers whether the email
-// already has an account.
+// account row is created BEFORE the confirmation email goes out,
+// so a signup that can't create an account never looks like it
+// succeeded. The row is PENDING until the visitor confirms their
+// email: the confirmation link (12 hours, single-use) signs them
+// straight into their dashboard, and only then does the signup
+// finish — the discussion seed, the inquiry email to Chris, the
+// new-lead push, and any referrer reward all wait for the
+// confirmation. A pending account can't sign in and stays out of
+// the admin lists; an hourly cleanup deletes pending accounts
+// whose link expired. The form is for NEW signups only: an email
+// that already has a confirmed account is rejected with a 409,
+// before anything is sent or recorded — existing clients use
+// their dashboard. An email with a pending account re-submits
+// to get a fresh confirmation link, with the original password
+// standing. A submission through a referral token or the hidden
+// on-site code gives the lead 10% off, kept in the `discounts`
+// table. Every confirmed lead a token brings in earns the
+// referrer more off — 10 points for the first lead, 5 per lead
+// after, capped at 50% — and a discount-status email each time.
+// The signup seeds the discussion thread with the visitor's
+// message once confirmed; no project is created — projects come
+// later, from the dashboard conversation. The form can pre-check
+// an email through GET /api/contact/check-email, which answers
+// whether the email already has an account, and whether that
+// account is still waiting on confirmation.
 
 import { json, clientIp, makeThrottle } from './worker/http';
-import { hashPassword } from './worker/crypto';
+import { hashPassword, randomToken, sha256Hex, timingSafeEqual } from './worker/crypto';
 import { CHRIS_EMAIL, type D1Database, type Env } from './worker/env';
 import { handleFeatured, handleFeaturedImage } from './worker/featured';
 import {
@@ -71,15 +81,38 @@ interface ContactPayload {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Whether the email already has a client row — an account. The
-    email column is COLLATE NOCASE, so the match is
-    case-insensitive. */
-async function emailHasAccount(db: D1Database, email: string): Promise<boolean> {
-  const row = await db
-    .prepare('SELECT 1 FROM clients WHERE email = ? LIMIT 1')
-    .bind(email)
-    .first();
-  return row !== null;
+/** Whether the email already has a client row, and whether that
+    account is still waiting on its email confirmation. The email
+    column is COLLATE NOCASE, so the match is case-insensitive.
+    A row with a password that hasn't confirmed yet reads
+    'pending': the visitor can re-submit to get a fresh
+    confirmation link, but the original password stands — a
+    re-submit never overwrites it. A row with no password (Chris
+    created it by hand) reads 'verified': it belongs in the
+    dashboard, and the form turns it away. */
+async function accountStatus(
+  db: D1Database,
+  email: string,
+): Promise<{ state: 'none' | 'verified' | 'pending'; id: number | null }> {
+  try {
+    const row = await db
+      .prepare('SELECT id, password_hash, email_verified FROM clients WHERE email = ?')
+      .bind(email)
+      .first<{ id: number; password_hash: string | null; email_verified: number | null }>();
+    if (!row) return { state: 'none', id: null };
+    if (!row.password_hash) return { state: 'verified', id: row.id };
+    if ((row.email_verified ?? 1) === 0) return { state: 'pending', id: row.id };
+    return { state: 'verified', id: row.id };
+  } catch (err) {
+    if (!(err instanceof Error && /no such column/i.test(err.message))) throw err;
+    // Pre-migration: no verification column, so every account
+    // reads verified and the old check decides.
+    const row = await db
+      .prepare('SELECT 1 FROM clients WHERE email = ? LIMIT 1')
+      .bind(email)
+      .first();
+    return row ? { state: 'verified', id: null } : { state: 'none', id: null };
+  }
 }
 
 // Email-check throttle: 10 checks / 15 min / IP — generous for
@@ -106,7 +139,8 @@ async function handleCheckEmail(request: Request, env: Env): Promise<Response> {
     return json({ ok: true, exists: false });
   }
   try {
-    return json({ ok: true, exists: await emailHasAccount(env.DB_CLIENTS, email) });
+    const status = await accountStatus(env.DB_CLIENTS, email);
+    return json({ ok: true, exists: status.state !== 'none', pending: status.state === 'pending' });
   } catch (err) {
     console.error('Email check failed:', err);
     return json({ ok: true, exists: false });
@@ -229,12 +263,15 @@ async function sendDiscountStatusEmail(
 
 /** Records a signup in the client database. The client INSERT is
     required: it throws on failure, and the caller answers 503
-    without sending the inquiry email — a signup with no account
-    must never look like it succeeded. Everything after the
-    insert is best-effort, each step in its own try/catch: the
-    account exists and the inquiry email carries the full
-    message, so a discounts, referral, or discussion failure is
-    logged and the signup still succeeds. */
+    without sending the confirmation email — a signup with no
+    account must never look like it succeeded. The row is created
+    PENDING (email_verified = 0) with a 12-hour confirmation
+    token; the discussion seed, the inquiry email, the push, and
+    any referrer reward all wait for the confirmation and run in
+    finalizeSignup instead. Everything after the insert is
+    best-effort, each step in its own try/catch: the account
+    exists and the confirmation email carries the link, so a
+    discounts failure is logged and the signup still succeeds. */
 async function recordSubmission(
   env: Env,
   db: D1Database,
@@ -243,23 +280,27 @@ async function recordSubmission(
     businessName: string;
     email: string;
     phone: string;
+    hasSite: boolean;
     siteUrl: string;
     comments: string;
     passwordHash: string;
+    discountLine: string;
+    tierLine: string;
     discountVerified: boolean;
     referralToken: string;
     requestedTierId: number | null;
   },
-): Promise<void> {
+): Promise<{ id: number; token: string }> {
   const email = input.email.toLowerCase();
   // Plain INSERT, no ON CONFLICT: the handler already rejected
   // emails with an account, so a conflict here is a race — it
   // throws, and the caller answers 409. Dual-write: status and
-  // is_client are set together, always ('onboarding' ⇔ 0).
+  // is_client are set together, always ('onboarding' ⇔ 0). The
+  // row starts unverified: the confirmation link flips it.
   await db
     .prepare(
-      `INSERT INTO clients (business_name, contact_name, email, phone, status, is_client, password_hash, requested_tier_id)
-       VALUES (?, ?, ?, ?, 'onboarding', 0, ?, ?)`,
+      `INSERT INTO clients (business_name, contact_name, email, phone, status, is_client, password_hash, requested_tier_id, email_verified)
+       VALUES (?, ?, ?, ?, 'onboarding', 0, ?, ?, 0)`,
     )
     .bind(input.businessName, input.name, email, input.phone || null, input.passwordHash, input.requestedTierId)
     .run();
@@ -296,6 +337,142 @@ async function recordSubmission(
     console.error('Signup discount record skipped:', err);
   }
 
+  // The referrer's reward waits for the confirmation — a lead
+  // that never confirms earns nobody anything. finalizeSignup
+  // runs it from the stored payload.
+
+  // The discussion seed waits for the confirmation too — the
+  // thread starts when the email proves real. finalizeSignup
+  // writes it from the stored payload.
+  const token = await createConfirmationToken(db, lead.id, {
+    name: input.name,
+    businessName: input.businessName,
+    email,
+    phone: input.phone,
+    hasSite: input.hasSite,
+    siteUrl: input.siteUrl,
+    comments: input.comments,
+    discountLine: input.discountLine,
+    tierLine: input.tierLine,
+    discountVerified: input.discountVerified,
+    referralToken: input.referralToken,
+    requestedTierId: input.requestedTierId,
+  });
+  return { id: lead.id, token };
+}
+
+/** The confirmation token: a random 32-byte value, stored as a
+    SHA-256 hash (the raw token only ever travels in the email),
+    good for 12 hours, single-use. The signup payload rides along
+    as JSON so the confirmation can finish the signup — discussion
+    seed, inquiry email, push, referrer reward — without trusting
+    anything the confirming request sends. */
+const CONFIRM_TTL = "datetime('now', '+12 hours')";
+
+async function createConfirmationToken(
+  db: D1Database,
+  clientId: number,
+  payload: Record<string, unknown>,
+): Promise<string> {
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  await db
+    .prepare(
+      `INSERT INTO email_confirmations (client_id, token_hash, expires_at, data) VALUES (?, ?, ${CONFIRM_TTL}, ?)`,
+    )
+    .bind(clientId, tokenHash, JSON.stringify(payload))
+    .run();
+  return token;
+}
+
+/** A fresh confirmation link for a pending account: the old
+    unused tokens die, so only one link is ever live per client.
+    The original password stands — the re-submit's password is
+    never stored. */
+async function rotateConfirmationToken(
+  db: D1Database,
+  clientId: number,
+  payload: Record<string, unknown>,
+): Promise<string> {
+  await db
+    .prepare('DELETE FROM email_confirmations WHERE client_id = ? AND used = 0')
+    .bind(clientId)
+    .run();
+  return createConfirmationToken(db, clientId, payload);
+}
+
+/** The confirmation email to the visitor. Throws when Resend
+    refuses it — the caller answers 502 and the visitor retries
+    through the re-submit path, which rotates the token and
+    sends again. */
+async function sendConfirmationEmail(
+  env: Env,
+  email: string,
+  name: string,
+  token: string,
+): Promise<void> {
+  const link = `https://dashboard.graywebsolutions.com/confirm?token=${token}`;
+  const text = [
+    `Hi ${name || 'there'},`,
+    '',
+    'Thanks for reaching out to Gray Web Solutions. One quick step before we get started:',
+    '',
+    `Confirm your email: ${link}`,
+    '',
+    'The link is good for 12 hours. Once you confirm, you will land straight in your client dashboard, where we will pick up the conversation about your project.',
+    '',
+    'If you did not ask for this, you can ignore it — the account is deleted automatically when the link expires.',
+    '',
+    '— Chris',
+    'Gray Web Solutions',
+  ].join('\n');
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Gray Web Solutions <donotreply@graywebsolutions.com>',
+      to: [email],
+      subject: 'Confirm your email — Gray Web Solutions',
+      text,
+    }),
+  });
+  if (!res.ok) {
+    console.error('Confirmation email failed:', res.status, await res.text().catch(() => ''));
+    throw new Error('CONFIRM_EMAIL_FAILED');
+  }
+}
+
+/** Finishes a signup whose email just confirmed: the referrer
+    reward (one attribution per lead), the discussion seed, the
+    inquiry email to Chris, and the new-lead push — everything
+    the signup held back. Called only from the internal
+    /api/internal/confirmed endpoint, which the dashboard Worker
+    hits after it flips the account verified. */
+async function finalizeSignup(
+  env: Env,
+  db: D1Database,
+  confirmation: { id: number; client_id: number; data: string },
+): Promise<void> {
+  const input = JSON.parse(confirmation.data) as {
+    name: string;
+    businessName: string;
+    email: string;
+    phone: string;
+    hasSite: boolean;
+    siteUrl: string;
+    comments: string;
+    discountLine: string;
+    tierLine: string;
+    discountVerified: boolean;
+    referralToken: string;
+    requestedTierId: number | null;
+  };
+  const leadId = confirmation.client_id;
+  const email = input.email.toLowerCase();
+
   // The referrer's reward: one attribution per lead, recorded in
   // referral_leads, so the ladder counts each lead exactly once no
   // matter how often a token is used. The discount-status email
@@ -303,17 +480,24 @@ async function recordSubmission(
   // recorded. A client submitting through their own link keeps
   // the 10% arrival discount but earns no referral reward.
   try {
+    let tokenRow: { id: number; client_id: number; used: number } | null = null;
+    if (input.referralToken) {
+      tokenRow = await db
+        .prepare('SELECT id, client_id, used FROM referral_tokens WHERE token = ?')
+        .bind(input.referralToken)
+        .first<{ id: number; client_id: number; used: number }>();
+    }
     if (tokenRow && env.RESEND_API_KEY) {
       const attributed = await db
         .prepare('SELECT id FROM referral_leads WHERE lead_client_id = ?')
-        .bind(lead.id)
+        .bind(leadId)
         .first<{ id: number }>();
       if (!attributed) {
         const referrer = await db
           .prepare('SELECT id, email, contact_name, business_name FROM clients WHERE id = ?')
           .bind(tokenRow.client_id)
           .first<{ id: number; email: string; contact_name: string; business_name: string }>();
-        if (referrer && referrer.id !== lead.id) {
+        if (referrer && referrer.id !== leadId) {
           await db
             .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
             .bind(referrer.id)
@@ -333,7 +517,7 @@ async function recordSubmission(
             );
             await db
               .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
-              .bind(referrer.id, lead.id, input.referralToken)
+              .bind(referrer.id, leadId, input.referralToken)
               .run();
             await db
               .prepare(
@@ -356,9 +540,7 @@ async function recordSubmission(
   // The discussion thread starts here: the visitor's project
   // details become the first comment, owned by their email, with
   // their existing site and phone number (when given) as a header
-  // so the context travels with the conversation. A missing table
-  // (the onboarding migration hasn't run) never fails the
-  // signup — the inquiry email carries the same message to Chris.
+  // so the context travels with the conversation.
   const header = [
     input.siteUrl ? `Existing website: ${input.siteUrl}` : '',
     input.phone ? `Phone: ${input.phone}` : '',
@@ -371,10 +553,147 @@ async function recordSubmission(
       .prepare(
         'INSERT INTO discussion_comments (client_id, comment_owner, comment_text) VALUES (?, ?, ?)',
       )
-      .bind(lead.id, email, seedText)
+      .bind(leadId, email, seedText)
       .run();
   } catch (err) {
     console.error('Discussion seed skipped:', err);
+  }
+
+  // The inquiry email to Chris — the same message the signup
+  // used to send immediately, now only after the email proves
+  // real.
+  const to = env.CONTACT_TO || CHRIS_EMAIL;
+  const from = env.CONTACT_FROM || 'website@graywebsolutions.com';
+  const text = [
+    `Name: ${input.name}`,
+    `Company: ${input.businessName}`,
+    `Email: ${email}`,
+    `Phone: ${input.phone || '—'}`,
+    `Existing site: ${input.hasSite ? `Yes — ${input.siteUrl || '—'}` : 'No'}`,
+    input.discountLine,
+    input.tierLine,
+    input.referralToken ? `Referral token: ${input.referralToken}` : '',
+    'Onboarding signup — an account was created for this email (status: onboarding).',
+    '',
+    input.comments,
+  ]
+    .filter((line, i, arr) => line !== '' || (i > 0 && arr[i - 1] !== ''))
+    .join('\n');
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `Gray Web Solutions <${from}>`,
+        to: [to],
+        reply_to: email,
+        subject: `Website inquiry from ${input.name}`,
+        text,
+      }),
+    });
+    if (!res.ok) {
+      console.error('Resend error:', res.status, await res.text().catch(() => ''));
+    }
+  } catch (err) {
+    console.error('Inquiry email failed:', err);
+  }
+
+  // New-lead push: tell the dashboard Worker to notify the admin
+  // right now, the same moment the inquiry email lands. The
+  // dashboard Worker owns the push subscriptions and the VAPID
+  // key; this Worker just calls its internal notify endpoint
+  // with the shared secret. Best-effort and never blocks the
+  // confirmation: a missing secret, a failed call, or a
+  // not-yet-deployed endpoint just logs.
+  try {
+    const secret = (env.INTERNAL_PUSH_SECRET ?? '').trim();
+    if (secret) {
+      const pushUrl =
+        (env.DASHBOARD_PUSH_URL ?? 'https://dashboard.graywebsolutions.com').replace(/\/$/, '') +
+        '/api/push/notify';
+      const pushRes = await fetch(pushUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${secret}`,
+        },
+        body: JSON.stringify({
+          title: `New lead: ${input.businessName}`,
+          body: `${input.name} — ${input.tierLine || 'website inquiry'}`,
+          url: '/dashboard',
+        }),
+      });
+      if (!pushRes.ok) {
+        console.error('New-lead push failed:', pushRes.status);
+      }
+    }
+  } catch (err) {
+    console.error('New-lead push failed:', err);
+  }
+}
+
+/** Internal endpoint (POST /api/internal/confirmed): the
+    dashboard Worker calls this after a visitor confirms their
+    email, so the signup finishes — discussion seed, inquiry
+    email, push, referrer reward. Guarded by the shared internal
+    secret, the same one this Worker sends with its push calls.
+    Idempotent: the first call claims finalized_at, later calls
+    answer already-finalized without repeating anything. */
+async function handleInternalConfirmed(request: Request, env: Env): Promise<Response> {
+  const secret = (env.INTERNAL_PUSH_SECRET ?? '').trim();
+  if (!secret) {
+    return json({ ok: false, error: 'Internal endpoint is not configured yet.' }, 503);
+  }
+  const presented = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (!timingSafeEqual(presented, secret)) {
+    return json({ ok: false, error: 'Unauthorized.' }, 401);
+  }
+  let body: { confirmationId?: unknown };
+  try {
+    body = (await request.json()) as { confirmationId?: unknown };
+  } catch {
+    return json({ ok: false, error: 'Invalid request body.' }, 400);
+  }
+  const confirmationId = typeof body.confirmationId === 'number' ? body.confirmationId : NaN;
+  if (!Number.isInteger(confirmationId) || confirmationId <= 0) {
+    return json({ ok: false, error: 'A confirmation id is required.' }, 400);
+  }
+  const db = env.DB_CLIENTS;
+  if (!db) {
+    return json({ ok: false, error: 'The dashboard is not configured yet.' }, 503);
+  }
+  try {
+    const row = await db
+      .prepare('SELECT id, client_id, data, used, finalized_at FROM email_confirmations WHERE id = ?')
+      .bind(confirmationId)
+      .first<{ id: number; client_id: number; data: string; used: number; finalized_at: string | null }>();
+    if (!row) {
+      return json({ ok: false, error: 'Confirmation not found.' }, 404);
+    }
+    if (row.used !== 1) {
+      return json({ ok: false, error: 'This confirmation has not been used yet.' }, 409);
+    }
+    if (row.finalized_at) {
+      return json({ ok: true, already: true });
+    }
+    const claimed = await db
+      .prepare("UPDATE email_confirmations SET finalized_at = datetime('now') WHERE id = ? AND finalized_at IS NULL")
+      .bind(confirmationId)
+      .run();
+    if ((claimed.meta?.changes ?? 0) !== 1) {
+      return json({ ok: true, already: true });
+    }
+    await finalizeSignup(env, db, row);
+    return json({ ok: true });
+  } catch (err) {
+    console.error('Confirm-finalize failed:', err);
+    if (err instanceof Error && /no such (column|table)/i.test(err.message)) {
+      return json({ ok: false, error: 'Account sign-up is not set up yet. Please try again later.' }, 503);
+    }
+    return json({ ok: false, error: 'Something went wrong finishing the signup.' }, 503);
   }
 }
 
@@ -429,25 +748,27 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   }
 
   // Signup needs the database: without it no account can be
-  // created, and sending the inquiry email would pretend one
+  // created, and sending a confirmation email would pretend one
   // was. The 409 check below is authoritative for emails that
-  // already have an account; a lookup failure fails open toward
-  // attempting the insert, and a duplicate there surfaces as a
-  // UNIQUE error, answered 409.
+  // already have a confirmed account; a lookup failure fails open
+  // toward attempting the insert, and a duplicate there surfaces
+  // as a UNIQUE error, answered 409. A pending account takes the
+  // re-submit path below instead: a fresh confirmation link, same
+  // password.
   const db = env.DB_CLIENTS;
   if (!db) {
     return json({ ok: false, error: SIGNUP_SETUP_ERROR }, 503);
   }
+  let pendingId: number | null = null;
   try {
-    if (await emailHasAccount(db, email)) {
+    const status = await accountStatus(db, email);
+    if (status.state === 'verified') {
       return json({ ok: false, error: 'An account already exists for this email.' }, 409);
     }
+    pendingId = status.state === 'pending' ? status.id : null;
   } catch (err) {
     console.error('Account check failed:', err);
   }
-
-  const to = env.CONTACT_TO || CHRIS_EMAIL;
-  const from = env.CONTACT_FROM || 'website@graywebsolutions.com';
 
   // Name the picked tier in the inquiry email when the tier table
   // exists; a missing table just omits the line. The requested
@@ -468,24 +789,62 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     }
   }
 
-  // The account is created BEFORE the inquiry email goes out: a
-  // signup that can't create an account (the onboarding migration
-  // hasn't run, the insert fails) answers 503 with nothing
-  // written and no email sent as if it succeeded.
+  // The payload the confirmation stores, so the confirm step can
+  // finish the signup without trusting the confirming request.
+  const confirmationPayload = {
+    name,
+    businessName,
+    email,
+    phone,
+    hasSite,
+    siteUrl,
+    comments,
+    discountLine,
+    tierLine,
+    discountVerified,
+    referralToken,
+    requestedTierId,
+  };
+
+  // A pending account re-submitting: rotate the token, re-send
+  // the confirmation email, and leave everything else — password
+  // included — exactly as the first submit left it.
+  if (pendingId !== null) {
+    try {
+      const token = await rotateConfirmationToken(db, pendingId, confirmationPayload);
+      await sendConfirmationEmail(env, email, name, token);
+    } catch (err) {
+      console.error('Confirmation resend failed:', err);
+      if (err instanceof Error && /no such (column|table)/i.test(err.message)) {
+        return json({ ok: false, error: SIGNUP_SETUP_ERROR }, 503);
+      }
+      return json({ ok: false, error: 'We could not send the confirmation email. Please try again.' }, 502);
+    }
+    return json({ ok: true, pending: true, resent: true });
+  }
+
+  // The account is created BEFORE the confirmation email goes
+  // out: a signup that can't create an account (the onboarding
+  // migration hasn't run, the insert fails) answers 503 with
+  // nothing written and no email sent as if it succeeded.
   const passwordHash = await hashPassword(password);
   try {
-    await recordSubmission(env, db, {
+    const { token } = await recordSubmission(env, db, {
       name,
       businessName,
       email,
       phone,
+      hasSite,
       siteUrl,
       comments,
       passwordHash,
+      discountLine,
+      tierLine,
       discountVerified,
       referralToken,
       requestedTierId,
     });
+    await sendConfirmationEmail(env, email, name, token);
   } catch (err) {
     const message = err instanceof Error ? err.message : '';
     if (/UNIQUE constraint failed/i.test(message)) {
@@ -495,87 +854,17 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     if (/no such (column|table)/i.test(message)) {
       return json({ ok: false, error: SIGNUP_SETUP_ERROR }, 503);
     }
+    if (message === 'CONFIRM_EMAIL_FAILED') {
+      return json({ ok: false, error: 'We could not send the confirmation email. Please try again.' }, 502);
+    }
     return json({ ok: false, error: 'Something went wrong creating your account. Please try again.' }, 503);
   }
 
-  const text = [
-    `Name: ${name}`,
-    `Company: ${businessName}`,
-    `Email: ${email}`,
-    `Phone: ${phone || '—'}`,
-    `Existing site: ${hasSite ? `Yes — ${siteUrl || '—'}` : 'No'}`,
-    discountLine,
-    tierLine,
-    referralToken ? `Referral token: ${referralToken}` : '',
-    'Onboarding signup — an account was created for this email (status: onboarding).',
-    '',
-    comments,
-  ]
-    .filter((line, i, arr) => line !== '' || (i > 0 && arr[i - 1] !== ''))
-    .join('\n');
-
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `Gray Web Solutions <${from}>`,
-      to: [to],
-      reply_to: email,
-      subject: `Website inquiry from ${name}`,
-      text,
-    }),
-  });
-
-  if (!res.ok) {
-    let detail = '';
-    try {
-      detail = JSON.stringify(await res.json());
-    } catch {
-      detail = await res.text();
-    }
-    console.error('Resend error:', res.status, detail);
-    return json({ ok: false, error: 'Something went wrong sending your message. Please try again.' }, 502);
-  }
-
-  // New-lead push: tell the dashboard Worker to notify the admin
-  // right now, the same moment the inquiry email lands. The dashboard
-  // Worker owns the push subscriptions and the VAPID key; this Worker
-  // just calls its internal notify endpoint with the shared secret.
-  // Best-effort and never blocks the signup: a missing secret, a
-  // failed call, or a not-yet-deployed endpoint just logs.
-  try {
-    const secret = (env.INTERNAL_PUSH_SECRET ?? '').trim();
-    if (secret) {
-      const pushUrl =
-        (env.DASHBOARD_PUSH_URL ?? 'https://dashboard.graywebsolutions.com').replace(/\/$/, '') +
-        '/api/push/notify';
-      const pushRes = await fetch(pushUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${secret}`,
-        },
-        body: JSON.stringify({
-          title: `New lead: ${businessName}`,
-          body: `${name} — ${tierLine || 'website inquiry'}`,
-          url: '/dashboard',
-        }),
-      });
-      if (!pushRes.ok) {
-        console.error('New-lead push failed:', pushRes.status);
-      }
-    }
-  } catch (err) {
-    console.error('New-lead push failed:', err);
-  }
-
-  // No session is minted here: the success screen links to the
-  // dashboard, where the visitor signs in with the login they
-  // just created.
-  return json({ ok: true });
+  // No session is minted here: the confirmation link signs the
+  // visitor straight into their dashboard once they confirm.
+  // Until then the account is pending — it can't sign in and
+  // stays out of the admin lists.
+  return json({ ok: true, pending: true });
 }
 
 export default {
@@ -592,6 +881,12 @@ export default {
         return json({ ok: false, error: 'Method not allowed.' }, 405);
       }
       return handleCheckEmail(request, env);
+    }
+    if (url.pathname === '/api/internal/confirmed') {
+      if (request.method !== 'POST') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      return handleInternalConfirmed(request, env);
     }
     if (url.pathname === '/api/referral') {
       if (request.method !== 'GET') {

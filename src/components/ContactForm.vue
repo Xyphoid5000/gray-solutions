@@ -9,6 +9,7 @@ import {
   type PricingTier,
 } from '../lib/pricing';
 import { contactSubmitted } from '../lib/contact';
+import { markManuscriptBound } from '../lib/manuscript';
 import { useBonusStore } from '../stores/bonus';
 import { useReferralStore } from '../stores/referral';
 import { useSettingsStore } from '../stores/settings';
@@ -39,6 +40,10 @@ const passwordError = ref('');
 /** The email from the signup that just succeeded — the success
     modal links to the dashboard with it prefilled. */
 const submittedEmail = ref('');
+/** True when the just-created login is still waiting on its
+    email confirmation — the success modal says check your email
+    instead of offering the dashboard sign-in. */
+const pendingConfirmation = ref(false);
 const dashboardSigninUrl = computed(
   () => `https://dashboard.graywebsolutions.com?email=${encodeURIComponent(submittedEmail.value)}`,
 );
@@ -107,13 +112,15 @@ const EMAIL_FORMAT_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Asks the Worker whether the email already has an account.
     Returns null on any failure — the caller fails open and lets
-    the submit go through; the Worker's 409 is authoritative. */
+    the submit go through; the Worker's 409 is authoritative.
+    A still-pending account reads as no account here: the visitor
+    can re-submit to get a fresh confirmation link. */
 async function checkEmailAccount(email: string): Promise<boolean | null> {
   try {
     const res = await fetch(`/api/contact/check-email?email=${encodeURIComponent(email)}`);
     if (!res.ok) return null;
-    const data = (await res.json().catch(() => ({}))) as { exists?: unknown };
-    return data.exists === true;
+    const data = (await res.json().catch(() => ({}))) as { exists?: unknown; pending?: unknown };
+    return data.exists === true && data.pending !== true;
   } catch {
     return null;
   }
@@ -249,7 +256,7 @@ async function submitContactForm(event: SubmitEvent) {
         company,
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; pending?: boolean };
     if (res.status === 409) {
       // Authoritative answer: the email already has an account.
       // The inline note carries the message; clear the status line.
@@ -260,10 +267,21 @@ async function submitContactForm(event: SubmitEvent) {
     if (!res.ok || !data.ok) {
       throw new Error(data.error || 'Something went wrong sending your message.');
     }
-    formStatus.value = 'Your login is created — sign in to your dashboard to follow the conversation.';
+    if (data.pending) {
+      // The login exists but the email isn't confirmed yet: the
+      // confirmation link is on its way, good for 12 hours.
+      formStatus.value = 'Check your email to confirm your account — the link is good for 12 hours.';
+      pendingConfirmation.value = true;
+    } else {
+      formStatus.value = 'Your login is created — sign in to your dashboard to follow the conversation.';
+      pendingConfirmation.value = false;
+    }
     submittedEmail.value = email;
     sent.value = true;
     contactSubmitted.value = true;
+    // They reached us without watching the binding — the manuscript
+    // counts as bound from here, so browsing on stays post-binding.
+    markManuscriptBound();
     form.reset();
     hasSite.value = '';
     selectedTierId.value = '';
@@ -287,9 +305,10 @@ async function submitContactForm(event: SubmitEvent) {
             <path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </span>
-        <p class="contact-success-title">Your login is ready.</p>
-        <p class="contact-success-sub">Your message has been sent. Chris will follow up with you within 3 days to discuss your project — sign in to your dashboard to follow the conversation.</p>
-        <a class="contact-modal-close" :href="dashboardSigninUrl">
+        <p class="contact-success-title">{{ pendingConfirmation ? 'Check your email.' : 'Your login is ready.' }}</p>
+        <p class="contact-success-sub" v-if="pendingConfirmation">We sent a confirmation link to {{ submittedEmail }} — it's good for 12 hours. Once you confirm, you'll land straight in your dashboard and we'll pick up the conversation about your project.</p>
+        <p class="contact-success-sub" v-else>Your message has been sent. Chris will follow up with you within 3 days to discuss your project — sign in to your dashboard to follow the conversation.</p>
+        <a v-if="!pendingConfirmation" class="contact-modal-close" :href="dashboardSigninUrl">
           Sign in to your dashboard
         </a>
         <button type="button" class="contact-modal-close" @click="sent = false">

@@ -49,6 +49,11 @@ CREATE TABLE IF NOT EXISTS clients (
   -- a password is set (older rows, demo-gate rows). The dashboard
   -- Worker owns verification; the signup form writes it.
   password_hash TEXT,
+  -- Email confirmation: 0 while the account is still waiting on
+  -- its confirmation link, 1 once confirmed. A pending account
+  -- can't sign in and stays out of the admin lists; an hourly
+  -- cleanup deletes pending accounts whose link expired.
+  email_verified INTEGER NOT NULL DEFAULT 1 CHECK (email_verified IN (0, 1)),
   -- 1 once they've agreed to use Gray Web Solutions.
   is_client INTEGER NOT NULL DEFAULT 0,
   -- Lifecycle: 'onboarding' from signup until Chris moves the
@@ -175,6 +180,25 @@ CREATE TABLE IF NOT EXISTS magic_tokens (
   used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1)),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS email_confirmations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  client_id INTEGER NOT NULL REFERENCES clients(id),
+  -- SHA-256 hex of the token. The plain token only ever travels in
+  -- the confirmation email. Tokens are single-use, 12-hour.
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0 CHECK (used IN (0, 1)),
+  -- When the signup finished (discussion seed, inquiry email, push,
+  -- referrer reward). NULL until the dashboard's confirm call
+  -- claims it — the claim makes the finalize idempotent.
+  finalized_at TEXT,
+  -- The signup payload as JSON, so the confirmation can finish the
+  -- signup without trusting anything the confirming request sends.
+  data TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_email_confirmations_client ON email_confirmations(client_id);
 
 CREATE TABLE IF NOT EXISTS client_features (
   id INTEGER PRIMARY KEY,
