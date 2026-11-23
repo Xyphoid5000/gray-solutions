@@ -6,7 +6,7 @@
 // entries wholesale (the portfolio-itself entry always stays
 // static, appended by the caller).
 
-import type { Project } from './projects';
+import { PROJECTS, type Project } from './projects';
 
 /** One row from GET /api/featured. */
 export interface FeaturedSite {
@@ -16,6 +16,9 @@ export interface FeaturedSite {
   tags: string[];
   booktext: string;
   pagetext: string;
+  /** The "How the story was written" copy — absent on stale cached
+      responses; read as '' and filled from the static copy. */
+  story?: string;
   showInBook: boolean;
   imageUrl: string | null;
 }
@@ -31,6 +34,7 @@ function isFeaturedSite(v: unknown): v is FeaturedSite {
     s.tags.every((t) => typeof t === 'string') &&
     typeof s.booktext === 'string' &&
     typeof s.pagetext === 'string' &&
+    (s.story === undefined || typeof s.story === 'string') &&
     typeof s.showInBook === 'boolean' &&
     (s.imageUrl === null || typeof s.imageUrl === 'string')
   );
@@ -50,9 +54,10 @@ async function fetchFeaturedRows(): Promise<FeaturedSite[] | null> {
 }
 
 /** A featured row as a Project: the book surface reads booktext,
-    the projects page reads pagetext. The table carries no story
-    text and no image is guaranteed, so those come back empty and
-    the showcase omits those blocks. */
+    the projects page reads pagetext. The table's story wins when
+    the admin filled it in; otherwise the static portfolio copy
+    fills it in by name. No image is guaranteed, so that comes back
+    empty and the showcase omits that block. */
 function toProject(row: FeaturedSite, surface: 'book' | 'page'): Project {
   return {
     slug: `feature-${row.id}`,
@@ -63,7 +68,7 @@ function toProject(row: FeaturedSite, surface: 'book' | 'page'): Project {
     imageAlt: `${row.name} website`,
     description: surface === 'book' ? row.booktext : row.pagetext,
     tech: row.tags,
-    story: '',
+    story: row.story || (PROJECTS.find((p) => p.name === row.name)?.story ?? ''),
   };
 }
 

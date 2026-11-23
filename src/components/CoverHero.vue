@@ -235,6 +235,10 @@ function burst(power: number) {
   const stage = stageRef.value;
   const book = bookRef.value;
   if (!stage || !book || !sprite) return;
+  // The canvas hides itself once the dust settles (see frame) — bring
+  // it back for this burst so replays and the second landing still puff.
+  const canvas = canvasRef.value;
+  if (canvas) canvas.style.display = '';
   const sr = stage.getBoundingClientRect();
   const br = book.getBoundingClientRect();
   const x = br.left + br.width / 2 - sr.left;
@@ -284,6 +288,9 @@ function frame(ts: number) {
     raf = requestAnimationFrame(frame);
   } else {
     looping = false;
+    // Last mote gone: hide the canvas so no settled dust sits under
+    // the page. burst() re-shows it for the next landing.
+    canvas.style.display = 'none';
   }
 }
 

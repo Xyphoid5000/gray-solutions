@@ -23,6 +23,15 @@ defineProps<{ project: Project }>();
       <ul class="proof-tags project-tech">
         <li v-for="t in project.tech" :key="t">{{ t }}</li>
       </ul>
+      <a
+        v-if="project.url"
+        class="project-site-link"
+        :href="project.url"
+        target="_blank"
+        rel="noopener"
+      >
+        View site <span class="arrow" aria-hidden="true">&rarr;</span>
+      </a>
       <h4 v-if="project.story" class="project-subhead">How the story was written</h4>
       <p v-if="project.story" class="project-story">{{ project.story }}</p>
     </div>

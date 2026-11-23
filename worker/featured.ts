@@ -13,13 +13,17 @@ export interface FeaturedSite {
   id: number;
   name: string;
   /** The client's live site — only when they consented to the link
-      (show_link) and a site URL is on file. */
+      (show_link) and a site URL is on file: the production URL from
+      their domain rows first, the legacy clients.site_url fallback. */
   siteUrl: string | null;
   tags: string[];
   /** The book chapter's panel copy. */
   booktext: string;
   /** The projects page copy. */
   pagetext: string;
+  /** The "How the story was written" copy — empty until the admin
+      fills it in; the site falls back to its hardcoded copy then. */
+  story: string;
   showInBook: boolean;
   /** The featured-image route, or null when no image was uploaded. */
   imageUrl: string | null;
@@ -35,18 +39,33 @@ interface FeatureRow {
   pagetext: string;
   show_in_book: number;
   site_url: string | null;
+  /** Absent until the story migration runs — read as ''. */
+  story?: string | null;
 }
 
 export async function listFeatures(db: D1Database): Promise<FeaturedSite[]> {
-  const res = await db
-    .prepare(
-      `SELECT f.id AS id, f.name AS name, f.image_key AS image_key, f.show_link AS show_link,
-         f.tags AS tags, f.booktext AS booktext, f.pagetext AS pagetext,
-         f.show_in_book AS show_in_book, c.site_url AS site_url
-       FROM client_features f LEFT JOIN clients c ON c.id = f.client_id
-       ORDER BY f.id`,
-    )
-    .all<FeatureRow>();
+  // The story column arrives via a one-time migration; until it
+  // runs, the same query without it keeps the features live.
+  const select = (withStory: boolean) =>
+    `SELECT f.id AS id, f.name AS name, f.image_key AS image_key, f.show_link AS show_link,
+       f.tags AS tags, f.booktext AS booktext, f.pagetext AS pagetext,
+       f.show_in_book AS show_in_book,${withStory ? ' f.story AS story,' : ''}
+       COALESCE(
+         (SELECT d.production_url FROM client_domains d
+           WHERE d.client_id = c.id
+             AND d.production_url IS NOT NULL AND d.production_url != ''
+           ORDER BY d.id LIMIT 1),
+         c.site_url
+       ) AS site_url
+     FROM client_features f LEFT JOIN clients c ON c.id = f.client_id
+     ORDER BY f.id`;
+  let res;
+  try {
+    res = await db.prepare(select(true)).all<FeatureRow>();
+  } catch (err) {
+    if (!(err instanceof Error && err.message.includes('no such column'))) throw err;
+    res = await db.prepare(select(false)).all<FeatureRow>();
+  }
   return res.results.map((r) => ({
     id: r.id,
     name: r.name,
@@ -57,6 +76,7 @@ export async function listFeatures(db: D1Database): Promise<FeaturedSite[]> {
       .filter(Boolean),
     booktext: r.booktext ?? '',
     pagetext: r.pagetext ?? '',
+    story: r.story ?? '',
     showInBook: r.show_in_book === 1,
     imageUrl: r.image_key ? `/api/featured-image?key=${encodeURIComponent(r.image_key)}` : null,
   }));
