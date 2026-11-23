@@ -2085,7 +2085,6 @@ html[data-theme='dark'] .read-pile .pile-page .pile-tab-mark {
 .cover-contact {
   position: relative;
   padding: 5rem 0 7rem;
-  border-top: 1px solid var(--line-soft);
   /* Stop the scroll when the workspace background above hits the
      header's bottom edge — not underneath it. */
   scroll-margin-top: var(--nav-h);
