@@ -31,16 +31,26 @@
 // their dashboard. An email with a pending account re-submits
 // to get a fresh confirmation link, with the original password
 // standing. A submission through a referral token or the hidden
-// on-site code gives the lead 10% off, kept in the `discounts`
+// on-site code (10%), or a global code such as HOLIDAY25
+// (25%) gives the lead the best of those — an arrival discount,
+// never gated, never capped by status, kept in the `discounts`
 // table. Every confirmed lead a token brings in earns the
-// referrer more off — 10 points for the first lead, 5 per lead
-// after, capped at 50% — and a discount-status email each time.
+// referrer a flat +5%, gated by the referrer's status (onboarding
+// banks 0, prospective at most 2, current at most 5) — the
+// referral COUNT is the bound, there is no percentage cap — and a
+// discount-status email each time a reward is granted. When a
+// reward is gated by status, the attribution row is still
+// recorded, but no discount is granted and no email is sent.
 // The signup seeds the discussion thread with the visitor's
 // message once confirmed; no project is created — projects come
 // later, from the dashboard conversation. The form can pre-check
 // an email through GET /api/contact/check-email, which answers
 // whether the email already has an account, and whether that
-// account is still waiting on confirmation.
+// account is still waiting on confirmation. GET
+// /api/global-discount?code=... validates a global discount code
+// against the global_discounts table (valid through its
+// expiration date, inclusive); a missing table answers invalid,
+// never 500.
 
 import { json, clientIp, makeThrottle } from './worker/http';
 import { hashPassword, randomToken, sha256Hex, timingSafeEqual } from './worker/crypto';
@@ -49,9 +59,11 @@ import { handleFeatured, handleFeaturedImage } from './worker/featured';
 import {
   handlePricing,
   applyLeadReward,
-  nextLeadIncrement,
   REFERRAL_PCT,
-  DISCOUNT_CAP_PCT,
+  REFERRAL_EARN_PCT,
+  REFERRAL_CAP_ONBOARDING,
+  REFERRAL_CAP_PROSPECTIVE,
+  REFERRAL_CAP_CURRENT,
 } from './worker/pricing';
 
 interface ContactPayload {
@@ -71,6 +83,14 @@ interface ContactPayload {
   discountLine?: string;
   /** True when the visitor's discount code matched the live code. */
   discountVerified?: boolean;
+  /** The raw discount code the visitor typed, if any — the server
+      re-validates it against global_discounts, never trusting the
+      client-claimed percent. */
+  discountCode?: string;
+  /** The effective discount percent the form computed (best of
+      referral / desk code / validated global code), display only —
+      the server recomputes the arrival percent itself. */
+  discountPct?: number;
   /** Referral token from ?ref=, when the visit came through a share link. */
   referralToken?: string;
   /** Pricing tier the visitor picked, when they picked one. */
@@ -208,6 +228,90 @@ async function handleReferral(request: Request, env: Env): Promise<Response> {
   return json({ ok: true, valid: true, referrer: row.businessName, discountPct: 10 });
 }
 
+/** Resolves a clients-row status, deriving it from is_client
+    when the column is missing (pre-migration) or holds anything
+    unexpected: established reads as 'current', everyone else as
+    'prospective'. 'onboarding' only ever comes from the column.
+    Identical to the dashboard Worker's resolveClientStatus —
+    status is maintained there; this Worker only reads it. */
+type ClientStatus = 'onboarding' | 'prospective' | 'current';
+
+function resolveClientStatus(value: unknown, isClient: number): ClientStatus {
+  if (value === 'onboarding' || value === 'prospective' || value === 'current') return value;
+  return isClient === 1 ? 'current' : 'prospective';
+}
+
+/** How many referrals a client of this status may bank. */
+function referralCapForStatus(status: ClientStatus): number {
+  if (status === 'onboarding') return REFERRAL_CAP_ONBOARDING;
+  if (status === 'prospective') return REFERRAL_CAP_PROSPECTIVE;
+  return REFERRAL_CAP_CURRENT;
+}
+
+type GlobalDiscountVerdict =
+  | { found: true; valid: true; discountPct: number }
+  | { found: true; valid: false; discountPct: 0; reason: 'expired' | 'invalid' }
+  | { found: false; valid: false; discountPct: 0; reason: 'invalid' };
+
+/** Looks a global discount code up in global_discounts, by
+    case-insensitive match. Returns null only when the table does
+    not exist yet (pre-migration) — the caller fails open. A row
+    is valid from start_date through expiration_date, inclusive;
+    a row that exists but is not yet started reads 'invalid',
+    one past its expiration reads 'expired'. */
+async function lookupGlobalDiscount(
+  db: D1Database,
+  code: string,
+): Promise<GlobalDiscountVerdict | null> {
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+  let row: { discount_pct: number; start_date: string; expiration_date: string } | null;
+  try {
+    row = await db
+      .prepare('SELECT discount_pct, start_date, expiration_date FROM global_discounts WHERE UPPER(code) = ?')
+      .bind(trimmed.toUpperCase())
+      .first<{ discount_pct: number; start_date: string; expiration_date: string }>();
+  } catch (err) {
+    if (err instanceof Error && /no such table/i.test(err.message)) return null;
+    throw err;
+  }
+  if (!row) return { found: false, valid: false, discountPct: 0, reason: 'invalid' };
+  const today = new Date().toISOString().slice(0, 10);
+  if (today < row.start_date) return { found: true, valid: false, discountPct: 0, reason: 'invalid' };
+  if (today > row.expiration_date) return { found: true, valid: false, discountPct: 0, reason: 'expired' };
+  return { found: true, valid: true, discountPct: row.discount_pct };
+}
+
+const globalDiscountThrottle = makeThrottle(30, 15 * 60 * 1000);
+
+/** GET /api/global-discount?code=... — validates a global
+    discount code. Mirrors handleReferral's shape: {ok:true,
+    valid:true, discountPct} in-window; {ok:true, valid:false,
+    reason:'expired'|'invalid'} otherwise. Pre-migration (no
+    table) or no DB binding answers invalid — never 500. */
+async function handleGlobalDiscount(request: Request, env: Env): Promise<Response> {
+  const code = (new URL(request.url).searchParams.get('code') ?? '').trim();
+  if (!code || code.length > 128 || !env.DB_CLIENTS) {
+    return json({ ok: true, valid: false, reason: 'invalid' });
+  }
+  const ip = clientIp(request);
+  if (globalDiscountThrottle.blocked(ip)) {
+    return json({ ok: true, valid: false, reason: 'invalid' });
+  }
+  globalDiscountThrottle.record(ip);
+  let verdict: GlobalDiscountVerdict | null;
+  try {
+    verdict = await lookupGlobalDiscount(env.DB_CLIENTS, code);
+  } catch (err) {
+    console.error('Global discount lookup failed:', err);
+    return json({ ok: true, valid: false, reason: 'invalid' });
+  }
+  if (!verdict || !verdict.valid) {
+    return json({ ok: true, valid: false, reason: verdict?.reason ?? 'invalid' });
+  }
+  return json({ ok: true, valid: true, discountPct: verdict.discountPct });
+}
+
 /** A referrer's discount-status email: their current total, how it
     was earned, what the next referral earns, and their share link.
     The lead is never named. This is the one discount email the
@@ -221,13 +325,15 @@ async function sendDiscountStatusEmail(
   newPct: number,
   leadsCount: number,
   token: string,
+  status: ClientStatus,
 ): Promise<void> {
   const name = referrer.contact_name || referrer.business_name;
   const greeting = name ? `Hi ${name},` : 'Hi,';
+  const cap = referralCapForStatus(status);
   const nextLine =
-    newPct >= DISCOUNT_CAP_PCT
-      ? `You've reached the maximum discount of ${DISCOUNT_CAP_PCT}% off — thank you for spreading the word.`
-      : `Your next referral earns you ${nextLeadIncrement(leadsCount)}% more off, up to ${DISCOUNT_CAP_PCT}% off.`;
+    leadsCount >= cap
+      ? `You've banked all ${cap} referral${cap === 1 ? '' : 's'} — use your discount on a project to start earning again.`
+      : `Your next referral earns you ${REFERRAL_EARN_PCT}% more off — ${leadsCount} of ${cap} referrals banked.`;
   const text = [
     greeting,
     '',
@@ -287,6 +393,8 @@ async function recordSubmission(
     discountLine: string;
     tierLine: string;
     discountVerified: boolean;
+    /** Raw typed discount code, if any — re-validated here. */
+    discountCode: string;
     referralToken: string;
     requestedTierId: number | null;
   },
@@ -310,9 +418,17 @@ async function recordSubmission(
     .first<{ id: number; is_client: number }>();
   if (!lead) throw new Error('Signup record not found after insert');
 
-  // A valid token identifies the referrer. An unknown token confers
-  // nothing — only a real share link (or the verified on-site code)
-  // earns the lead 10%.
+  // The arrival discount is the best of the sources, never
+  // stacked: a valid referral token earns 10%, the verified
+  // on-site (desk) code earns 10%, a valid global code earns its
+  // own percent. The submitted code is re-validated against
+  // global_discounts — the client-claimed percent is never
+  // trusted. When the code matches a global row, that row's
+  // verdict is authoritative and overrides discountVerified for
+  // that code (an expired global code grants nothing, even with
+  // discountVerified set); otherwise the desk path still grants
+  // 10% per the existing trust model. Pre-migration (no table)
+  // there is no global code — fail open, do not 500.
   let tokenRow: { id: number; client_id: number; used: number } | null = null;
   try {
     await db
@@ -325,12 +441,19 @@ async function recordSubmission(
         .bind(input.referralToken)
         .first<{ id: number; client_id: number; used: number }>();
     }
-    if (tokenRow || input.discountVerified) {
+    const globalVerdict = input.discountCode
+      ? await lookupGlobalDiscount(db, input.discountCode)
+      : null;
+    const referralPct = tokenRow ? REFERRAL_PCT : 0;
+    const deskPct = input.discountVerified && !(globalVerdict && globalVerdict.found) ? REFERRAL_PCT : 0;
+    const globalPct = globalVerdict && globalVerdict.valid ? globalVerdict.discountPct : 0;
+    const arrivalPct = Math.max(referralPct, deskPct, globalPct);
+    if (arrivalPct > 0) {
       await db
         .prepare(
           `UPDATE discounts SET discount_pct = MAX(discount_pct, ?), updated_at = datetime('now') WHERE client_id = ?`,
         )
-        .bind(REFERRAL_PCT, lead.id)
+        .bind(arrivalPct, lead.id)
         .run();
     }
   } catch (err) {
@@ -355,6 +478,7 @@ async function recordSubmission(
     discountLine: input.discountLine,
     tierLine: input.tierLine,
     discountVerified: input.discountVerified,
+    discountCode: input.discountCode,
     referralToken: input.referralToken,
     requestedTierId: input.requestedTierId,
   });
@@ -467,6 +591,7 @@ async function finalizeSignup(
     discountLine: string;
     tierLine: string;
     discountVerified: boolean;
+    discountCode?: string;
     referralToken: string;
     requestedTierId: number | null;
   };
@@ -474,11 +599,17 @@ async function finalizeSignup(
   const email = input.email.toLowerCase();
 
   // The referrer's reward: one attribution per lead, recorded in
-  // referral_leads, so the ladder counts each lead exactly once no
-  // matter how often a token is used. The discount-status email
-  // goes out BEFORE the rows land — if the send fails, nothing is
-  // recorded. A client submitting through their own link keeps
-  // the 10% arrival discount but earns no referral reward.
+  // referral_leads, so the reward counts each lead exactly once no
+  // matter how often a token is used. The reward is a flat +5%,
+  // granted ONLY while the referrer is under their status cap
+  // (onboarding 0, prospective 2, current 5 banked). When gated,
+  // nothing is granted, leads_count does not move, and no email
+  // goes out — but the referral_leads attribution row IS still
+  // recorded, as the audit trail of exactly-once attribution. The
+  // discount-status email goes out BEFORE the rows land — if the
+  // send fails, nothing is recorded. A client submitting through
+  // their own link keeps the 10% arrival discount but earns no
+  // referral reward.
   try {
     let tokenRow: { id: number; client_id: number; used: number } | null = null;
     if (input.referralToken) {
@@ -494,9 +625,9 @@ async function finalizeSignup(
         .first<{ id: number }>();
       if (!attributed) {
         const referrer = await db
-          .prepare('SELECT id, email, contact_name, business_name FROM clients WHERE id = ?')
+          .prepare('SELECT id, email, contact_name, business_name, status, is_client FROM clients WHERE id = ?')
           .bind(tokenRow.client_id)
-          .first<{ id: number; email: string; contact_name: string; business_name: string }>();
+          .first<{ id: number; email: string; contact_name: string; business_name: string; status: string | null; is_client: number }>();
         if (referrer && referrer.id !== leadId) {
           await db
             .prepare('INSERT OR IGNORE INTO discounts (client_id) VALUES (?)')
@@ -507,28 +638,41 @@ async function finalizeSignup(
             .bind(referrer.id)
             .first<{ id: number; discount_pct: number; leads_count: number }>();
           if (referrerDiscount) {
-            const reward = applyLeadReward(referrerDiscount.discount_pct, referrerDiscount.leads_count);
-            await sendDiscountStatusEmail(
-              env,
-              referrer,
-              reward.pct,
-              referrerDiscount.leads_count + 1,
-              input.referralToken,
-            );
-            await db
-              .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
-              .bind(referrer.id, leadId, input.referralToken)
-              .run();
-            await db
-              .prepare(
-                `UPDATE discounts SET discount_pct = ?, leads_count = ?, updated_at = datetime('now') WHERE client_id = ?`,
-              )
-              .bind(reward.pct, referrerDiscount.leads_count + 1, referrer.id)
-              .run();
-            await db
-              .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
-              .bind(tokenRow.id)
-              .run();
+            const status = resolveClientStatus(referrer.status, referrer.is_client);
+            const cap = referralCapForStatus(status);
+            if (referrerDiscount.leads_count < cap) {
+              const reward = applyLeadReward(referrerDiscount.discount_pct, referrerDiscount.leads_count);
+              await sendDiscountStatusEmail(
+                env,
+                referrer,
+                reward.pct,
+                referrerDiscount.leads_count + 1,
+                input.referralToken,
+                status,
+              );
+              await db
+                .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
+                .bind(referrer.id, leadId, input.referralToken)
+                .run();
+              await db
+                .prepare(
+                  `UPDATE discounts SET discount_pct = ?, leads_count = ?, updated_at = datetime('now') WHERE client_id = ?`,
+                )
+                .bind(reward.pct, referrerDiscount.leads_count + 1, referrer.id)
+                .run();
+              await db
+                .prepare(`UPDATE referral_tokens SET used = 1, used_at = datetime('now') WHERE id = ?`)
+                .bind(tokenRow.id)
+                .run();
+            } else {
+              // Gated by status: no reward, no count, no email —
+              // but the attribution row still lands, so the lead
+              // is accounted for exactly once.
+              await db
+                .prepare('INSERT OR IGNORE INTO referral_leads (referrer_client_id, lead_client_id, token) VALUES (?, ?, ?)')
+                .bind(referrer.id, leadId, input.referralToken)
+                .run();
+            }
           }
         }
       }
@@ -729,6 +873,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
   const comments = (payload.comments ?? '').trim();
   const discountLine = (payload.discountLine ?? '').trim() || 'Discount code: —';
   const discountVerified = payload.discountVerified === true;
+  const discountCode = (payload.discountCode ?? '').trim().slice(0, 128);
   const referralToken = (payload.referralToken ?? '').trim().slice(0, 128);
   const tierIdRaw = typeof payload.tierId === 'number' ? payload.tierId : NaN;
   const tierId = Number.isInteger(tierIdRaw) && tierIdRaw > 0 ? tierIdRaw : null;
@@ -802,6 +947,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
     discountLine,
     tierLine,
     discountVerified,
+    discountCode,
     referralToken,
     requestedTierId,
   };
@@ -841,6 +987,7 @@ async function handleContact(request: Request, env: Env): Promise<Response> {
       discountLine,
       tierLine,
       discountVerified,
+      discountCode,
       referralToken,
       requestedTierId,
     });
@@ -887,6 +1034,12 @@ export default {
         return json({ ok: false, error: 'Method not allowed.' }, 405);
       }
       return handleInternalConfirmed(request, env);
+    }
+    if (url.pathname === '/api/global-discount') {
+      if (request.method !== 'GET') {
+        return json({ ok: false, error: 'Method not allowed.' }, 405);
+      }
+      return handleGlobalDiscount(request, env);
     }
     if (url.pathname === '/api/referral') {
       if (request.method !== 'GET') {
