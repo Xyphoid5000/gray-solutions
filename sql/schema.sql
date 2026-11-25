@@ -38,6 +38,13 @@
 -- requested_tier_id, discussion_comments holds the pre-project
 -- conversation, and comment_notifications covers discussion
 -- threads too. Upgrading: run sql/migrate-onboarding.sql.
+--
+-- Global discounts (2026-11-24): global_discounts holds
+-- site-wide codes (e.g. HOLIDAY25) any visitor can use at
+-- signup; client_pricing's discount CHECK widens to 0-50 (a
+-- data-integrity ceiling only, not a business cap) and the
+-- discounts comment is rewritten to the status-based referral
+-- caps. Upgrading: run sql/migrate-global-discounts.sql.
 
 CREATE TABLE IF NOT EXISTS clients (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,11 +141,11 @@ CREATE TABLE IF NOT EXISTS client_pricing (
   project_type TEXT NOT NULL DEFAULT 'install' CHECK (project_type IN ('install', 'feature')),
   -- The tier this quote prices from. NULL until a tier is picked.
   tier_id INTEGER REFERENCES pricing_tiers(id),
-  -- 0, 10, or 20. On the install row: 10 = referred lead or
-  -- hidden-code finder; 20 = a share of theirs brought in a lead.
-  -- On the feature row: 10 = an established client's reward for a
-  -- share that brought in a lead. 20 is the cap — never stacks.
-  discount_pct INTEGER NOT NULL DEFAULT 0 CHECK (discount_pct IN (0, 10, 20)),
+  -- 0-50. Legacy rows only — no live code writes this table.
+  -- The 0-50 CHECK is a data-integrity ceiling, not a business
+  -- cap: the binding limits are the referral-count caps by
+  -- client status (onboarding 0, prospective 2, current 5).
+  discount_pct INTEGER NOT NULL DEFAULT 0 CHECK (discount_pct BETWEEN 0 AND 50),
   -- After any discount, in cents — the number the client saw. NULL
   -- until quoted. The pre-discount price is the tier's price (see
   -- tier_id). A custom quote that matches no tier exactly keeps
@@ -231,10 +238,15 @@ CREATE TABLE IF NOT EXISTS client_features (
 -- Discounts: one row per client holding their total earned
 -- discount percent and how many leads they've generated. The
 -- percent is a total: 15 when a project completes and is paid (a
--- floor), +10 on the first generated lead, +5 per lead after,
--- capped at 50. Quote-time caps apply per project type (install
--- 25%, feature/upgrade 50%) — the cap lives in the quoting code,
--- not here.
+-- floor for a published current client), +5 per generated
+-- referral, gated by the referrer's status (onboarding banks 0,
+-- prospective at most 2, current at most 5). Arrival discounts
+-- (referral 10%, desk code 10%, a global code up to 25%) are
+-- one-project boosts, spent on use: when a discounted project
+-- completes and is paid, the total falls back to the floor (0, or
+-- 15% once current) and leads_count resets to 0. The 0-50 CHECK
+-- is the arithmetic ceiling only — the binding limits are the
+-- referral-count caps.
 CREATE TABLE IF NOT EXISTS discounts (
   id INTEGER PRIMARY KEY,
   client_id INTEGER NOT NULL UNIQUE REFERENCES clients(id),
@@ -244,6 +256,18 @@ CREATE TABLE IF NOT EXISTS discounts (
   leads_count INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Global discount codes: site-wide codes any visitor can use at
+-- signup (e.g. HOLIDAY25). A code is valid from start_date
+-- through expiration_date, inclusive; the match is
+-- case-insensitive. Seeded by sql/migrate-global-discounts.sql,
+-- not here.
+CREATE TABLE IF NOT EXISTS global_discounts (
+  code TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  discount_pct INTEGER NOT NULL CHECK (discount_pct BETWEEN 0 AND 50),
+  start_date TEXT NOT NULL DEFAULT (date('now')),
+  expiration_date TEXT NOT NULL
 );
 
 -- Client projects: the per-client project history. The id is a

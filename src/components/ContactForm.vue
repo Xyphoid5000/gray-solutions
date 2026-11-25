@@ -55,20 +55,42 @@ const phoneInput = ref<HTMLInputElement | null>(null);
 const tiers = ref<PricingTier[]>(FALLBACK_TIERS);
 const selectedTierId = ref('');
 const discountText = ref('');
+/** The percent of the last validated global code, and the code it
+    was validated for (uppercase) — a stale validation never
+    counts once the text changes. */
+const globalPct = ref(0);
+const globalCodeChecked = ref('');
 
 onMounted(async () => {
   tiers.value = await fetchPricingTiers();
+  // /contact?code=HOLIDAY25 pre-fills the field (URL param only,
+  // no sessionStorage) and runs the same validation as typed
+  // entry — same result either way.
+  const urlCode = new URLSearchParams(window.location.search).get('code')?.trim() ?? '';
+  if (urlCode) {
+    discountText.value = urlCode;
+    if (discountInput.value) discountInput.value.value = urlCode;
+    await validateDiscountCode(urlCode);
+  }
 });
 
-/** Live discount for the price line: the referral discount, or a
-    discount code that matches the live code. The submit handler
-    re-validates the code itself — this is display only. */
+/** Live discount for the price line: the best of the referral
+    discount, a desk code that matches the live code, and a
+    validated global code. The submit handler re-validates the
+    code itself — this is display only. */
 const codeMatches = computed(() => {
   const live = activeDiscountCode.value.trim();
   const typed = discountText.value.trim();
   return !!live && !!typed && typed.toUpperCase() === live.toUpperCase();
 });
-const discountPct = computed(() => (referralActive.value || codeMatches.value ? 10 : 0));
+/** The validated global percent, only while the field still holds
+    the code it was validated for. */
+const validatedGlobalPct = computed(() =>
+  discountText.value.trim().toUpperCase() === globalCodeChecked.value ? globalPct.value : 0,
+);
+const discountPct = computed(() =>
+  Math.max(referralActive.value ? 10 : 0, codeMatches.value ? 10 : 0, validatedGlobalPct.value),
+);
 const selectedTier = computed(
   () => tiers.value.find((t) => String(t.id) === selectedTierId.value) ?? null,
 );
@@ -90,15 +112,60 @@ function tryFillDiscount() {
 watch(activeDiscountCode, tryFillDiscount, { immediate: true });
 watch(discountInput, tryFillDiscount);
 
-/** A referral token replaces the discount code: when one is active the
-    code field hides entirely, and anything already typed into it is
-    cleared so a stale code is never submitted. */
-watch(referralActive, (isActive) => {
-  if (isActive) {
-    discountText.value = '';
-    discountError.value = '';
+/** Validates a typed code against the global-discount endpoint
+    (on blur and at submit; never on keystroke). The desk code is
+    checked by the caller first and never reaches this endpoint.
+    Also records the validated percent and, for an expired code,
+    the inline error — the submit handler is authoritative. */
+async function validateDiscountCode(code: string): Promise<{ valid: boolean; pct: number; reason?: string }> {
+  const upper = code.trim().toUpperCase();
+  try {
+    const res = await fetch(`/api/global-discount?code=${encodeURIComponent(code.trim())}`);
+    const data = (await res.json().catch(() => ({}))) as { valid?: unknown; discountPct?: unknown; reason?: unknown };
+    if (res.ok && data.valid === true && typeof data.discountPct === 'number') {
+      globalPct.value = data.discountPct;
+      globalCodeChecked.value = upper;
+      discountError.value = '';
+      return { valid: true, pct: data.discountPct };
+    }
+    globalPct.value = 0;
+    globalCodeChecked.value = upper;
+    const reason = typeof data.reason === 'string' ? data.reason : 'invalid';
+    if (reason === 'expired') {
+      discountError.value = 'This code is no longer valid.';
+    }
+    return { valid: false, pct: 0, reason };
+  } catch {
+    globalPct.value = 0;
+    globalCodeChecked.value = upper;
+    return { valid: false, pct: 0, reason: 'invalid' };
   }
-});
+}
+
+/** On blur, validate a typed code that isn't the desk code, so the
+    price line shows the real percent before submit. */
+async function onDiscountBlur() {
+  const code = discountText.value.trim();
+  if (!code) {
+    globalPct.value = 0;
+    globalCodeChecked.value = '';
+    discountError.value = '';
+    return;
+  }
+  const live = activeDiscountCode.value.trim();
+  if (live && code.toUpperCase() === live.toUpperCase()) {
+    discountError.value = '';
+    return;
+  }
+  await validateDiscountCode(code);
+}
+
+/** Typing clears the inline error — the code on screen is not the
+    code that was checked. */
+function onDiscountInput(event: Event) {
+  discountText.value = (event.target as HTMLInputElement).value;
+  discountError.value = '';
+}
 
 /** Reveal the hint, freezing whatever the bonus state is right now —
     it never updates after this. Bonus already on: point at the first
@@ -207,20 +274,36 @@ async function submitContactForm(event: SubmitEvent) {
     return;
   }
 
-  // A code only counts if it matches the one currently on the phone.
+  // A code only counts if it matches the one currently on the phone,
+  // or a live global code. The submit-time check is authoritative.
   discountError.value = '';
   let discountLine = `Discount code: ${discount || '—'}`;
   let discountVerified = false;
+  let codePct = 0;
   if (discount) {
     const live = activeDiscountCode.value.trim();
     if (live && discount.toUpperCase() === live.toUpperCase()) {
       discountLine = `Discount code: ${live} — verified (10% off)`;
       discountVerified = true;
+      codePct = 10;
     } else {
-      discountError.value = "That doesn't match the code on the site.";
-      return;
+      const verdict = await validateDiscountCode(discount);
+      if (verdict.valid) {
+        discountLine = `Discount code: ${discount.toUpperCase()} — verified (${verdict.pct}% off)`;
+        discountVerified = true;
+        codePct = verdict.pct;
+      } else if (verdict.reason === 'expired') {
+        discountError.value = 'This code is no longer valid.';
+        return;
+      } else {
+        discountError.value = "That doesn't match the code on the site.";
+        return;
+      }
     }
   }
+  // The effective percent is the best of the sources — the server
+  // recomputes it from the raw code, this is what the form saw.
+  const effectivePct = Math.max(referralActive.value ? 10 : 0, codePct);
 
   // An email that already has an account belongs in the dashboard,
   // not this form. The pre-submit check fails open — the Worker
@@ -251,6 +334,8 @@ async function submitContactForm(event: SubmitEvent) {
         confirmPassword,
         discountLine,
         discountVerified,
+        discountCode: discount,
+        discountPct: effectivePct,
         referralToken: referralActive.value ? referral.token : '',
         tierId: selectedTierId.value ? Number(selectedTierId.value) : null,
         company,
@@ -393,13 +478,13 @@ async function submitContactForm(event: SubmitEvent) {
       Starting at {{ formatPrice(selectedTier.priceCents) }}<template v-if="discountPct"> — {{ formatPrice(finalPrice ?? 0) }} with your {{ discountPct }}% off</template>.
     </p>
     <p v-if="referralActive" class="referral-note">
-      {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}10% off your website, applied when you create your login.
+      {{ referrerName ? `Referred by ${referrerName} — ` : 'You came through a share link — ' }}{{ discountPct }}% off your website, applied when you create your login.
     </p>
-    <label v-if="!referralActive" class="field">
+    <label class="field">
       <span>Discount code <em>(if you found one)</em>
         <button type="button" class="puzzle-info-btn" @click="showPuzzleInfo = !showPuzzleInfo" aria-label="About the discount code">?</button>
       </span>
-      <input ref="discountInput" name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" @input="discountText = ($event.target as HTMLInputElement).value" />
+      <input ref="discountInput" name="discount-code" type="text" autocomplete="off" placeholder="CURIOUS-XXXXXX" aria-describedby="discount-error" @input="onDiscountInput" @blur="onDiscountBlur" />
       <small v-if="discountError" id="discount-error" class="discount-error" role="alert">{{ discountError }}</small>
       <span v-if="showPuzzleInfo" class="puzzle-info-text">
         <small>Somewhere on this site is a one time code for 10% off your website.</small>

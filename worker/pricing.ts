@@ -9,47 +9,56 @@ import type { D1Database, Env } from './env';
 /** Discounts are percents off the LIST price, added — never
     multiplied — and they live in the `discounts` table: one row per
     client holding their total earned percent and how many leads
-    they have generated. The ladder: a lead who arrives through a
-    referral token (or the hidden on-site code) starts at 10%; a
-    client's first generated lead adds 10 points; each lead after
-    that adds 5; the total never passes 50%. A completed-and-paid
-    project sets a 15% floor (the dashboard Worker applies that —
-    never a reduction: a larger earned total is never lowered to
-    it). Quote-time caps apply per project type: installs cap at
-    25%, feature and upgrade work at 50%. */
+    they have generated. The model: a lead who arrives through a
+    referral token (10%), the hidden on-site code (10%), or a
+    global code such as HOLIDAY25 (25%) starts at the best of those
+    — an arrival discount, never gated, never capped by status, and
+    spent when it is applied to a project. Every generated lead
+    then earns the referrer a flat +5%, gated by the referrer's
+    status: onboarding banks 0, prospective banks at most 2,
+    current banks at most 5 — the referral COUNT is the bound, so
+    there is no percentage cap anywhere in the code. A
+    published current client (live site) has a 15% floor. In
+    practice a total never exceeds 50 (max arrival 25 + max earned
+    25); the discounts table CHECK (0-50) is the backstop, a
+    data-integrity ceiling, not a business cap. When a discount is
+    applied to a project that is then completed AND fully paid, the
+    total falls back to the floor (0, or 15% once current) and
+    leads_count resets to 0 — the dashboard Worker applies that
+    reset, never this one. */
 export const REFERRAL_PCT = 10;
-export const FIRST_LEAD_PCT = 10;
-export const FURTHER_LEAD_PCT = 5;
-export const DISCOUNT_CAP_PCT = 50;
-export const INSTALL_DISCOUNT_CAP = 25;
-export const FEATURE_DISCOUNT_CAP = 50;
+/** Arrival percent for a lead who comes through a share link. */
+export const REFERRAL_ARRIVAL_PCT = 10;
+/** Flat percent one generated lead earns the referrer. */
+export const REFERRAL_EARN_PCT = 5;
+/** Referral-count caps by client status — the only caps. */
+export const REFERRAL_CAP_ONBOARDING = 0;
+export const REFERRAL_CAP_PROSPECTIVE = 2;
+export const REFERRAL_CAP_CURRENT = 5;
+/** Floor for a published current client (live site). */
+export const COMPLETION_FLOOR_PCT = 15;
 
-/** The percent a quote may actually apply: the earned total,
-    clamped to the cap for the project type. Unknown types price
-    like an install (the conservative cap). */
-export function clampDiscountPct(projectType: string, earnedPct: number): number {
-  const cap = projectType === 'feature' || projectType === 'upgrade' ? FEATURE_DISCOUNT_CAP : INSTALL_DISCOUNT_CAP;
-  return Math.max(0, Math.min(cap, earnedPct));
+/** What one more generated lead earns: a flat 5 points, whatever
+    the referrer has banked so far. The status gate in the caller
+    is the bound — there is no percentage cap. */
+export function nextLeadIncrement(_leadsCount: number): number {
+  return REFERRAL_EARN_PCT;
 }
 
-/** What one more generated lead earns: 10 points for the first
-    lead, 5 for every lead after that. */
-export function nextLeadIncrement(leadsCount: number): number {
-  return leadsCount <= 0 ? FIRST_LEAD_PCT : FURTHER_LEAD_PCT;
-}
-
-/** The referrer's new total after one fresh lead: the increment
-    for that lead, capped at 50%. Returns the new total and the
-    points actually added (0 once the cap is reached). */
+/** The referrer's new total after one fresh lead: a flat +5 on
+    whatever they hold. Returns the new total and the points
+    actually added (always 5 — the caller gates by status cap
+    before calling). */
 export function applyLeadReward(
   currentPct: number,
   leadsCount: number,
 ): { pct: number; increment: number } {
-  const pct = Math.min(DISCOUNT_CAP_PCT, currentPct + nextLeadIncrement(leadsCount));
-  return { pct, increment: pct - currentPct };
+  const increment = nextLeadIncrement(leadsCount);
+  return { pct: currentPct + increment, increment };
 }
 
-/** The final quoted price: tier price minus the total percent off. */
+/** The final quoted price: tier price minus the total percent off.
+    The earned percent applies in full — no clamp. */
 export function quotePriceCents(tierPriceCents: number, effectivePct: number): number {
   return Math.round(tierPriceCents * (1 - effectivePct / 100));
 }
